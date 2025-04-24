@@ -1,0 +1,205 @@
+if (GAME_LOCALE or GetLocale()) ~= "koKR" then return end
+
+local L = BuffOverlay.L
+
+L["%s %s is already being tracked."] = "%s %s는 이미 추적되고 있습니다."
+L["%s %s: Resets current profile to default settings. This does not remove any custom auras."] = "%s %s: 현재 프로필을 기본 설정으로 리셋합니다. 사용자 정의 오라는 제거되지 않습니다."
+L["%s %s: Shows a copyable version string for bug reports."] = "%s %s: 버그 보고서에 대한 복사 가능한 버전 문자열을 보여줍니다."
+L["%s %s: Shows test icons on all visible raid/party frames."] = "%s %s: 모든 보이는 공격대/파티 프레임에 테스트 아이콘을 보여줍니다."
+L["%s %s: Toggles the minimap icon."] = "%s %s: 미니맵 아이콘을 전환합니다."
+L["%s Frames need to be visible in order to see test icons. If you are using a non-Blizzard frame addon, you will need to make the frames visible either by joining a group or through that addon's settings."] = "%s 블리자드 프레임 애드온이 아닌 경우, 테스트 아이콘을 보기 위해서는 프레임이 보이도록 해야합니다. 그룹에 참여하거나 애드온 설정을 통해 프레임을 보이게 해야합니다."
+L["%s is already being tracked as a child of %s and cannot be edited."] = "%s는 이미 %s의 자식으로 추적되고 있으므로 편집할 수 없습니다."
+L["%s is already being tracked under %s %s."] = "%s는 이미 %s %s 에서 추적 중입니다."
+L["%s or %s: Toggles the options panel."] = "%s 또는 %s를 사용하여 옵션 패널을 전환합니다."
+L["%s to toggle options window."] = "옵션 창을 전환하려면 %s"
+L["%s to toggle test icons."] = "아이콘 토글 하기 %s"
+L["%s to toggle the minimap icon."] = "미니맵 아이콘을 전환하려면 %s."
+L["%s%sCopy this version number and send it to the author if you need help with a bug."] = "%s%s이 버전 번호를 복사하여 버그가 있을 경우 저자에게 보내주세요."
+L["(%s: This is a default spell. Deleting it from this tab will simply reset all of its values to their defaults, but it will not be removed from the spells tab.)"] = "(%s: 이것은 기본 주문입니다. 이 탭에서 삭제하면 모든 값이 기본값으로 되돌려지지만 주문 탭에서는 제거되지 않습니다.)"
+--[[Translation missing --]]
+L["(Note: This will be automatically disabled if Masque is enabled for this bar.)"] = "(Note: This will be automatically disabled if Masque is enabled for this bar.)"
+L["Action Button"] = "동작 버튼"
+L["Add %s to the custom spell list, opening up global settings to edit for this spell."] = "%s을 사용자 정의 주문 목록에 추가하고, 이 주문을 편집하기 위해 전역 설정을 열어보세요."
+L["Add a child spell ID to this spell. Child IDs will be checked like normal IDs but will use all the same settings (including icon) as its parent. Also, any changes to the parent will apply to all of its children. This is useful for spells that have multiple ids which are convenient to track as a single spell (e.g. different ranks of the same spell)."] = "이 주문에 자식 주문 ID를 추가하세요. 자식 ID는 일반 ID와 마찬가지로 검사되며 부모의 모든 설정(아이콘 포함)을 동일하게 사용합니다. 또한 부모에 대한 모든 변경사항은 모든 자식에 적용됩니다. 이것은 동일한 주문의 다른 등급을 한개의 주문으로 추적하기 쉽게 하기 위해 유용합니다."
+L["Add an additional aura bar with default settings."] = "초기 설정값으로 추가 오라 바를 추가하세요."
+L["Add Bar"] = "막대 추가"
+L["Add Child Spell ID"] = "아이디 자식 스펠 추가"
+L["Adds a pixel border around the icon. This will also zoom the icon in slightly to remove any default borders that may be present."] = "아이콘 주변에 픽셀 보더를 추가합니다. 이렇게 하면 기본 보더가 있는 경우 약간 확대되어 보더를 제거합니다."
+L["Anchoring"] = "앵커링"
+L["Apply %s's custom settings (glow, glow color, glow type, own only, etc) to all auras in %s.%sThis does not include any global settings (prio, class, etc)."] = "%s의 사용자 설정 (발광, 발광 색상, 발광 유형, 소유만 등)을 %s의 모든 오라에 적용합니다.%s이에는 글로벌 설정 (프리오, 클래스 등)이 포함되지 않습니다."
+L["Apply to All"] = "모두에게 적용하다"
+L["Are you sure you want to delete this bar?%s%s%s"] = "너가 이 바를 삭제하고 싶어하는건 확실한가요?%s%s%s"
+L["Are you sure you want to delete this spell?"] = "너가 이 마법을 삭제하길 정말 원하는 건가요?"
+L["Aura List"] = "오라 리스트"
+L["Author"] = "저자"
+L["Bars"] = "바"
+L["BOTTOM"] = "하단"
+L["BOTTOMLEFT"] = "하단 왼쪽"
+L["BOTTOMRIGHT"] = "바닥 오른쪽"
+L["CENTER"] = "중앙"
+L["Change the icon border color based on the dispel type of the buff. This overrides the icon border color."] = "이버프의 해제 유형에 따라 아이콘 테두리 색상을 변경합니다. 이것은 아이콘 테두리 색상을 덮어쓰게 됩니다."
+L["Change the icon border color based on the dispel type of the debuff. This overrides the icon border color."] = "디버프의 해제 유형에 따라 아이콘 테두리 색상을 변경합니다. 이것은 아이콘 테두리 색상을 덮어씁니다."
+L["Change the icon border color."] = "아이콘 테두리 색상을 변경하세요."
+L["Change the icon border size (in pixels)."] = "아이콘 테두리 크기를 픽셀로 변경하세요."
+L["Change the icon group's X-Offset."] = "아이콘 그룹의 X-Offset을 변경하세요."
+L["Change the icon group's Y-Offset."] = "아이콘 그룹의 Y-오프셋을 변경하세요."
+L["Child Spell ID(s)"] = "아이 스펠 아이디(들)"
+L["Color Buff Icon Border by Dispel Type"] = "컬러 버프 아이콘 테두리를 디스펠 타입으로 만들어라"
+L["Color Debuff Icon Border by Dispel Type"] = "색상 디버프 아이콘 경계는 해제 유형에 의해 제거됩니다."
+L["Command List"] = "명령 목록"
+L["Cooldown Spiral"] = "쿨다운 스파이럴"
+L["Cooldown Text Scale"] = "쿨다운 텍스트 스케일"
+L["Copied settings, anchoring, and visibility tabs from %s to %s"] = "%s에서 %s로 설정, 고정 및 가시성 탭을 복사했습니다."
+L["Copied spells from %s to %s."] = "%s에서 %s로 복사한 주문들"
+L["Copy Settings From"] = "복사할 설정 얻기"
+L["Copy Spells From"] = "복사주문 복붙하기"
+L["Corrupted buff database found. This is likely due to updating from an older version of Buff Overlay. Resetting buff database to default. Your other settings (including custom buffs) will be preserved."] = "변조된 버프 데이터베이스가 발견되었습니다. 이것은 이전 버프 오버레이 버전으로 업데이트하는 것으로 추정됩니다. 버프 데이터베이스를 기본값으로 재설정합니다. 다른 설정(사용자 정의 버프 포함)은 유지됩니다."
+--[[Translation missing --]]
+L["Custom Glow Color"] = "Custom Glow Color"
+L["Custom Icon"] = "사용자 아이콘"
+L["Custom Spells"] = "커스텀 주문"
+L["Delete Bar"] = "바 삭제"
+L["Disable all spells."] = "모든 주문을 비활성화하세요."
+L["DOWN"] = "아래에"
+L["Eating/Drinking"] = "먹거나 마시기"
+L["Edit Global Settings"] = "글로벌 설정 편집"
+L["Enable a glow border effect around the icon."] = "이상 아이콘 주변에 빛나는 테두리 효과를 활성화하세요."
+L["Enable all spells."] = "모든 주문을 활성화하세요."
+L["Enabled Auras Priority List"] = "활성화된 오라 우선순위 목록"
+L["Enter the spell ID of the spell you want to keep track of."] = "보관하고자 하는 주문의 주문 ID를 입력하세요."
+L["Exiting test mode. Frame visibility will update out of combat."] = "테스트 모드를 종료합니다. 전투 중이 아닐 때 프레임 가시성이 업데이트됩니다."
+L["Frame Attachment Point"] = "프레임 첨부 포인트"
+L["Frame Types"] = "프레임 유형"
+L["Glow"] = "발광하다"
+L["Glow Type"] = "반짝이는 타입"
+L["Group Size"] = "그룹 사이즈"
+L["Grow Direction"] = "성장 방향"
+L["HORIZONTAL"] = "가로"
+L["Icon Alpha"] = "아이콘 알파"
+L["Icon Anchor"] = "아이콘 앵커"
+L["Icon Border"] = "아이콘 테두리"
+L["Icon Border Color"] = "아이콘 테두리 색상"
+L["Icon Border Size"] = "아이콘 테두리 크기"
+L["Icon Count"] = "아이콘 개수"
+L["Icon position relative to its parent frame."] = "아이콘의 부모 프레임에 대한 상대적 위치"
+L["Icon Scale"] = "아이콘 스케일"
+L["Icon Spacing"] = "아이콘 간격"
+L["Icon transparency."] = "아이콘 투명도"
+--[[Translation missing --]]
+L[ [=[In addition to adding new spells here, you can also add any Spell ID from the spells tab to edit its default values.
+(Note: anything you add here will persist through addon updates and profile resets.)]=] ] = [=[In addition to adding new spells here, you can also add any Spell ID from the spells tab to edit its default values.
+(Note: anything you add here will persist through addon updates and profile resets.)]=]
+L["In order for %s setting to work in BuffOverlay, cooldown text needs to be enabled in Blizzard settings. You can find this setting located at:%s%s%sWould you like BuffOverlay to enable this setting for you?%s"] = "%s에 대한 BuffOverlay에서 작동하려면 블리자드 설정에서 쿨다운 텍스트를 활성화해야 합니다. 이 설정은 다음 위치에서 찾을 수 있습니다: %s%s%sBuffOverlay가 이 설정을 당신에게 활성화해 드릴까요?%s"
+L["Interface > ActionBars > Show Numbers for Cooldowns"] = "인터페이스 > 액션바 > 쿨다운에 대한 숫자 표시"
+L["Invalid input for custom icon: %s"] = "사용자 정의 아이콘에 대한 잘못된 입력: %s"
+L["Invalid Spell ID %s"] = "%s에 잘못된 스펠 ID"
+L["Invalid Spell: %s"] = "잘못된 마법: %s"
+--[[Translation missing --]]
+L["Keep in mind you want to add the Spell ID of the aura that appears on the buff/debuff bar, not necessarily the Spell ID from the spell book or talent tree."] = "Keep in mind you want to add the Spell ID of the aura that appears on the buff/debuff bar, not necessarily the Spell ID from the spell book or talent tree."
+L["LEFT"] = "왼쪽"
+L["Left-click"] = "왼쪽-클릭"
+--[[Translation missing --]]
+L["Legacy Blizzard"] = "Legacy Blizzard"
+L["Minimap Icon"] = "미니맵 아이콘"
+L["Minimap icon is now hidden. Type %s %s to show it again."] = "미니맵 아이콘이 이제 숨겨졌습니다. 다시 보려면 %s %s을 입력하세요."
+L["Never Show"] = "표시하지 않음"
+L["Never show this bar."] = "이 바를 결코 보여주지 마세요."
+L["Number of icons you want to display (per frame)."] = "각 프레임당 보여줄 아이콘의 수."
+L["Only show the aura if you cast it."] = "만약 당신이 시전한다면 오라만 보여주세요."
+L["Open Options"] = "옵션 열기"
+L["Options > Gameplay > Action Bars > Show Numbers for Cooldowns"] = "옵션 > 게임플레이 > 액션 바 > 쿨다운 숫자 표시"
+L["Own"] = "본인"
+L["Pixel"] = "픽셀"
+L["Priority"] = "우선 순위"
+L["Priority (Lower is Higher Prio)"] = "우선순위 (낮을수록 높은 우선순위)"
+L["Priority must be a positive integer from 0 to 999999"] = "우선 순위는 0에서 999999까지의 양의 정수여야 합니다."
+L["Remove Custom Child Spell ID"] = "사용자 정의 자식 마법 ID 제거"
+L["RIGHT"] = "오른쪽"
+L["Right-click"] = "오른쪽 클릭"
+L["Scale the icon's cooldown text size."] = "아이콘의 쿨다운 텍스트 크기를 조절하세요."
+L["Scale the icon's stack count text size."] = "아이콘의 스택 카운트 텍스트 크기를 조절하세요."
+L["Scale the size of the icon. Base icon size is proportionate to its parent frame."] = "아이콘의 크기를 조절해라. 기본 아이콘 크기는 상위 프레임과 비례하게 된다."
+L["Set Bar Name"] = "바 이름 설정"
+L["Shift+Right-click"] = "Shift+오른쪽 클릭"
+L["Show a test overlay for %s"] = "%s에 대한 테스트 오버레이 보여주기"
+L["Show Blizzard Cooldown Text"] = "블리자드 쿨다운 텍스트 보여주기"
+L["Show In Arena"] = "아레나에서 보여주세요"
+L["Show In Battleground"] = "쇼 인 배틀그라운드"
+L["Show In Dungeon"] = "쇼 인 던전"
+L["Show In Raid"] = "레이드 쇼"
+L["Show In Scenario"] = "시나리오에 보여주기"
+--[[Translation missing --]]
+L["Show overlays on this frame type."] = "Show overlays on this frame type."
+--[[Translation missing --]]
+L[ [=[Show overlays on this frame type.
+
+Blizzard frames do not currently support separate types.]=] ] = [=[Show overlays on this frame type.
+
+Blizzard frames do not currently support separate types.]=]
+L["Show Stack Count"] = "보여주세요 스택 카운트"
+L["Show test overlays for this bar."] = "이 바에 대한 테스트 오버레이 보여주세요."
+--[[Translation missing --]]
+L[ [=[Show this bar when the group size is equal to or greater than this value.
+
+0=Solo with no group.
+1=Solo in a group.]=] ] = [=[Show this bar when the group size is equal to or greater than this value.
+
+0=Solo with no group.
+1=Solo in a group.]=]
+--[[Translation missing --]]
+L[ [=[Show this bar when the group size is equal to or less than this value.
+
+0=Solo with no group.
+1=Solo in a group.]=] ] = [=[Show this bar when the group size is equal to or less than this value.
+
+0=Solo with no group.
+1=Solo in a group.]=]
+L["Show Tooltip On Hover"] = "마우스 오버시 툴팁 보이기"
+L["Show When Non-Instanced"] = "비 인스턴스 시간 보여주기"
+L["Shows a list of all enabled auras for this bar in order of priority."] = "바의 모든 가능한 오라의 우선순위대로 목록을 보여줍니다."
+L["Spacing between icons. Spacing is scaled based on icon size for uniformity across different icon sizes."] = "아이콘 사이의 간격. 아이콘 크기에 따라 간격이 조정되어 다른 아이콘 크기에 대한 균일성을 유지합니다."
+L["Spell ID"] = "아우라 아이디"
+L["Spell ID %s is invalid and has been removed."] = "아우라 아이디 %s이(가) 유효하지 않기 때문에 제거되었습니다."
+L["Spell ID %s is invalid. If you haven't made any manual code changes, please report this to the author."] = "아우라 아이디 %s가 잘못되었습니다. 수동 코드 변경을 하지 않았다면, 이것을 저자에게 보고하십시오."
+L["Spell ID must be a positive integer from 0 to 9999999"] = "스펠드 ID는 0에서 9999999 사이의 양의 정수여야 합니다."
+L["Stack Count Scale"] = "스택 카운트 스케일"
+L["Test"] = "테스트"
+L["Test All"] = "테스트 전체"
+L["Test Aura"] = "테스트 오라"
+L["Test Bar"] = "테스트 바"
+L["The icon ID to use for this spell. This will overwrite the default icon."] = "이 주문에 사용할 아이콘 ID. 이것은 기본 아이콘을 덮어쓰게 됩니다."
+L["The priority of this spell. Lower numbers are higher priority. If two spells have the same priority, it will show alphabetically."] = "이 주문의 우선순위입니다. 낮은 숫자가 높은 우선순위입니다. 만약 두 주문이 같은 우선순위라면, 알파벳 순으로 나타납니다."
+L["There has been a major update and unfortunately your profiles need to be reset. Upside though, you can now add BuffOverlay aura bars in multiple locations on your frames! Check it out by typing %s in chat."] = "죄송합니다. 대규모 업데이트가 있었기 때문에 당신의 프로필을 리셋해야 합니다. 하지만 다행히도 BuffOverlay 오라 바를 여러 위치에 추가할 수 있습니다. 채팅창에 %s 를 입력하여 확인하세요."
+L["This copies settings from 'Settings', 'Anchoring', and 'Visibility' tabs."] = "이것은 '설정' '고정' 그리고 '가시성' 탭에서 설정을 복사합니다."
+L["This informational panel is the full list of spells currently enabled for %s in order of priority. Any aura changes made while this panel is open will be reflected here in real time."] = "이 정보 패널은 %s에 사용 가능한 모든 주문의 우선 순위를 나타내고 있습니다. 이 패널이 열려 있는 동안 변경된 오라 정보는 실시간으로 여기에 반영됩니다."
+L["Toggle showing of the cooldown spiral."] = "쿨다운 스파이럴의 보여주기 전환"
+L["Toggle showing of the cooldown text."] = "쿨다운 텍스트 표시 전환"
+L["Toggle showing of the stack count text on the icon."] = "아이콘에서 스택 카운트 텍스트의 표시 여부를 전환합니다."
+L["Toggle showing of the tooltip when hovering over an icon."] = "아이콘에 마우스를 올려놓으면 툴팁의 보이기를 토글합니다."
+L["Toggle showing of the welcome message on login."] = "로그인 시 환영 메시지 표시를 토글합니다."
+L["Toggle showing this bar in a battleground."] = "배틀그라운드에서 이 바를 보이기 전환합니다."
+L["Toggle showing this bar in a dungeon instance."] = "던전 인스턴스에서 이 바 보이기를 토글하세요."
+L["Toggle showing this bar in a raid instance."] = "레이드 인스턴스에서 이 바 보이기를 토글하세요."
+L["Toggle showing this bar in a scenario."] = "이 바를 시나리오에서 보이기 전환하다."
+L["Toggle showing this bar in an arena."] = "개장 공연장에서이 바를 보여주기 전환하다."
+L["Toggle showing this bar in the world/outside of instances."] = "인스턴스 밖에서 이 바를 토글하여 보여주기"
+L["Toggle test overlays for all bars."] = "모든 바의 토글 테스트 오버레이를 켜주세요."
+L["Toggle the minimap icon."] = "미니맵 아이콘을 전환하세요."
+--[[Translation missing --]]
+L["Toggle whether or not to use a custom color for glow."] = "Toggle whether or not to use a custom color for glow."
+L["TOP"] = "탑"
+L["TOPLEFT"] = "상단 왼쪽"
+L["TOPRIGHT"] = "상단 우측"
+L["Type %s or %s to open the options panel or %s for more commands."] = "%s 또는 %s를 입력하여 옵션 패널을 열거나 %s을 입력하여 더 많은 명령을 사용하십시오."
+L["UP"] = "위에"
+L["VERTICAL"] = "수직"
+L["Visibility"] = "가시성"
+L["Welcome Message"] = "환영 메시지"
+L["Where the anchor is on the icon."] = "아이콘에서 망치가 어디에 있는지"
+L["Where the icons will grow from the first icon."] = "어디서 첫 번째 아이콘부터 아이콘이 성장할까요?"
+L["X-Offset"] = "엑스오프셋"
+L["Y-Offset"] = "와이 오프셋"
+
+
+
+

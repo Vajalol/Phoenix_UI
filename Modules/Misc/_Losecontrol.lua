@@ -1,0 +1,15 @@
+local Module = Phoenix_UI:NewModule("Misc.Losecontrol");
+
+function Module:OnEnable()
+    local db = Phoenix_UI.db.profile.misc.losecontrol
+    if (db) then
+        LossOfControlFrame:ClearAllPoints()
+        LossOfControlFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+        select(1, LossOfControlFrame:GetRegions()):SetAlpha(0)
+        select(2, LossOfControlFrame:GetRegions()):SetAlpha(0)
+        select(3, LossOfControlFrame:GetRegions()):SetAlpha(0)
+    end
+end
+
+
+

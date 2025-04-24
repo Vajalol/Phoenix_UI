@@ -1,0 +1,8 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+    <Script file="_Core.lua"/>
+    <Script file="modules/CooldownText.lua"/>
+    <Script file="modules/SpellTracker.lua"/>
+    <Script file="modules/PartyCD.lua"/>
+    <Script file="Styling.lua"/>
+    <Script file="_Config.lua"/>
+</Ui> 

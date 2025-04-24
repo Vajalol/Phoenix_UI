@@ -1,0 +1,19 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/
+..\FrameXML\UI.xsd">
+    <!-- Core Module -->
+    <Script file="_Core.lua"/>
+    
+    <!-- Localization -->
+    <Script file="Locale.lua"/>
+    
+    <!-- Submodules -->
+    <Script file="Timer.lua"/>
+    <Script file="Objectives.lua"/>
+    <Script file="DeathTracker.lua"/>
+    <Script file="KeystoneInfo.lua"/>
+    <Script file="AutoGossip.lua"/>
+    
+    <!-- Configuration -->
+    <Script file="_Config.lua"/>
+    <Script file="TabIntegration.lua"/>
+</Ui> 

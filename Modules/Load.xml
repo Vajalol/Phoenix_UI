@@ -1,0 +1,158 @@
+<Ui xmlns='http://www.blizzard.com/wow/ui/'>
+  <Include file='NamePlates\Load.xml'/>
+  <Include file='RaidFrames\Load.xml'/>
+  <Include file='Misc\Load.xml'/>
+  <Include file='Chat\Load.xml'/>
+  <Include file='Maps\Load.xml'/>
+  <Include file="UnitFrames\Load.xml"/>
+  <Include file="ActionBars\Load.xml"/>
+  <Include file="Skins\Load.xml"/>
+  <Include file='Buffs\Load.xml'/>
+  <Include file='General\Load.xml'/>
+  <Include file='Tooltip\Load.xml'/>
+  <Include file='CastBars\Load.xml'/>
+  <Include file='MSBT\Load.xml'/>
+  <Include file='CooldownTracker\Load.xml'/>
+  <Include file="Detail-Skin\Load.xml"/>
+  ##buffoverlay
+  <!-- buffoverlay module includes each file directly instead of using Load.xml -->
+  <Include file='buffoverlay\Border.xml'/>
+  <Include file='buffoverlay\Embeds.xml'/>
+  <Include file='buffoverlay\Init.lua'/>
+  <Include file='buffoverlay\Locales.xml'/>
+  <Include file='buffoverlay\Spells\Mainline.lua'/>
+  <Include file='buffoverlay\Spells\Vanilla.lua'/>
+  <Include file='buffoverlay\Spells\TBC.lua'/>
+  <Include file='buffoverlay\Spells\Wrath.lua'/>
+  <Include file='buffoverlay\Spells\Cata.lua'/>
+  <Include file='buffoverlay\AddonCompatibility.lua'/>
+  <Include file='buffoverlay\BuffOverlay.lua'/>
+  <Include file='buffoverlay\Options.lua'/>
+
+##idTip
+<Include file='idTip\idTip.lua'/>
+
+## D4Lib is in MoveAny directory
+<Include file='MoveAny\libs\D4Lib\D4Lib.xml'/>
+
+## These files are in MoveAny directory
+<Include file='MoveAny\libs\math.lua'/>
+<Include file='MoveAny\libs\db.lua'/>
+
+## Locale files are in MoveAny directory
+<Include file='MoveAny\locale\enUS.lua'/>
+<Include file='MoveAny\locale\deDE.lua'/>
+<Include file='MoveAny\locale\esES.lua'/>
+<Include file='MoveAny\locale\frFR.lua'/>
+<Include file='MoveAny\locale\itIT.lua'/>
+<Include file='MoveAny\locale\koKR.lua'/>
+<Include file='MoveAny\locale\ptBR.lua'/>
+<Include file='MoveAny\locale\ruRU.lua'/>
+<Include file='MoveAny\locale\zhCN.lua'/>
+
+<Include file='MoveAny\libs\lang.lua'/>
+
+<Include file='MoveAny\ele\actionbars.lua'/>
+<Include file='MoveAny\ele\arenaenemyframes.lua'/>
+<Include file='MoveAny\ele\bagbar.lua'/>
+<Include file='MoveAny\ele\buffbar.lua'/>
+<Include file='MoveAny\ele\debuffbar.lua'/>
+<Include file='MoveAny\ele\fps.lua'/>
+<Include file='MoveAny\ele\mavehicleseatindicator.lua'/>
+<Include file='MoveAny\ele\micromenu.lua'/>
+<Include file='MoveAny\ele\minimap.lua'/>
+<Include file='MoveAny\ele\multicastactionbar.lua'/>
+<Include file='MoveAny\ele\partyframe.lua'/>
+<Include file='MoveAny\ele\petbar.lua'/>
+<Include file='MoveAny\ele\stancebar.lua'/>
+
+<Include file='MoveAny\core.lua'/>
+<Include file='MoveAny\registerwidgets.lua'/>
+<Include file='MoveAny\moveframes.lua'/>
+<Include file='MoveAny\settings.lua'/>
+
+## MikScrollingBattleText
+<Include file='MikScrollingBattleText\Libs\LibStub.lua'/>
+<Include file='MikScrollingBattleText\Libs\CallbackHandler-1.0.lua'/>
+<Include file='MikScrollingBattleText\Libs\LibSharedMedia-3.0.lua'/>
+
+<Include file='MikScrollingBattleText\MikSBT.lua'/>
+<Include file='MikScrollingBattleText\Localization\localization.xml'/>
+<Include file='MikScrollingBattleText\MSBTProfiles.lua'/>
+<Include file='MikScrollingBattleText\MSBTParser.lua'/>
+<Include file='MikScrollingBattleText\MSBTMedia.lua'/>
+<Include file='MikScrollingBattleText\MSBTAnimations.lua'/>
+<Include file='MikScrollingBattleText\MSBTTriggers.lua'/>
+<Include file='MikScrollingBattleText\MSBTCooldowns.lua'/>
+<Include file='MikScrollingBattleText\MSBTLoot.lua'/>
+<Include file='MikScrollingBattleText\MSBTMain.lua'/>
+<Include file='MikScrollingBattleText\MSBTAnimationStyles.lua'/>
+
+# MikScrollingBattleText Option
+<Include file='MSBTOptions\Localization\localization.xml'/>
+<Include file='MSBTOptions\MSBTOptionsControls.lua'/>
+<Include file='MSBTOptions\MSBTOptionsPopups.lua'/>
+<Include file='MSBTOptions\MSBTOptionsMain.lua'/>
+<Include file='MSBTOptions\MSBTOptionsTabs.lua'/>
+
+# Premade Groups
+<Include file='PremadeGroupsFilter\Init.lua'/>
+<Include file='PremadeGroupsFilter\Compat.lua'/>
+<Include file='PremadeGroupsFilter\Localization\enUS.lua'/>
+<Include file='PremadeGroupsFilter\Localization\frFR.lua'/>
+<Include file='PremadeGroupsFilter\Localization\deDE.lua'/>
+<Include file='PremadeGroupsFilter\Localization\koKR.lua'/>
+<Include file='PremadeGroupsFilter\Localization\zhCN.lua'/>
+<Include file='PremadeGroupsFilter\Localization\zhTW.lua'/>
+<Include file='PremadeGroupsFilter\Localization\ruRU.lua'/>
+<Include file='PremadeGroupsFilter\Localization\esES.lua'/>
+<Include file='PremadeGroupsFilter\Localization\itIT.lua'/>
+
+<Include file='PremadeGroupsFilter\Modules\Logger.lua'/>
+<Include file='PremadeGroupsFilter\Fixes\FixReportAdvertisement.lua'/>
+<Include file='PremadeGroupsFilter\UI\StaticPopup.xml'/>
+<Include file='PremadeGroupsFilter\UI\StaticPopup.lua'/>
+<Include file='PremadeGroupsFilter\Modules\Util.lua'/>
+<Include file='PremadeGroupsFilter\Modules\Activity.lua'/>
+<Include file='PremadeGroupsFilter\Modules\ActivityKeywords.lua'/>
+<Include file='PremadeGroupsFilter\Modules\AdvancedFilter.lua'/>
+<Include file='PremadeGroupsFilter\Modules\Specializations.lua'/>
+<Include file='PremadeGroupsFilter\Modules\MemberInfo.lua'/>
+<Include file='PremadeGroupsFilter\Modules\RemainingSlots.lua'/>
+<Include file='PremadeGroupsFilter\Modules\ApplicationStatus.lua'/>
+<Include file='PremadeGroupsFilter\Modules\Lockout.lua'/>
+<Include file='PremadeGroupsFilter\Modules\Expression.lua'/>
+<Include file='PremadeGroupsFilter\Modules\PlayerInfo.lua'/>
+<Include file='PremadeGroupsFilter\Modules\Macro.lua'/>
+<Include file='PremadeGroupsFilter\Modules\GroupTooltip.lua'/>
+<Include file='PremadeGroupsFilter\Modules\RoleIndicators.lua'/>
+<Include file='PremadeGroupsFilter\Modules\RatingInfo.lua'/>
+<Include file='PremadeGroupsFilter\Modules\OneClickSignUp.lua'/>
+<Include file='PremadeGroupsFilter\Modules\PersistSignUpNote.lua'/>
+<Include file='PremadeGroupsFilter\Modules\SignUpOnEnter.lua'/>
+<Include file='PremadeGroupsFilter\Main.lua'/>
+<Include file='PremadeGroupsFilter\Plugins\PremadeRegions.lua'/>
+<Include file='PremadeGroupsFilter\Plugins\RaiderIO.lua'/>
+<Include file='PremadeGroupsFilter\Settings\Settings.xml'/>
+<Include file='PremadeGroupsFilter\Settings\Settings.lua'/>
+<Include file='PremadeGroupsFilter\UI\Common.lua'/>
+<Include file='PremadeGroupsFilter\UI\PopupMenu.xml'/>
+<Include file='PremadeGroupsFilter\UI\PopupMenu.lua'/>
+<Include file='PremadeGroupsFilter\UI\Help.lua'/>
+<Include file='PremadeGroupsFilter\UI\Templates.xml'/>
+<Include file='PremadeGroupsFilter\UI\Dialog.xml'/>
+<Include file='PremadeGroupsFilter\UI\Dialog.lua'/>
+<Include file='PremadeGroupsFilter\UI\DungeonPanel.xml'/>
+<Include file='PremadeGroupsFilter\UI\DungeonPanel.lua'/>
+<Include file='PremadeGroupsFilter\UI\RolePanel.xml'/>
+<Include file='PremadeGroupsFilter\UI\RolePanel.lua'/>
+<Include file='PremadeGroupsFilter\UI\ArenaPanel.xml'/>
+<Include file='PremadeGroupsFilter\UI\ArenaPanel.lua'/>
+<Include file='PremadeGroupsFilter\UI\RBGPanel.xml'/>
+<Include file='PremadeGroupsFilter\UI\RBGPanel.lua'/>
+<Include file='PremadeGroupsFilter\UI\RaidPanel.xml'/>
+<Include file='PremadeGroupsFilter\UI\RaidPanel.lua'/>
+<Include file='PremadeGroupsFilter\UI\MiniPanel.xml'/>
+<Include file='PremadeGroupsFilter\UI\MiniPanel.lua'/>
+<Include file='PremadeGroupsFilter\UI\UsePGFButton.lua'/>
+</Ui>

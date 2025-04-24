@@ -1,0 +1,25 @@
+## Interface: 100205, 30401, 11501
+## Author: VortexQ8
+## Version: 11.0.52
+## Title: |cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r
+## SavedVariables: Phoenix_UIDB
+## SavedVariablesPerCharacter: Phoenix_UIPerCharDB
+## IconTexture: Interface\Icons\Spell_Fire_FlameBolt
+## AddonCompartmentFunc: Phoenix_Options
+## Notes: The Most Advanced and Feature Rich UI for World of Warcraft Improved by VortexQ8
+## X-Curse-Project-ID: 1242528
+## X-Wago-ID: jK8XQjKy
+
+## LIBS
+Libs\Load.xml
+## MEDIA
+Media\Load.xml
+## CORE
+Core\Load.xml
+## CONFIG (Moved earlier to ensure proper module initialization)
+Config\Load.xml
+## DATA
+Data\Load.xml
+## MODULES
+Modules\Load.xml
+

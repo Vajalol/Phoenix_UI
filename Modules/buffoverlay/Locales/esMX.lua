@@ -1,0 +1,205 @@
+if (GAME_LOCALE or GetLocale()) ~= "esMX" then return end
+
+local L = BuffOverlay.L
+
+L["%s %s is already being tracked."] = "%s %s ya está siendo rastreado."
+L["%s %s: Resets current profile to default settings. This does not remove any custom auras."] = "%s %s: Restablece la configuración predeterminada del perfil actual. Esto no elimina ninguna aura personalizada."
+L["%s %s: Shows a copyable version string for bug reports."] = "%s %s: Muestra una cadena de versión copiable para informes de errores."
+L["%s %s: Shows test icons on all visible raid/party frames."] = "%s %s: Muestra iconos de prueba en todos los marcos de banda/fiesta visibles."
+L["%s %s: Toggles the minimap icon."] = "%s %s: Activa el icono del minimapa."
+L["%s Frames need to be visible in order to see test icons. If you are using a non-Blizzard frame addon, you will need to make the frames visible either by joining a group or through that addon's settings."] = "%s Los marcos deben ser visibles para ver los iconos de prueba. Si estás usando un complemento de marco no de Blizzard, tendrás que hacerlos visibles uniéndote a un grupo o a través de la configuración de ese complemento."
+L["%s is already being tracked as a child of %s and cannot be edited."] = "%s ya se está rastreando como hijo de %s y no se puede editar."
+L["%s is already being tracked under %s %s."] = "%s ya se está rastreando bajo %s %s."
+L["%s or %s: Toggles the options panel."] = "%s o %s: Alternar el panel de opciones."
+L["%s to toggle options window."] = "Presiona %s para alternar la ventana de opciones."
+L["%s to toggle test icons."] = "%s: Activar/desactivar iconos de prueba."
+L["%s to toggle the minimap icon."] = "%s: Activar/desactivar el icono del minimapa."
+L["%s%sCopy this version number and send it to the author if you need help with a bug."] = "%s%sCopia este número de versión y envíalo al autor si necesitas ayuda con un error."
+L["(%s: This is a default spell. Deleting it from this tab will simply reset all of its values to their defaults, but it will not be removed from the spells tab.)"] = "(%s: Esta es una hechizo predeterminado. Eliminarlo de esta pestaña simplemente restablecerá todos sus valores a sus valores predeterminados, pero no se eliminará de la pestaña de hechizos.)"
+--[[Translation missing --]]
+L["(Note: This will be automatically disabled if Masque is enabled for this bar.)"] = "(Note: This will be automatically disabled if Masque is enabled for this bar.)"
+L["Action Button"] = "Botón de Acción"
+L["Add %s to the custom spell list, opening up global settings to edit for this spell."] = "Agregar %s a la lista de hechizos personalizados, abriendo la configuración global para editar este hechizo."
+L["Add a child spell ID to this spell. Child IDs will be checked like normal IDs but will use all the same settings (including icon) as its parent. Also, any changes to the parent will apply to all of its children. This is useful for spells that have multiple ids which are convenient to track as a single spell (e.g. different ranks of the same spell)."] = "Agregue un ID de hechizo hijo a este hechizo. Los IDs de los hijos se verificarán como los IDs normales, pero usarán todos los mismos ajustes (incluido el icono) que su padre. Además, cualquier cambio en el padre se aplicará a todos sus hijos. Esto es útil para hechizos que tienen múltiples IDs que son convenientes para rastrear como un solo hechizo (por ejemplo, diferentes rangos del mismo hechizo)."
+L["Add an additional aura bar with default settings."] = "Agregar una barra de aura adicional con la configuración predeterminada."
+L["Add Bar"] = "Agregar Barra"
+L["Add Child Spell ID"] = "Agregar ID de hechizo de niño"
+L["Adds a pixel border around the icon. This will also zoom the icon in slightly to remove any default borders that may be present."] = "Agrega un borde de píxeles alrededor del icono. Esto también hará zoom ligeramente en el icono para eliminar cualquier borde predeterminado que pueda estar presente."
+L["Anchoring"] = "Anclaje"
+L["Apply %s's custom settings (glow, glow color, glow type, own only, etc) to all auras in %s.%sThis does not include any global settings (prio, class, etc)."] = "Aplicar la configuración personalizada (%s, color de brillo, tipo de brillo, solo propio, etc.) a todas las auras en %s.%sEsto no incluye ninguna configuración global (prioridad, clase, etc)."
+L["Apply to All"] = "Aplicar a todos"
+L["Are you sure you want to delete this bar?%s%s%s"] = "¿Estás seguro de que quieres eliminar esta barra?%s%s%s"
+L["Are you sure you want to delete this spell?"] = "¿Estás seguro de que quieres eliminar este hechizo?"
+L["Aura List"] = "Lista de Aura"
+L["Author"] = "Autor"
+L["Bars"] = "Barras"
+L["BOTTOM"] = "Fondo"
+L["BOTTOMLEFT"] = "Inferior Izquierda"
+L["BOTTOMRIGHT"] = "Abajo a la derecha"
+L["CENTER"] = "CENTRO"
+L["Change the icon border color based on the dispel type of the buff. This overrides the icon border color."] = "Cambia el color del borde del icono en base al tipo de disipación del buff. Esto anula el color del borde del icono."
+L["Change the icon border color based on the dispel type of the debuff. This overrides the icon border color."] = "Cambiar el color del borde del icono según el tipo de disipación del debuff. Esto anula el color del borde del icono."
+L["Change the icon border color."] = "Cambiar el color del borde del icono."
+L["Change the icon border size (in pixels)."] = "Cambiar el tamaño del borde del icono (en píxeles)."
+L["Change the icon group's X-Offset."] = "Cambiar el desplazamiento X del grupo de iconos."
+L["Change the icon group's Y-Offset."] = "Cambiar el desplazamiento Y del grupo de iconos."
+L["Child Spell ID(s)"] = "ID(s) de hechizo de niño"
+L["Color Buff Icon Border by Dispel Type"] = "Icono de borde de color buff por tipo de disipación"
+L["Color Debuff Icon Border by Dispel Type"] = "Icono de borde de desventaja de color por tipo de disipación"
+L["Command List"] = "Lista de comandos"
+L["Cooldown Spiral"] = "Espiral de enfriamiento"
+L["Cooldown Text Scale"] = "Escala de texto de enfriamiento"
+L["Copied settings, anchoring, and visibility tabs from %s to %s"] = "Copió la configuración, anclaje y pestañas de visibilidad de %s a %s"
+L["Copied spells from %s to %s."] = "Copiado hechizos de %s a %s."
+L["Copy Settings From"] = "Copiar configuraciones de"
+L["Copy Spells From"] = "Copiar hechizos de"
+L["Corrupted buff database found. This is likely due to updating from an older version of Buff Overlay. Resetting buff database to default. Your other settings (including custom buffs) will be preserved."] = "Se encontró una base de datos de buff corrupta. Esto es probablemente debido a la actualización desde una versión anterior de Buff Overlay. Reiniciando la base de datos de buff a la predeterminada. Se preservarán sus otros ajustes (incluidos los buffs personalizados)."
+--[[Translation missing --]]
+L["Custom Glow Color"] = "Custom Glow Color"
+L["Custom Icon"] = "Ícono personalizado"
+L["Custom Spells"] = "Hechizos personalizados"
+L["Delete Bar"] = "Eliminar Barra"
+L["Disable all spells."] = "Desactivar todos los hechizos."
+L["DOWN"] = "Abajo"
+L["Eating/Drinking"] = "Comer/Beber"
+L["Edit Global Settings"] = "Editar Configuraciones Globales"
+L["Enable a glow border effect around the icon."] = "Habilitar un efecto de borde brillante alrededor del icono."
+L["Enable all spells."] = "Habilitar todos los hechizos."
+L["Enabled Auras Priority List"] = "Lista de prioridades de Auras habilitadas"
+L["Enter the spell ID of the spell you want to keep track of."] = "Ingresa el ID de hechizo del hechizo que quieres seguir."
+L["Exiting test mode. Frame visibility will update out of combat."] = "Saliendo del modo de prueba. La visibilidad del marco se actualizará fuera de combate."
+L["Frame Attachment Point"] = "Punto de fijación de marco"
+L["Frame Types"] = "Tipos de marco"
+L["Glow"] = "Brillo"
+L["Glow Type"] = "Tipo de brillo"
+L["Group Size"] = "Tamaño de grupo"
+L["Grow Direction"] = "Dirección de crecimiento"
+L["HORIZONTAL"] = "HORIZONTAL --> HORIZONTAL"
+L["Icon Alpha"] = "Ícono Alfa"
+L["Icon Anchor"] = "Ícono Ancla"
+L["Icon Border"] = "Borde de icono"
+L["Icon Border Color"] = "Color del borde del icono"
+L["Icon Border Size"] = "Tamaño del borde del icono"
+L["Icon Count"] = "Conteo de iconos"
+L["Icon position relative to its parent frame."] = "Posición del icono relativa al marco de su padre."
+L["Icon Scale"] = "Escala de icono"
+L["Icon Spacing"] = "Espaciado de icono"
+L["Icon transparency."] = "Transparencia de icono."
+--[[Translation missing --]]
+L[ [=[In addition to adding new spells here, you can also add any Spell ID from the spells tab to edit its default values.
+(Note: anything you add here will persist through addon updates and profile resets.)]=] ] = [=[In addition to adding new spells here, you can also add any Spell ID from the spells tab to edit its default values.
+(Note: anything you add here will persist through addon updates and profile resets.)]=]
+L["In order for %s setting to work in BuffOverlay, cooldown text needs to be enabled in Blizzard settings. You can find this setting located at:%s%s%sWould you like BuffOverlay to enable this setting for you?%s"] = "Para que la configuración de %s funcione en BuffOverlay, el texto de tiempo de recarga debe estar habilitado en la configuración de Blizzard. Puedes encontrar esta configuración en: %s%s%s ¿Deseas que BuffOverlay habilite esta configuración para ti?%s"
+L["Interface > ActionBars > Show Numbers for Cooldowns"] = "Interfaz > Barras de Acción > Mostrar Números para Enfriamiento"
+L["Invalid input for custom icon: %s"] = "Entrada inválida para el icono personalizado: %s"
+L["Invalid Spell ID %s"] = "ID de hechizo inválido %s"
+L["Invalid Spell: %s"] = "Spell Inválido: %s"
+--[[Translation missing --]]
+L["Keep in mind you want to add the Spell ID of the aura that appears on the buff/debuff bar, not necessarily the Spell ID from the spell book or talent tree."] = "Keep in mind you want to add the Spell ID of the aura that appears on the buff/debuff bar, not necessarily the Spell ID from the spell book or talent tree."
+L["LEFT"] = "IZQUIERDA"
+L["Left-click"] = "Haga clic izquierdo"
+--[[Translation missing --]]
+L["Legacy Blizzard"] = "Legacy Blizzard"
+L["Minimap Icon"] = "Ícono de minimapa"
+L["Minimap icon is now hidden. Type %s %s to show it again."] = "Icono de minimapa ahora está oculto. Escriba %s %s para mostrarlo de nuevo."
+L["Never Show"] = "Nunca Mostrar"
+L["Never show this bar."] = "Nunca muestre esta barra."
+L["Number of icons you want to display (per frame)."] = "Número de iconos que desea mostrar (por marco)."
+L["Only show the aura if you cast it."] = "Solo muestra el aura si la lanzas."
+L["Open Options"] = "Abrir Opciones"
+L["Options > Gameplay > Action Bars > Show Numbers for Cooldowns"] = "Opciones > Juego > Barras de Acción > Mostrar Números para los Tiempos de Recarga"
+L["Own"] = "Ser"
+L["Pixel"] = "Píxel"
+L["Priority"] = "Prioridad"
+L["Priority (Lower is Higher Prio)"] = "Prioridad (Menor es Prioridad Más Alta)"
+L["Priority must be a positive integer from 0 to 999999"] = "La prioridad debe ser un número entero positivo entre 0 y 999999."
+L["Remove Custom Child Spell ID"] = "Eliminar ID de hechizo personalizado de niño"
+L["RIGHT"] = "Derecha"
+L["Right-click"] = "Haga clic derecho"
+L["Scale the icon's cooldown text size."] = "Escala el tamaño del texto de recarga del icono."
+L["Scale the icon's stack count text size."] = "Escalar el tamaño del texto de la cuenta de la pila del icono."
+L["Scale the size of the icon. Base icon size is proportionate to its parent frame."] = "Escala el tamaño del icono. El tamaño del icono base es proporcional a su marco padre."
+L["Set Bar Name"] = "Establecer nombre de barra"
+L["Shift+Right-click"] = "Shift+Clic derecho"
+L["Show a test overlay for %s"] = "Mostrar una superposición de prueba para %s"
+L["Show Blizzard Cooldown Text"] = "Mostrar texto de tiempo de reutilización de Blizzard"
+L["Show In Arena"] = "Mostrar en Arena"
+L["Show In Battleground"] = "Mostrar en Campo de Batalla"
+L["Show In Dungeon"] = "Mostrar en el calabozo"
+L["Show In Raid"] = "Mostrar en Raid"
+L["Show In Scenario"] = "Mostrar en Escenario"
+--[[Translation missing --]]
+L["Show overlays on this frame type."] = "Show overlays on this frame type."
+--[[Translation missing --]]
+L[ [=[Show overlays on this frame type.
+
+Blizzard frames do not currently support separate types.]=] ] = [=[Show overlays on this frame type.
+
+Blizzard frames do not currently support separate types.]=]
+L["Show Stack Count"] = "Mostrar conteo de pila"
+L["Show test overlays for this bar."] = "Mostrar superposiciones de prueba para esta barra."
+--[[Translation missing --]]
+L[ [=[Show this bar when the group size is equal to or greater than this value.
+
+0=Solo with no group.
+1=Solo in a group.]=] ] = [=[Show this bar when the group size is equal to or greater than this value.
+
+0=Solo with no group.
+1=Solo in a group.]=]
+--[[Translation missing --]]
+L[ [=[Show this bar when the group size is equal to or less than this value.
+
+0=Solo with no group.
+1=Solo in a group.]=] ] = [=[Show this bar when the group size is equal to or less than this value.
+
+0=Solo with no group.
+1=Solo in a group.]=]
+L["Show Tooltip On Hover"] = "Mostrar descripción al pasar el ratón"
+L["Show When Non-Instanced"] = "Mostrar cuando no sea instanciado"
+L["Shows a list of all enabled auras for this bar in order of priority."] = "Muestra una lista de todas las auras habilitadas para esta barra en orden de prioridad."
+L["Spacing between icons. Spacing is scaled based on icon size for uniformity across different icon sizes."] = "Espaciado entre iconos. El espaciado se ajusta en función del tamaño del icono para lograr una uniformidad entre diferentes tamaños de iconos."
+L["Spell ID"] = "ID de hechizo"
+L["Spell ID %s is invalid and has been removed."] = "ID de hechizo %s no es válido y ha sido eliminado."
+L["Spell ID %s is invalid. If you haven't made any manual code changes, please report this to the author."] = "ID de hechizo %s no es válido. Si no has hecho ningún cambio de código manual, por favor informa esto al autor."
+L["Spell ID must be a positive integer from 0 to 9999999"] = "El ID de hechizo debe ser un número entero positivo de 0 a 9999999"
+L["Stack Count Scale"] = "Escala de conteo de pila"
+L["Test"] = "Prueba"
+L["Test All"] = "Probar todo"
+L["Test Aura"] = "Prueba Aura"
+L["Test Bar"] = "Barra de prueba"
+L["The icon ID to use for this spell. This will overwrite the default icon."] = "El ID de icono a usar para este hechizo. Esto reemplazará el icono predeterminado."
+L["The priority of this spell. Lower numbers are higher priority. If two spells have the same priority, it will show alphabetically."] = "La prioridad de este hechizo. Los números más bajos tienen mayor prioridad. Si dos hechizos tienen la misma prioridad, se mostrarán en orden alfabético."
+L["There has been a major update and unfortunately your profiles need to be reset. Upside though, you can now add BuffOverlay aura bars in multiple locations on your frames! Check it out by typing %s in chat."] = "Se ha realizado una gran actualización y, desafortunadamente, sus perfiles necesitan ser reiniciados. Lo bueno es que ahora puedes agregar barras de aura BuffOverlay en múltiples ubicaciones en tus marcos. ¡Echa un vistazo escribiendo %s en el chat!"
+L["This copies settings from 'Settings', 'Anchoring', and 'Visibility' tabs."] = "Esto copia la configuración de las pestañas 'Ajustes', 'Anclaje' y 'Visibilidad'."
+L["This informational panel is the full list of spells currently enabled for %s in order of priority. Any aura changes made while this panel is open will be reflected here in real time."] = "Este panel informativo es la lista completa de hechizos actualmente habilitados para %s en orden de prioridad. Cualquier cambio de aura realizado mientras este panel está abierto se reflejará aquí en tiempo real."
+L["Toggle showing of the cooldown spiral."] = "Alternar la visualización de la espiral de enfriamiento."
+L["Toggle showing of the cooldown text."] = "Alternar la visualización del texto de enfriamiento."
+L["Toggle showing of the stack count text on the icon."] = "Alternar la visualización del texto de la cuenta de la pila en el icono."
+L["Toggle showing of the tooltip when hovering over an icon."] = "Mostrar/ocultar la descripción emergente al pasar el cursor sobre un icono."
+L["Toggle showing of the welcome message on login."] = "Activar la visualización del mensaje de bienvenida al iniciar sesión."
+L["Toggle showing this bar in a battleground."] = "Alternar mostrando esta barra en un campo de batalla."
+L["Toggle showing this bar in a dungeon instance."] = "Alternar mostrando esta barra en una instancia de mazmorra."
+L["Toggle showing this bar in a raid instance."] = "Alternar mostrando esta barra en una instancia de raid."
+L["Toggle showing this bar in a scenario."] = "Alternar mostrando esta barra en un escenario."
+L["Toggle showing this bar in an arena."] = "Alternar mostrando esta barra en una arena."
+L["Toggle showing this bar in the world/outside of instances."] = "Mostrar esta barra en el mundo/fuera de instancias."
+L["Toggle test overlays for all bars."] = "Activar superposiciones de prueba para todas las barras."
+L["Toggle the minimap icon."] = "Alternar el icono del minimapa."
+--[[Translation missing --]]
+L["Toggle whether or not to use a custom color for glow."] = "Toggle whether or not to use a custom color for glow."
+L["TOP"] = "TOP (superior)"
+L["TOPLEFT"] = "Izquierda superior"
+L["TOPRIGHT"] = "Derecha superior"
+L["Type %s or %s to open the options panel or %s for more commands."] = "Escriba %s o %s para abrir el panel de opciones o %s para más comandos."
+L["UP"] = "Arriba"
+L["VERTICAL"] = "VERTICAL"
+L["Visibility"] = "Visibilidad"
+L["Welcome Message"] = "Mensaje de bienvenida"
+L["Where the anchor is on the icon."] = "Aquí es donde está el ancla en el icono."
+L["Where the icons will grow from the first icon."] = "Aquí es donde crecerán los íconos desde el primer ícono."
+L["X-Offset"] = "Desplazamiento X"
+L["Y-Offset"] = "Desplazamiento-Y"
+
+
+
+
