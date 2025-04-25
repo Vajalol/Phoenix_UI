@@ -169,8 +169,8 @@ Phoenix_UIConfig.ScrollFrameMethods = {
 				end
 			end
 			
-			-- Add generous extra padding to ensure scrolling works properly
-			totalHeight = totalHeight + (scrollFrameHeight * 1.5)  -- 150% of window height as extra padding
+			-- Add generous extra padding to ensure scrolling works properly for all tabs
+			totalHeight = totalHeight + (scrollFrameHeight * 2)  -- Double window height as padding (increased from 1.5)
 		end
 		
 		-- Set the scroll child height to the calculated total
@@ -178,11 +178,23 @@ Phoenix_UIConfig.ScrollFrameMethods = {
 			self.scrollChild:SetHeight(totalHeight)
 		end
 		
-		-- Always force showing the scrollbar for ActionBar and Tooltip tabs which need more space
-		local tabName = Phoenix_UI and Phoenix_UI.UI and Phoenix_UI.UI.currentTab
-		if tabName and (tabName == "Actionbar" or tabName == "Tooltip") then
-			totalHeight = totalHeight + 300  -- Extra padding for these specific tabs
-			self.scrollChild:SetHeight(totalHeight)
+		-- Add significant extra padding universally to ALL tabs to ensure good scrolling
+		-- 450px of universal padding helps ensure all tabs can scroll fully
+		totalHeight = totalHeight + 450
+		self.scrollChild:SetHeight(totalHeight)
+	end,
+
+	DoVerticalScroll = function(self, value, buttonHeight, updateFunction)
+		local scrollBar = self.scrollBar;
+		local scrollFrame = self.scrollFrame;
+		local scrollStep = buttonHeight or self.scrollStep;
+
+		if ( scrollBar:GetValue() ~= value ) then
+			scrollBar:SetValue(value);
+
+			if ( updateFunction ) then
+				updateFunction(self, value);
+			end
 		end
 	end,
 };
@@ -268,7 +280,6 @@ function Phoenix_UIConfig:ScrollFrame(parent, width, height, scrollChild)
 
 	return panel;
 end
-
 
 ----------------------------------------------------
 --- FauxScrollFrame

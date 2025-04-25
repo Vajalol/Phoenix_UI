@@ -6,7 +6,10 @@ function Layout:OnEnable()
 
     -- Layout
     Layout.layout = {
-        layoutConfig = { padding = { top = 15 } },
+        layoutConfig = { 
+            padding = { top = 15 },
+            initialScrollOffset = 0  -- Ensure panel starts scrolled to the top
+        },
         database = db.profile.tooltip,
         rows = {
             -- Main Header and Style Selection
@@ -317,7 +320,7 @@ function Layout:OnEnable()
             {
                 bottomPadding = {
                     type = 'spacer',
-                    height = 100,
+                    height = 400,
                     column = 12,
                     order = 1
                 }

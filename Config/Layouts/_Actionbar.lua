@@ -6,7 +6,10 @@ function Layout:OnEnable()
 
     -- Layout
     Layout.layout = {
-        layoutConfig = { padding = { top = 15 } },
+        layoutConfig = { 
+            padding = { top = 15 },
+            initialScrollOffset = 0  -- Ensure panel starts scrolled to the top
+        },
         database = db.profile.actionbar,
         rows = {
             {
@@ -374,7 +377,7 @@ function Layout:OnEnable()
             {
                 bottomPadding = {
                     type = 'spacer',
-                    height = 300,
+                    height = 500,
                     column = 12,
                     order = 1
                 }
