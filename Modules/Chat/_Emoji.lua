@@ -87,7 +87,20 @@ Phoenix_UI.ChatEmojiCache = processedMessageCache
 
 -- Function to replace emoji codes with textures in a message
 local function ReplaceEmojis(text, forSendChat)
+    -- Skip processing if text is missing or empty
     if not text or text == "" then return text end
+    
+    -- Skip processing if text is not a string (this can happen with some addons)
+    if type(text) ~= "string" then return text end
+    
+    -- Skip processing for SendChat if disabled in settings
+    if forSendChat then
+        if Phoenix_UI.db and Phoenix_UI.db.profile and 
+           Phoenix_UI.db.profile.chat and Phoenix_UI.db.profile.chat.emoji and 
+           Phoenix_UI.db.profile.chat.emoji.enabled == false then
+            return text
+        end
+    end
     
     -- Check cache first for improved performance
     local cacheKey = text .. (forSendChat and "_send" or "_display")
@@ -95,12 +108,33 @@ local function ReplaceEmojis(text, forSendChat)
         return processedMessageCache[cacheKey]
     end
     
-    -- Skip complex messages that would break with texture replacement
-    -- More thorough check for any potential special formatting
-    if text:find("|H") or text:find("|c") then
+    -- Skip more complex messages that would break with texture replacement
+    -- IMPORTANT: We need to be very careful with messages containing formatting
+    
+    -- Skip messages with item/spell links
+    if text:find("|H") then return text end
+    
+    -- Skip messages with color codes 
+    if text:find("|c") then return text end
+    
+    -- Skip messages with existing textures
+    if text:find("|T") then return text end
+    
+    -- Skip messages with other formatting codes
+    if text:find("|r") then return text end
+    
+    -- Safety check for invalid escape sequences
+    if text:find("||") then return text end
+    
+    -- Only allow replacing emojis when displaying, not when sending
+    -- This is crucial to avoid the "Invalid escape code in chat message" error
+    if forSendChat then
+        -- IMPORTANT: For sending, we should not try to add texture escape sequences
+        -- We'll simply return the original text
         return text
     end
     
+    -- For display in chat, we can safely replace emoji codes with textures
     local result = text
     -- Track if the message has been modified
     local modified = false
@@ -110,11 +144,12 @@ local function ReplaceEmojis(text, forSendChat)
         if result:find(code, 1, true) then
             -- Text patterns are literal strings, need to escape special chars
             local pattern = code:gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1")
-            local replacement = forSendChat and emoji.escaped or emoji.display
+            -- For display, we can safely use the display texture
+            local replacement = emoji.display
             
             -- Only do string.gsub if we actually have a match
-            local newResult = result:gsub(pattern, replacement)
-            if newResult ~= result then
+            local newResult, replacements = result:gsub(pattern, replacement)
+            if replacements > 0 and newResult ~= result then
                 result = newResult
                 modified = true
             end
@@ -138,9 +173,7 @@ local function ReplaceEmojis(text, forSendChat)
     end
     
     -- Skip messages with broken formatting that could result from emoji replacement
-    if result:find("||") or 
-       (not forSendChat and result:find("|[^cHhTr]")) or -- Detect broken formatting codes
-       (not forSendChat and result:find("|$")) then -- Detect trailing pipe
+    if result:find("||") or result:find("|[^cHhTr]") or result:find("|$") then
         return text
     end
     
@@ -193,11 +226,15 @@ local function HookSendChatMessage(text, chatType, ...)
         
         -- Only process if message actually contains emoji codes
         if hasEmoji then
-            local processedText = ReplaceEmojis(text, true)
-            -- Verify the processed text isn't corrupted
-            if processedText and not processedText:find("||") then
-                return originalSendChatMessage(processedText, chatType, ...)
-            end
+            -- IMPORTANT: We CANNOT send texture escape sequences directly with SendChatMessage
+            -- Instead, we need to add a special identifier that the chat filter will recognize
+            
+            -- Method 1: Use a simpler approach - just pass the original text
+            -- The visual representation will be handled by the chat filters
+            return originalSendChatMessage(text, chatType, ...)
+            
+            -- NOTE: The actual emoji replacement is now handled by the chat message display filter
+            -- which converts emoji codes to textures when messages are displayed in chat
         end
     end
     
@@ -315,6 +352,43 @@ function Module:OnEnable()
     end
     
     InitializeEmojis()
+    
+    -- Set up chat message display filtering
+    local function SetupChatFilters()
+        -- Store original AddMessage function for each chat frame
+        local originalAddMessage = {}
+        
+        -- Function to filter and process chat messages for emojis
+        local function FilterMessageForEmojis(self, text, ...)
+            -- Skip non-text messages
+            if not text or type(text) ~= "string" then
+                return originalAddMessage[self](self, text, ...)
+            end
+            
+            -- Process the text through emoji replacer
+            local processedText = ReplaceEmojis(text, false)
+            
+            -- Call original handler with processed text
+            return originalAddMessage[self](self, processedText, ...)
+        end
+        
+        -- Hook all chat frames
+        for i = 1, NUM_CHAT_WINDOWS do
+            local chatFrame = _G["ChatFrame" .. i]
+            if chatFrame and chatFrame.AddMessage then
+                -- Store original function
+                originalAddMessage[chatFrame] = chatFrame.AddMessage
+                
+                -- Replace with our filtered version
+                chatFrame.AddMessage = function(self, text, ...)
+                    return FilterMessageForEmojis(self, text, ...)
+                end
+            end
+        end
+    end
+    
+    -- Set up chat filters after a brief delay to ensure UI is fully loaded
+    C_Timer.After(1, SetupChatFilters)
     
     -- Register our emoji replacement function with the chat module
     if not Phoenix_UI.ChatEmojiHandlers then
@@ -447,9 +521,13 @@ function Module:OnEnable()
         print("Normal message: " .. normalReplaced)
         print("Escaped message: " .. escapedReplaced:gsub("\124", "\\124"))
         
-        -- Test direct SendChatMessage
-        print("Attempting direct SendChatMessage with escaped texture...")
-        SendChatMessage("Test with escaped emoji: " .. escapedTexture, "EMOTE")
+        -- Test the new chat filtering approach
+        print("Testing the chat filtering approach...")
+        print("The emoji in this message :) should be replaced when displayed in chat.")
+        
+        -- Explain the approach
+        print("|cffFF7D0APhoenix UI:|r Emoji system now uses chat frame filtering instead of direct SendChatMessage replacement.")
+        print("This avoids the 'Invalid escape code in chat message' error.")
     end
     
     -- Announce emoji system is enabled with debug status

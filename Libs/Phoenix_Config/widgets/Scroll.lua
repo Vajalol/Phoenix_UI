@@ -165,7 +165,7 @@ Phoenix_UIConfig.ScrollFrameMethods = {
 			end
 			
 			-- Add padding
-			totalHeight = totalHeight + 50
+			totalHeight = totalHeight + 150
 		end
 		
 		-- Set height and update scroll bar
@@ -660,6 +660,3 @@ function Phoenix_UIConfig:HybridScrollFrame(parent, width, height, scrollChild)
 end
 
 Phoenix_UIConfig:RegisterModule(module, version);
-
-
-

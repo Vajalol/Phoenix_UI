@@ -349,7 +349,7 @@ function Gui:OnEnable()
     
     -- Create custom ember particles around the text
     for i = 1, 5 do
-        local ember = config.titlePanel:CreateTexture(nil, "ARTWORK", nil, 1)
+        local ember = config.titlePanel:CreateTexture(nil, "ARTWORK")
         ember:SetSize(12, 12)
         
         -- Position embers differently based on index
@@ -907,16 +907,21 @@ function Gui:OnEnable()
         QueueSave = function()
             -- Track the changed element if we can find it
             local element = nil
-            local i = 1
-            while not element and i <= 10 do
-                element = select(i, debug.getlocal(2, i))
+            local caller = 2  -- Get info about the function that called QueueSave
+            
+            -- Use pcall to safely attempt to find the element
+            pcall(function()
+                -- Try to get the element from common caller patterns in the UI system
+                if Phoenix_UI and Phoenix_UI.UI and Phoenix_UI.UI.lastInteractedElement then
+                    element = Phoenix_UI.UI.lastInteractedElement
+                end
+                
+                -- If we found a valid UI element
                 if element and type(element) == "table" and (element.GetObjectType or element.GetValue) then
                     -- We found the UI element that triggered the save
                     Phoenix_UI.UI:TrackElementChange(element)
-                    break
                 end
-                i = i + 1
-            end
+            end)
             
             -- Call original function
             originalQueueSave()
@@ -1284,13 +1289,15 @@ function Gui:OnEnable()
                 if self.pendingChanges then
                     for element in pairs(self.pendingChanges) do
                         if element and element.dataKey and element.dbReference and element.GetValue then
-                            local success, value = pcall(function() return element:GetValue() end)
-                            if success and value ~= nil then
+                            local value = element:GetValue()
+                            if value ~= nil then
                                 local dbPath = element.dataKey:gsub("%.", ",%s")
                                 element.dbReference[dbPath] = value
                             end
                         end
                     end
+                    
+                    -- Clear pending changes after processing
                     self.pendingChanges = {}
                 end
             end

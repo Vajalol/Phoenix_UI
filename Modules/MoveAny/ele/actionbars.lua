@@ -486,59 +486,133 @@ end
 -- The previous approach using hooksecurefunc("ActionButton_OnLoad") is no longer valid
 -- So we'll directly apply styles to existing buttons and set up a system to handle new ones
 do
-    local function ApplyStyleToAllButtons()
-        -- Standard action buttons
-        for i = 1, 12 do
-            local button = _G["ActionButton" .. i]
-            if button then
-                MoveAny:ApplyButtonStyle(button, (Phoenix_UI and Phoenix_UI.db and Phoenix_UI.db.profile.actionbar and Phoenix_UI.db.profile.actionbar.style) or {})
+    -- Create a frame to handle events
+    local styleFrame = CreateFrame("Frame", nil, UIParent, "SecureHandlerStateTemplate")
+    
+    -- Get the style options from the Phoenix_UI settings
+    local function GetStyleOptions()
+        return (Phoenix_UI and Phoenix_UI.db and Phoenix_UI.db.profile.actionbar and Phoenix_UI.db.profile.actionbar.style) or {}
+    end
+    
+    -- Apply style to a specific button
+    local function ApplyStyleToButton(button)
+        if button and not InCombatLockdown() then
+            MoveAny:ApplyButtonStyle(button, GetStyleOptions())
+            
+            -- Make sure style persists when the button is shown
+            if not button.PhoenixStyleHooked then
                 button:HookScript("OnShow", function(self)
-                    if self.action then
-                        MoveAny:ApplyButtonStyle(self, (Phoenix_UI and Phoenix_UI.db and Phoenix_UI.db.profile.actionbar and Phoenix_UI.db.profile.actionbar.style) or {})
-                    end
+                    MoveAny:ApplyButtonStyle(self, GetStyleOptions())
                 end)
+                button.PhoenixStyleHooked = true
             end
         end
-        
-        -- MultiBar buttons
+    end
+    
+    -- Apply styles to all standard action buttons
+    local function ApplyStandardActionButtons()
+        for i = 1, 12 do
+            local button = _G["ActionButton" .. i]
+            if button then ApplyStyleToButton(button) end
+        end
+    end
+    
+    -- Apply styles to multi-bar buttons
+    local function ApplyMultiBarButtons()
         for barName, btnName in pairs(btns) do
             if type(btnName) == "string" then
                 for i = 1, 12 do
                     local button = _G[btnName .. i]
-                    if button then
-                        MoveAny:ApplyButtonStyle(button, (Phoenix_UI and Phoenix_UI.db and Phoenix_UI.db.profile.actionbar and Phoenix_UI.db.profile.actionbar.style) or {})
-                        button:HookScript("OnShow", function(self)
-                            if self.action then
-                                MoveAny:ApplyButtonStyle(self, (Phoenix_UI and Phoenix_UI.db and Phoenix_UI.db.profile.actionbar and Phoenix_UI.db.profile.actionbar.style) or {})
-                            end
-                        end)
-                    end
+                    if button then ApplyStyleToButton(button) end
                 end
             end
         end
-        
-        -- Pet buttons
+    end
+    
+    -- Apply styles to pet buttons
+    local function ApplyPetButtons()
         for i = 1, 10 do
             local button = _G["PetActionButton" .. i]
-            if button then
-                MoveAny:ApplyButtonStyle(button, (Phoenix_UI and Phoenix_UI.db and Phoenix_UI.db.profile.actionbar and Phoenix_UI.db.profile.actionbar.style) or {})
-                button:HookScript("OnShow", function(self)
-                    MoveAny:ApplyButtonStyle(self, (Phoenix_UI and Phoenix_UI.db and Phoenix_UI.db.profile.actionbar and Phoenix_UI.db.profile.actionbar.style) or {})
-                end)
-            end
-        end
-        
-        -- Stance/shapeshift buttons
-        for i = 1, 10 do
-            local button = _G["StanceButton" .. i]
-            if button then
-                MoveAny:ApplyButtonStyle(button, (Phoenix_UI and Phoenix_UI.db and Phoenix_UI.db.profile.actionbar and Phoenix_UI.db.profile.actionbar.style) or {})
-                button:HookScript("OnShow", function(self)
-                    MoveAny:ApplyButtonStyle(self, (Phoenix_UI and Phoenix_UI.db and Phoenix_UI.db.profile.actionbar and Phoenix_UI.db.profile.actionbar.style) or {})
-                end)
-            end
+            if button then ApplyStyleToButton(button) end
         end
     end
+    
+    -- Apply styles to stance/shapeshift buttons
+    local function ApplyStanceButtons()
+        for i = 1, 10 do
+            local button = _G["StanceButton" .. i]
+            if button then ApplyStyleToButton(button) end
+        end
+    end
+    
+    -- Apply styles to possession bar buttons
+    local function ApplyPossessionButtons()
+        for i = 1, 12 do
+            local button = _G["PossessButton" .. i]
+            if button then ApplyStyleToButton(button) end
+        end
+    end
+    
+    -- Apply styles to extra action button
+    local function ApplyExtraActionButton()
+        local button = _G["ExtraActionButton1"]
+        if button then ApplyStyleToButton(button) end
+    end
+    
+    -- Apply styles to override action buttons (vehicle UI, etc)
+    local function ApplyOverrideActionButtons()
+        for i = 1, 6 do
+            local button = _G["OverrideActionBarButton" .. i]
+            if button then ApplyStyleToButton(button) end
+        end
+    end
+    
+    -- Apply styles to all buttons
+    local function ApplyStyleToAllButtons()
+        -- Use a small delay to ensure all buttons are fully created
+        C_Timer.After(0.1, function()
+            ApplyStandardActionButtons()
+            ApplyMultiBarButtons()
+            ApplyPetButtons()
+            ApplyStanceButtons()
+            ApplyPossessionButtons()
+            ApplyExtraActionButton()
+            ApplyOverrideActionButtons()
+        end)
+    end
+    
+    -- Register events to keep styles updated
+    styleFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+    styleFrame:RegisterEvent("ACTIONBAR_PAGE_CHANGED")
+    styleFrame:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
+    styleFrame:RegisterEvent("ACTIONBAR_UPDATE_STATE")
+    styleFrame:RegisterEvent("ACTIONBAR_UPDATE_COOLDOWN")
+    styleFrame:RegisterEvent("ACTIONBAR_UPDATE_USABLE")
+    styleFrame:RegisterEvent("PET_BAR_UPDATE")
+    styleFrame:RegisterEvent("PLAYER_TALENT_UPDATE")
+    styleFrame:RegisterEvent("UPDATE_VEHICLE_ACTIONBAR")
+    styleFrame:RegisterEvent("UPDATE_OVERRIDE_ACTIONBAR")
+    styleFrame:RegisterEvent("UPDATE_POSSESS_BAR")
+    styleFrame:RegisterEvent("UPDATE_BONUS_ACTIONBAR")
+    styleFrame:RegisterEvent("UNIT_ENTERED_VEHICLE")
+    styleFrame:RegisterEvent("UNIT_EXITED_VEHICLE")
+    
+    -- Event handler
+    styleFrame:SetScript("OnEvent", function(self, event, ...)
+        -- Don't style in combat to avoid taint issues
+        if InCombatLockdown() then 
+            -- Queue the styling for after combat
+            self:RegisterEvent("PLAYER_REGEN_ENABLED")
+            return
+        end
+        
+        if event == "PLAYER_REGEN_ENABLED" then
+            self:UnregisterEvent("PLAYER_REGEN_ENABLED")
+        end
+        
+        -- Apply styles with a slight delay to ensure all UI elements are updated
+        C_Timer.After(0.1, ApplyStyleToAllButtons)
+    end)
     
     -- Apply styles when addon is loaded
     ApplyStyleToAllButtons()
@@ -547,14 +621,6 @@ do
     if Phoenix_UI then
         Phoenix_UI:RegisterMessage("PHOENIX_UI_SETTINGS_CHANGED", ApplyStyleToAllButtons)
     end
-    
-    -- Hook the frame creation for dynamic handling
-    local buttonStyleFrame = CreateFrame("Frame")
-    buttonStyleFrame:RegisterEvent("ADDON_LOADED")
-    buttonStyleFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-    buttonStyleFrame:SetScript("OnEvent", function(self, event, arg1)
-        C_Timer.After(0.5, ApplyStyleToAllButtons)
-    end)
 end
 
 function MoveAny:InitActionBarLayouts()
@@ -872,7 +938,7 @@ asabf:SetScript(
 	end
 )
 
-local f = CreateFrame("Frame")
+local f = CreateFrame("Frame", nil, MoveAny:GetMainPanel(), "SecureHandlerStateTemplate")
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
 f:RegisterEvent("UPDATE_BONUS_ACTIONBAR")
 f:RegisterEvent("ACTIONBAR_PAGE_CHANGED")
