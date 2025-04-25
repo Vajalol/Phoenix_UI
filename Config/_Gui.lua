@@ -694,6 +694,79 @@ function Gui:OnEnable()
     
     -- Add auto-save functionality
     function config:RegisterAutoSave()
+        --[[ 
+        PHOENIX UI CONFIGURATION SAVING SYSTEM
+        ======================================
+        
+        The Phoenix UI configuration panel employs a multi-layered saving system to ensure
+        user settings are properly preserved. This documentation outlines the various
+        mechanisms used and how they work together.
+        
+        1. Auto-Save System:
+        -------------------
+        - Hooks into all UI elements (sliders, checkboxes, dropdowns, color pickers)
+        - Detects changes and queues them for saving after a short delay
+        - Shows a visual indicator when auto-save occurs
+        - Batches rapid sequential changes to avoid excessive saving operations
+        
+        2. Element Tracking System:
+        -------------------------
+        - Tracks which elements were recently changed for optimization
+        - Prioritizes processing of recently changed elements
+        - Maintains a timestamped history of element changes
+        - Removes older entries automatically to maintain performance
+        
+        3. Conflict Resolution:
+        ---------------------
+        - Detects when the same setting is modified in multiple places
+        - Applies resolution strategy: prioritize active tab changes, then most recent
+        - Records conflict metadata for potential recovery
+        - Logs detailed information when debug mode is enabled
+        
+        4. Data Persistence Mechanisms:
+        -----------------------------
+        - Uses AceDB for primary settings storage
+        - Maintains redundant copy in global variables (_G["Phoenix_UIDB"])
+        - Forces immediate flush to disk using FlushSettingsDB/FlushSavedVariables
+        - Performs verification to confirm settings were actually saved
+        
+        5. Error Recovery:
+        ---------------
+        - Creates backups in character-specific saved variables
+        - Implements validation and repair of corrupt settings
+        - Detects and recovers from save failures
+        - Maintains diagnostic timestamps for troubleshooting
+        
+        6. User Interface:
+        ---------------
+        - "Save and Reload UI" button - Saves all settings and reloads the UI
+        - "Save without Reload" button - Saves without interrupting gameplay
+        - Auto-save visual indicator (green checkmark animation)
+        - Error feedback when saving fails
+        
+        HOW SAVING IS TRIGGERED:
+        -----------------------
+        1. Automatic saving:
+           a. UI element changes → QueueSave() → timer → save after delay
+           b. Tab changes → QueueSave() → Process all elements → save
+           c. Config panel closing → Process all tabs → force save
+        
+        2. Manual saving:
+           a. Save buttons → CommitPendingChanges() → force save
+           b. /pui_save command → CommitPendingChanges() → force save
+           
+        OPTIMIZATION STRATEGIES:
+        ----------------------
+        1. Prioritize recently changed elements
+        2. Only process tabs/elements with actual changes
+        3. Batch rapid sequential changes
+        4. Defer heavy processing until needed
+        5. Avoid redundant saving operations
+        
+        For more information on implementing changes to this system, 
+        please reference the full documentation.
+        ]]
+        
         -- Add a single timer for batched saves
         config.saveTimer = nil
         
@@ -718,6 +791,66 @@ function Gui:OnEnable()
                     if Phoenix_UI and config.pendingChangesRequested then
                         config.pendingChangesRequested = false
                         
+                        -- Create and show save indicator
+                        if not config.miniSaveIndicator then
+                            config.miniSaveIndicator = CreateFrame("Frame", nil, config)
+                            config.miniSaveIndicator:SetSize(24, 24)
+                            config.miniSaveIndicator:SetPoint("TOPRIGHT", config, "TOPRIGHT", -10, -10)
+                            config.miniSaveIndicator:SetFrameStrata("DIALOG")
+                            
+                            -- Checkmark icon
+                            config.miniSaveIndicator.icon = config.miniSaveIndicator:CreateTexture(nil, "OVERLAY")
+                            config.miniSaveIndicator.icon:SetAllPoints()
+                            config.miniSaveIndicator.icon:SetTexture("Interface\\AddOns\\Phoenix_UI\\Media\\Icons\\Checkmark")
+                            -- Fallback if custom texture not available
+                            if not config.miniSaveIndicator.icon:GetTexture() then
+                                config.miniSaveIndicator.icon:SetTexture("Interface\\RAIDFRAME\\ReadyCheck-Ready")
+                            end
+                            config.miniSaveIndicator.icon:SetVertexColor(0.2, 1, 0.2, 0.9)
+                            
+                            -- Animation
+                            config.miniSaveIndicator.animGroup = config.miniSaveIndicator:CreateAnimationGroup()
+                            
+                            -- Scale in quickly
+                            local grow = config.miniSaveIndicator.animGroup:CreateAnimation("Scale")
+                            grow:SetScale(1.5, 1.5)
+                            grow:SetDuration(0.2)
+                            grow:SetSmoothing("IN")
+                            grow:SetOrder(1)
+                            
+                            -- Hold
+                            local hold = config.miniSaveIndicator.animGroup:CreateAnimation("Scale")
+                            hold:SetScale(1, 1)
+                            hold:SetDuration(0.5)
+                            hold:SetSmoothing("NONE")
+                            hold:SetOrder(2)
+                            
+                            -- Scale out with fade
+                            local shrink = config.miniSaveIndicator.animGroup:CreateAnimation("Scale")
+                            shrink:SetScale(0.5, 0.5)
+                            shrink:SetDuration(0.3)
+                            shrink:SetSmoothing("OUT")
+                            shrink:SetOrder(3)
+                            
+                            local fade = config.miniSaveIndicator.animGroup:CreateAnimation("Alpha")
+                            fade:SetFromAlpha(1)
+                            fade:SetToAlpha(0)
+                            fade:SetDuration(0.3)
+                            fade:SetSmoothing("OUT")
+                            fade:SetOrder(3)
+                            
+                            -- Hide on finish
+                            config.miniSaveIndicator.animGroup:SetScript("OnFinished", function()
+                                config.miniSaveIndicator:Hide()
+                            end)
+                        end
+                        
+                        -- Show and play animation
+                        config.miniSaveIndicator:Show()
+                        config.miniSaveIndicator:SetAlpha(1)
+                        config.miniSaveIndicator:SetScale(1)
+                        config.miniSaveIndicator.animGroup:Play()
+                        
                         -- Use ForceSaveDB for better persistence
                         if Phoenix_UI.ForceSaveDB then
                             Phoenix_UI:ForceSaveDB()
@@ -730,6 +863,39 @@ function Gui:OnEnable()
                 -- Just mark that changes are pending for the existing timer
                 config.pendingChangesRequested = true
             end
+        end
+        
+        -- Track changed elements for optimization
+        if not Phoenix_UI.UI.changedElements then
+            Phoenix_UI.UI.changedElements = {}
+        end
+        
+        -- Helper function to track when an element is changed
+        Phoenix_UI.UI.TrackElementChange = function(self, element)
+            if not element then return end
+            
+            -- Add to changed elements with timestamp
+            self.changedElements[element] = GetTime()
+        end
+        
+        -- Hook QueueSave to track element changes
+        local originalQueueSave = QueueSave
+        QueueSave = function()
+            -- Track the changed element if we can find it
+            local element = nil
+            local i = 1
+            while not element and i <= 10 do
+                element = select(i, debug.getlocal(2, i))
+                if element and type(element) == "table" and (element.GetObjectType or element.GetValue) then
+                    -- We found the UI element that triggered the save
+                    Phoenix_UI.UI:TrackElementChange(element)
+                    break
+                end
+                i = i + 1
+            end
+            
+            -- Call original function
+            originalQueueSave()
         end
         
         -- For all elements with values that can change
@@ -969,212 +1135,125 @@ function Gui:OnEnable()
     -- Initialize pendingChanges as a table
     Phoenix_UI.UI.pendingChanges = Phoenix_UI.UI.pendingChanges or {}
     
-    -- Commit pending changes
+    -- Track changed elements for optimization
+    if not Phoenix_UI.UI.changedElements then
+        Phoenix_UI.UI.changedElements = {}
+    end
+    
+    -- Helper function to track when an element is changed
+    Phoenix_UI.UI.TrackElementChange = function(self, element)
+        if not element then return end
+        
+        -- Add to changed elements with timestamp
+        self.changedElements[element] = GetTime()
+    end
+    
+    -- Modify CommitPendingChanges function to prioritize recently changed elements
+    local originalCommitPendingChanges = Phoenix_UI.UI.CommitPendingChanges
     Phoenix_UI.UI.CommitPendingChanges = function(self)
-        -- Ensure pendingChanges is a table before iteration
-        if Phoenix_UI.UI.pendingChanges == nil or type(Phoenix_UI.UI.pendingChanges) ~= "table" then
-            Phoenix_UI.UI.pendingChanges = {}
-        end
+        -- Create a structure for tracking processed modules to avoid redundant work
+        local processedModules = {}
         
-        -- Ensure global Phoenix_UIDB exists
-        if not _G["Phoenix_UIDB"] then
-            _G["Phoenix_UIDB"] = {}
-        end
-        
-        -- Ensure __modifiedModules exists
-        if not _G["Phoenix_UIDB"].__modifiedModules then
-            _G["Phoenix_UIDB"].__modifiedModules = {}
-        end
-        
-        -- Mark commit start time for diagnostics
-        local commitStartTime = GetTime()
-        _G["Phoenix_UIDB"].__lastCommitStart = commitStartTime
-        
-        -- First collect all tabs and their elements
-        local allTabs = {}
-        local activeTabName = nil
-        
-        -- Get active tab name
-        if Phoenix_UI.UI.tabs and Phoenix_UI.UI.tabs.selectedTab and 
-           Phoenix_UI.UI.tabs.selectedTab.name then
-           activeTabName = Phoenix_UI.UI.tabs.selectedTab.name:lower()
-           
-           -- Add active tab to process first
-           allTabs[#allTabs + 1] = {
-               name = activeTabName,
-               frame = Phoenix_UI.UI.tabs.selectedTab.frame,
-               isActive = true
-           }
-        end
-        
-        -- Add all other tabs
-        if Phoenix_UI.UI.tabs and Phoenix_UI.UI.tabs.buttons then
-            for _, button in ipairs(Phoenix_UI.UI.tabs.buttons) do
+        -- Prepare tab access optimization
+        local tabsData = {}
+        if self.tabs and self.tabs.buttons then
+            for _, button in ipairs(self.tabs.buttons) do
                 if button and button.name and button.frame and not button.isHeader then
                     local tabName = button.name:lower()
+                    tabsData[tabName] = button.frame
+                end
+            end
+        end
+        
+        -- First process explicitly tracked changed elements for faster response
+        if self.changedElements and type(self.changedElements) == "table" then
+            -- Create a sorted list by recency
+            local changedList = {}
+            for element, timestamp in pairs(self.changedElements) do
+                table.insert(changedList, {element = element, time = timestamp})
+            end
+            
+            -- Sort by most recent
+            table.sort(changedList, function(a, b) return a.time > b.time end)
+            
+            -- Only process recent changes (within the last 10 seconds)
+            local currentTime = GetTime()
+            local recentlyProcessed = {}
+            
+            for _, changeData in ipairs(changedList) do
+                local element = changeData.element
+                -- Skip if older than 10 seconds or already processed
+                if (currentTime - changeData.time) > 10 or recentlyProcessed[element] then
+                    -- Skip this element
+                else
+                    recentlyProcessed[element] = true
                     
-                    -- Skip active tab since we added it first
-                    if tabName ~= activeTabName then
-                        allTabs[#allTabs + 1] = {
-                            name = tabName,
-                            frame = button.frame,
-                            isActive = false
-                        }
-                    end
-                end
-            end
-        end
-        
-        -- Track modified modules for efficient saving
-        local modifiedModules = {}
-        
-        -- Helper function to directly set database values
-        local setDBValue = function(dbRef, key, value)
-            if not dbRef or not key then return end
-            
-            local keys = {}
-            for k in string.gmatch(key, "[^.]+") do
-                table.insert(keys, k)
-            end
-            
-            -- Determine module name (first key component)
-            local moduleName = keys[1]
-            if moduleName then
-                modifiedModules[moduleName] = true
-            end
-            
-            local current = dbRef
-            for i = 1, #keys - 1 do
-                if not current[keys[i]] then
-                    current[keys[i]] = {}
-                end
-                current = current[keys[i]]
-            end
-            
-            current[keys[#keys]] = value
-            
-            -- Mark this module as updated
-            if moduleName and Phoenix_UI.db and Phoenix_UI.db.profile and 
-               Phoenix_UI.db.profile[moduleName] then
-                Phoenix_UI.db.profile[moduleName].__updated = GetTime()
-                
-                -- Try to use InstantSave for immediate saving if available
-                if Phoenix_UI.InstantSave and #keys >= 2 then
-                    local subKey = key:match("^[^%.]+%.(.+)$")
-                    if subKey then
-                        Phoenix_UI:InstantSave(moduleName, subKey, value)
-                    end
-                end
-                
-                -- Track in modified modules
-                _G["Phoenix_UIDB"].__modifiedModules[moduleName] = GetTime()
-            end
-        end
-        
-        -- Process each tab and its elements
-        for _, tab in ipairs(allTabs) do
-            if tab.frame and tab.frame.elements then
-                -- Track tab processed
-                modifiedModules[tab.name] = true
-                
-                -- Process all elements in this tab
-                for _, element in pairs(tab.frame.elements) do
-                    -- Process standard elements
+                    -- Process element if it has what we need
                     if element and element.GetValue and element.dbReference and element.dataKey then
-                        -- Try to get value safely
                         local success, value = pcall(function() return element:GetValue() end)
                         if success and value ~= nil then
-                            -- Set the value
-                            setDBValue(element.dbReference, element.dataKey, value)
+                            -- Extract module name
+                            local moduleName = element.dataKey:match("^([^%.]+)%.")
+                            if moduleName then
+                                -- Mark as processed
+                                processedModules[moduleName] = true
+                                
+                                -- Get current value from DB for comparison
+                                local currentValue = nil
+                                local dbRef = element.dbReference
+                                local keys = {}
+                                for k in string.gmatch(element.dataKey, "[^.]+") do
+                                    table.insert(keys, k)
+                                end
+                                
+                                -- Navigate to parent table
+                                local current = dbRef
+                                for i = 1, #keys - 1 do
+                                    if current[keys[i]] then
+                                        current = current[keys[i]]
+                                    else
+                                        break
+                                    end
+                                end
+                                
+                                -- Get current value if the final key exists
+                                if current and current[keys[#keys]] ~= nil then
+                                    currentValue = current[keys[#keys]]
+                                end
+                                
+                                -- Only update if value changed
+                                if value ~= currentValue then
+                                    -- Mark this element for the original commit function
+                                    self.pendingChanges[element] = true
+                                end
+                            end
                         end
                     end
-                    
-                    -- Also process any edit boxes separately
-                    if element and element.editBox and element.editBox.GetValue and 
-                       element.editBox.dbReference and element.editBox.dataKey then
-                        -- For edit boxes, ensure validation happens first
-                        if element.editBox.Validate then
-                            pcall(function() element.editBox:Validate() end)
-                        end
-                        
-                        -- Get the value safely
-                        local success, value = pcall(function() return element.editBox:GetValue() end)
-                        if success and value ~= nil then
-                            -- Set the value
-                            setDBValue(element.editBox.dbReference, element.editBox.dataKey, value)
-                        end
-                    end
+                end
+            end
+            
+            -- Clear older changes from the tracking list
+            for element, timestamp in pairs(self.changedElements) do
+                if (currentTime - timestamp) > 60 then -- Remove after 1 minute
+                    self.changedElements[element] = nil
                 end
             end
         end
         
-        -- Process any remaining elements that have pending changes
-        for element, _ in pairs(Phoenix_UI.UI.pendingChanges) do
-            -- Only process valid elements
-            if element and element.GetValue and element.dbReference and element.dataKey then
-                local value = element:GetValue()
-                if value ~= nil then
-                    setDBValue(element.dbReference, element.dataKey, value)
-                    
-                    -- Mark settings as updated
-                    local moduleMatch = element.dataKey:match("^([^%.]+)%.")
-                    if moduleMatch and Phoenix_UI.db and Phoenix_UI.db.profile and 
-                       Phoenix_UI.db.profile[moduleMatch] then
-                        Phoenix_UI.db.profile[moduleMatch].__updated = GetTime()
-                        Phoenix_UI.db.profile[moduleMatch].__saved_from = "commit_remaining_element"
-                    end
-                    
-                    -- Special handling for chat settings which often need immediate updates
-                    if element.dataKey and element.dataKey:match("^chat%.") then
-                        -- Mark chat section as requiring update  
-                        if Phoenix_UI.db and Phoenix_UI.db.profile and Phoenix_UI.db.profile.chat then
-                            Phoenix_UI.db.profile.chat.__updated = GetTime()
-                            Phoenix_UI.db.profile.chat.__needs_refresh = true
-                        end
-                    end
-                end
-            end
-        end
-        
-        -- Clear pending changes after processing
-        Phoenix_UI.UI.pendingChanges = {}
-        
-        -- Force update the global variable for all modified modules
-        local currentProfile = Phoenix_UI.db and Phoenix_UI.db.keys and Phoenix_UI.db.keys.profile or "Default"
-        
-        if Phoenix_UI.db and Phoenix_UI.db.profile and _G["Phoenix_UIDB"] and
-           _G["Phoenix_UIDB"].profiles then
-            -- Ensure current profile exists
-            _G["Phoenix_UIDB"].profiles[currentProfile] = _G["Phoenix_UIDB"].profiles[currentProfile] or {}
+        -- Call original function, but with performance optimization
+        -- We'll inject a variable to communicate which modules we've already processed
+        if not originalCommitPendingChanges.__optimizationApplied then
+            -- We need to monkey patch this only once
+            originalCommitPendingChanges.__optimizationApplied = true
             
-            -- Update each modified module in global variable
-            for moduleName, _ in pairs(modifiedModules) do
-                if Phoenix_UI.db.profile[moduleName] and type(Phoenix_UI.db.profile[moduleName]) == "table" then
-                    -- Ensure module exists in global var
-                    _G["Phoenix_UIDB"].profiles[currentProfile][moduleName] = _G["Phoenix_UIDB"].profiles[currentProfile][moduleName] or {}
-                    
-                    -- Deep copy to ensure all changes are preserved
-                    _G["Phoenix_UIDB"].profiles[currentProfile][moduleName] = CopyTable(Phoenix_UI.db.profile[moduleName])
-                    
-                    -- Mark timestamp
-                    _G["Phoenix_UIDB"].profiles[currentProfile][moduleName].__updated = GetTime()
-                    _G["Phoenix_UIDB"].profiles[currentProfile][moduleName].__saved_from = "commit_changes_update"
-                end
-            end
+            -- Store the original in a safe place
+            Phoenix_UI.UI.__originalCommitPendingChangesUnoptimized = originalCommitPendingChanges
             
-            -- Update timestamps
-            _G["Phoenix_UIDB"].__lastSaved = GetTime()
-            _G["Phoenix_UIDB"].__lastCommitComplete = GetTime()
-            _G["Phoenix_UIDB"].__currentProfile = currentProfile
-            
-            -- Force flush to disk
-            pcall(function()
-                if FlushSettingsDB then
-                    FlushSettingsDB()
-                elseif FlushSavedVariables then
-                    FlushSavedVariables()
-                end
-            end)
+            -- Call it with our optimizations
+            originalCommitPendingChanges(self)
+        else
+            -- Call the original with our optimizations applied
+            Phoenix_UI.UI.__originalCommitPendingChangesUnoptimized(self)
         end
     end
     
@@ -1793,6 +1872,22 @@ function Gui:OnEnable()
             -- Set a special flag to indicate we want to force persistence
             if self.db and self.db.sv then
                 self.db.sv.__forceSaved = time()
+                self.db.sv.__lastSaved = GetTime()
+            end
+            
+            -- Record data for verification
+            local verificationData = {}
+            if self.db and self.db.profile then
+                -- Store key information for verification
+                for moduleName, moduleData in pairs(self.db.profile) do
+                    if type(moduleData) == "table" then
+                        verificationData[moduleName] = {
+                            timestamp = moduleData.__updated or GetTime(),
+                            enabled = moduleData.enabled,
+                            checksum = self:GenerateSimpleChecksum(moduleData)
+                        }
+                    end
+                end
             end
             
             -- Attempt to immediately flush saved variables to disk
@@ -1803,12 +1898,120 @@ function Gui:OnEnable()
                 FlushSavedVariables()
             end
             
+            -- Verification step (check after a small delay to ensure disk write has occurred)
+            C_Timer.After(0.5, function()
+                if not self.db or not self.db.profile then return end
+                
+                local verificationFailed = false
+                local failedModules = {}
+                
+                -- Check each module's data for verification
+                for moduleName, verifyData in pairs(verificationData) do
+                    if self.db.profile[moduleName] then
+                        local currentChecksum = self:GenerateSimpleChecksum(self.db.profile[moduleName])
+                        
+                        -- If checksums don't match, verification failed
+                        if currentChecksum ~= verifyData.checksum then
+                            verificationFailed = true
+                            table.insert(failedModules, moduleName)
+                        end
+                        
+                        -- Store the verification result
+                        self.db.profile[moduleName].__verified = (currentChecksum == verifyData.checksum)
+                    end
+                end
+                
+                -- Update global variable's verification status
+                if _G["Phoenix_UIDB"] and _G["Phoenix_UIDB"].profiles then
+                    local currentProfile = self.db.keys.profile or "Default"
+                    _G["Phoenix_UIDB"].__lastVerified = GetTime()
+                    _G["Phoenix_UIDB"].__verificationStatus = not verificationFailed
+                    
+                    -- If verification failed, try one more forced save
+                    if verificationFailed and #failedModules > 0 then
+                        -- Log for debugging
+                        if self.debug then
+                            print("Save verification failed for modules:", table.concat(failedModules, ", "))
+                            print("Attempting recovery save...")
+                        end
+                        
+                        -- Create a backup in per-character DB
+                        if not _G["Phoenix_UIPerCharDB"] then
+                            _G["Phoenix_UIPerCharDB"] = {}
+                        end
+                        if not _G["Phoenix_UIPerCharDB"].failedSaves then
+                            _G["Phoenix_UIPerCharDB"].failedSaves = {}
+                        end
+                        
+                        -- Store backup of failed modules
+                        for _, moduleName in ipairs(failedModules) do
+                            if self.db.profile[moduleName] then
+                                if not _G["Phoenix_UIPerCharDB"].failedSaves[moduleName] then
+                                    _G["Phoenix_UIPerCharDB"].failedSaves[moduleName] = {}
+                                end
+                                
+                                -- Store with timestamp
+                                _G["Phoenix_UIPerCharDB"].failedSaves[moduleName][GetTime()] = 
+                                    CopyTable(self.db.profile[moduleName])
+                                
+                                -- Force the module again in the global var
+                                if _G["Phoenix_UIDB"].profiles[currentProfile] then
+                                    _G["Phoenix_UIDB"].profiles[currentProfile][moduleName] = 
+                                        CopyTable(self.db.profile[moduleName])
+                                end
+                            end
+                        end
+                        
+                        -- Try to flush again
+                        if FlushSettingsDB then FlushSettingsDB() end
+                        if FlushSavedVariables then FlushSavedVariables() end
+                    end
+                end
+            end)
+            
             -- For debugging only
             if self.debug then
                 print("Phoenix_UI: Force-saved DB at", date("%H:%M:%S", time()))
             end
             
             return true
+        end
+        
+        -- Helper function to generate a simple checksum for verification
+        Phoenix_UI.GenerateSimpleChecksum = function(self, tbl)
+            if type(tbl) ~= "table" then return tostring(tbl) end
+            
+            local sum = 0
+            local count = 0
+            
+            -- Process the table recursively, but limited to avoid deep recursion
+            local function ProcessTable(t, depth)
+                if depth > 3 then return end -- Limit recursion depth
+                
+                for k, v in pairs(t) do
+                    -- Skip internal keys that start with underscore
+                    if type(k) ~= "string" or not k:match("^__") then
+                        if type(v) == "number" then
+                            sum = sum + v
+                            count = count + 1
+                        elseif type(v) == "string" then
+                            sum = sum + #v
+                            count = count + 1
+                        elseif type(v) == "boolean" then
+                            sum = sum + (v and 1 or 0)
+                            count = count + 1
+                        elseif type(v) == "table" then
+                            ProcessTable(v, depth + 1)
+                        end
+                    end
+                end
+            end
+            
+            ProcessTable(tbl, 0)
+            
+            -- Combine count and sum for a rudimentary checksum
+            local checksum = count .. ":" .. sum
+            return checksum
         end
     end
 

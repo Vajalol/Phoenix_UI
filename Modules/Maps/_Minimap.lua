@@ -714,13 +714,29 @@ function Module:OnEnable()
                 end
                 
                 -- Update fade settings when configuration changes
-                Phoenix_UI.RegisterCallback(Module, "PHOENIX_UI_DB_UPDATED", function()
-                    db = {
-                        maps = Phoenix_UI.db.profile.maps,
-                        queueicon = Phoenix_UI.db.profile.edit.queueicon
-                    }
-                    ButtonManager.fadeTime = db.maps.fadeSpeed or 0.3
-                end)
+                if Phoenix_UI.RegisterCallback then
+                    Phoenix_UI.RegisterCallback(Module, "PHOENIX_UI_DB_UPDATED", function()
+                        db = {
+                            maps = Phoenix_UI.db.profile.maps,
+                            queueicon = Phoenix_UI.db.profile.edit.queueicon
+                        }
+                        ButtonManager.fadeTime = db.maps.fadeSpeed or 0.3
+                    end)
+                else
+                    -- Fallback method using event frame if RegisterCallback isn't available
+                    local settingsWatcher = CreateFrame("Frame")
+                    settingsWatcher:RegisterEvent("PLAYER_ENTERING_WORLD")
+                    settingsWatcher:RegisterEvent("ADDON_LOADED")
+                    settingsWatcher:SetScript("OnEvent", function(self, event, addon)
+                        if event == "ADDON_LOADED" and addon == "Phoenix_UI" then
+                            db = {
+                                maps = Phoenix_UI.db.profile.maps,
+                                queueicon = Phoenix_UI.db.profile.edit.queueicon
+                            }
+                            ButtonManager.fadeTime = db.maps.fadeSpeed or 0.3
+                        end
+                    end)
+                end
                 
                 -- Register a button for management
                 ButtonManager.RegisterButton = function(self, button, options)
@@ -1031,13 +1047,29 @@ function Module:OnEnable()
             Module:StyleMinimap()
             
             -- Watch for settings changes and update
-            Phoenix_UI.RegisterCallback(Module, "PHOENIX_UI_DB_UPDATED", function()
-                db = {
-                    maps = Phoenix_UI.db.profile.maps,
-                    queueicon = Phoenix_UI.db.profile.edit.queueicon
-                }
-                Module:StyleMinimap()
-            end)
+            if Phoenix_UI.RegisterCallback then
+                Phoenix_UI.RegisterCallback(Module, "PHOENIX_UI_DB_UPDATED", function()
+                    db = {
+                        maps = Phoenix_UI.db.profile.maps,
+                        queueicon = Phoenix_UI.db.profile.edit.queueicon
+                    }
+                    Module:StyleMinimap()
+                end)
+            else
+                -- Fallback method using event frame if RegisterCallback isn't available
+                local settingsWatcher = CreateFrame("Frame")
+                settingsWatcher:RegisterEvent("PLAYER_ENTERING_WORLD")
+                settingsWatcher:RegisterEvent("ADDON_LOADED")
+                settingsWatcher:SetScript("OnEvent", function(self, event, addon)
+                    if event == "ADDON_LOADED" and addon == "Phoenix_UI" then
+                        db = {
+                            maps = Phoenix_UI.db.profile.maps,
+                            queueicon = Phoenix_UI.db.profile.edit.queueicon
+                        }
+                        Module:StyleMinimap()
+                    end
+                end)
+            end
             
             -- Rescaling functions and minimap mover setup
             local function ApplyMinimapScale()
@@ -1056,9 +1088,21 @@ function Module:OnEnable()
             ApplyMinimapScale()
             
             -- Update scale when settings change
-            Phoenix_UI.RegisterCallback(Module, "PHOENIX_UI_DB_UPDATED", function()
-                ApplyMinimapScale()
-            end)
+            if Phoenix_UI.RegisterCallback then
+                Phoenix_UI.RegisterCallback(Module, "PHOENIX_UI_DB_UPDATED", function()
+                    ApplyMinimapScale()
+                end)
+            else
+                -- Fallback method using event frame if RegisterCallback isn't available
+                local settingsWatcher = CreateFrame("Frame")
+                settingsWatcher:RegisterEvent("PLAYER_ENTERING_WORLD")
+                settingsWatcher:RegisterEvent("ADDON_LOADED")
+                settingsWatcher:SetScript("OnEvent", function(self, event, addon)
+                    if event == "ADDON_LOADED" and addon == "Phoenix_UI" then
+                        ApplyMinimapScale()
+                    end
+                end)
+            end
             
             -- Make minimap movable if enabled
             if db.maps.moveableminimap then
@@ -1112,6 +1156,3 @@ function Module:OnEnable()
         end
     end
 end
-
-
-

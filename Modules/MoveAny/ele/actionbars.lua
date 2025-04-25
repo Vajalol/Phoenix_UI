@@ -483,20 +483,79 @@ local function ApplyCustomFlashSettings(self)
 end
 
 -- Hook into action button creation to apply our settings
-hooksecurefunc("ActionButton_OnLoad", function(self)
-	self:HookScript("OnShow", function(button)
-		if button.action then
-			MoveAny:ApplyButtonStyle(button, (Phoenix_UI and Phoenix_UI.db and Phoenix_UI.db.profile.actionbar and Phoenix_UI.db.profile.actionbar.style) or {})
-		end
-	end)
-	
-	-- Hook into the flash functionality
-	if self.UpdateFlash then
-		hooksecurefunc(self, "UpdateFlash", function(button)
-			ApplyCustomFlashSettings(button)
-		end)
-	end
-end)
+-- The previous approach using hooksecurefunc("ActionButton_OnLoad") is no longer valid
+-- So we'll directly apply styles to existing buttons and set up a system to handle new ones
+do
+    local function ApplyStyleToAllButtons()
+        -- Standard action buttons
+        for i = 1, 12 do
+            local button = _G["ActionButton" .. i]
+            if button then
+                MoveAny:ApplyButtonStyle(button, (Phoenix_UI and Phoenix_UI.db and Phoenix_UI.db.profile.actionbar and Phoenix_UI.db.profile.actionbar.style) or {})
+                button:HookScript("OnShow", function(self)
+                    if self.action then
+                        MoveAny:ApplyButtonStyle(self, (Phoenix_UI and Phoenix_UI.db and Phoenix_UI.db.profile.actionbar and Phoenix_UI.db.profile.actionbar.style) or {})
+                    end
+                end)
+            end
+        end
+        
+        -- MultiBar buttons
+        for barName, btnName in pairs(btns) do
+            if type(btnName) == "string" then
+                for i = 1, 12 do
+                    local button = _G[btnName .. i]
+                    if button then
+                        MoveAny:ApplyButtonStyle(button, (Phoenix_UI and Phoenix_UI.db and Phoenix_UI.db.profile.actionbar and Phoenix_UI.db.profile.actionbar.style) or {})
+                        button:HookScript("OnShow", function(self)
+                            if self.action then
+                                MoveAny:ApplyButtonStyle(self, (Phoenix_UI and Phoenix_UI.db and Phoenix_UI.db.profile.actionbar and Phoenix_UI.db.profile.actionbar.style) or {})
+                            end
+                        end)
+                    end
+                end
+            end
+        end
+        
+        -- Pet buttons
+        for i = 1, 10 do
+            local button = _G["PetActionButton" .. i]
+            if button then
+                MoveAny:ApplyButtonStyle(button, (Phoenix_UI and Phoenix_UI.db and Phoenix_UI.db.profile.actionbar and Phoenix_UI.db.profile.actionbar.style) or {})
+                button:HookScript("OnShow", function(self)
+                    MoveAny:ApplyButtonStyle(self, (Phoenix_UI and Phoenix_UI.db and Phoenix_UI.db.profile.actionbar and Phoenix_UI.db.profile.actionbar.style) or {})
+                end)
+            end
+        end
+        
+        -- Stance/shapeshift buttons
+        for i = 1, 10 do
+            local button = _G["StanceButton" .. i]
+            if button then
+                MoveAny:ApplyButtonStyle(button, (Phoenix_UI and Phoenix_UI.db and Phoenix_UI.db.profile.actionbar and Phoenix_UI.db.profile.actionbar.style) or {})
+                button:HookScript("OnShow", function(self)
+                    MoveAny:ApplyButtonStyle(self, (Phoenix_UI and Phoenix_UI.db and Phoenix_UI.db.profile.actionbar and Phoenix_UI.db.profile.actionbar.style) or {})
+                end)
+            end
+        end
+    end
+    
+    -- Apply styles when addon is loaded
+    ApplyStyleToAllButtons()
+    
+    -- Also apply styles when interface options are changed
+    if Phoenix_UI then
+        Phoenix_UI:RegisterMessage("PHOENIX_UI_SETTINGS_CHANGED", ApplyStyleToAllButtons)
+    end
+    
+    -- Hook the frame creation for dynamic handling
+    local buttonStyleFrame = CreateFrame("Frame")
+    buttonStyleFrame:RegisterEvent("ADDON_LOADED")
+    buttonStyleFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+    buttonStyleFrame:SetScript("OnEvent", function(self, event, arg1)
+        C_Timer.After(0.5, ApplyStyleToAllButtons)
+    end)
+end
 
 function MoveAny:InitActionBarLayouts()
 	if MoveAny:GetWoWBuild() == "RETAIL" then
