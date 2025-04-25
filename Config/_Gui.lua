@@ -22,6 +22,8 @@ local FAQ = Phoenix_UI:GetModule("Config.Layout.FAQ")
 local Profiles = Phoenix_UI:GetModule("Config.Layout.Profiles")
 local WeakAurasIntegration = Phoenix_UI:GetModule("Config.Layout.WeakAurasIntegration")
 local CooldownTracker = Phoenix_UI:GetModule("Config.Layout.CooldownTracker")
+local MythicPlus = Phoenix_UI:GetModule("Config.Layout.MythicPlus")
+local DetailSkin = Phoenix_UI:GetModule("Config.Layout.DetailSkin")
 
 local Ace = LibStub("AceAddon-3.0")
 local PhoenixConfig = Ace:NewAddon('Phoenix_UI_Config')
@@ -1465,7 +1467,7 @@ function Gui:OnEnable()
             
             -- Then force an update of the global variable for redundancy
             if Phoenix_UI.db and Phoenix_UI.db.profile then
-                local currentProfile = Phoenix_UI.db.keys and Phoenix_UI.db.keys.profile or "Default"
+                local currentProfile = Phoenix_UI.db.keys.profile or "Default"
                 
                 -- Ensure global variable exists
                 if _G["Phoenix_UIDB"] == nil then
@@ -1669,7 +1671,9 @@ function Gui:OnEnable()
         Profiles = Profiles.layout,
         FAQ = FAQ.layout,
         WeakAurasIntegration = WeakAurasIntegration.layout,
-        CooldownTracker = CooldownTracker.layout
+        CooldownTracker = CooldownTracker.layout,
+        MythicPlus = MythicPlus.layout,
+        DetailSkin = DetailSkin.layout
     }
 
     -- Organize modules into categories for better organization
@@ -1691,6 +1695,8 @@ function Gui:OnEnable()
         { title = 'MSBT', name = 'Msbt', layout = options['Msbt'] },
         { title = 'IdTip', name = 'IdTip', layout = options['IdTip'] },
         { title = 'WeakAuras', name = 'WeakAurasIntegration', layout = options['WeakAurasIntegration'] },
+        { title = 'Mythic+', name = 'MythicPlus', layout = options['MythicPlus'] },
+        { title = 'Detail Skin', name = 'DetailSkin', layout = options['DetailSkin'] },
         
         -- Appearance
         { title = '|cffFF5500Appearance|r', name = 'header3', isHeader = true },
