@@ -985,12 +985,25 @@ end
 
 -- Add a function to verify installation status
 function Phoenix_UI:IsInstalled()
-    -- Return true if the addon is already installed
+    -- Make sure to clearly debug this critical function
+    local debug = self.debug
+    
+    -- Log function entry
+    if debug then
+        print("Phoenix_UI: IsInstalled - Function called")
+    end
     
     -- Check if the database exists
-    if not self.db or not self.db.profile then
-        if self.debug then
-            print("Phoenix_UI: IsInstalled - DB or profile not available")
+    if not self.db then
+        if debug then
+            print("Phoenix_UI: IsInstalled - DB not available")
+        end
+        return false
+    end
+    
+    if not self.db.profile then
+        if debug then
+            print("Phoenix_UI: IsInstalled - Profile not available")
         end
         return false
     end
@@ -999,48 +1012,90 @@ function Phoenix_UI:IsInstalled()
     local currentProfile = self.db.keys and self.db.keys.profile or "Default"
     
     -- Add debug output if enabled
-    if self.debug then
+    if debug then
         print("Phoenix_UI: IsInstalled - Checking install status for profile: " .. currentProfile)
     end
     
-    -- First check if the global variable has the install flag set
-    if _G["Phoenix_UIDB"] and _G["Phoenix_UIDB"].profiles then
-        if _G["Phoenix_UIDB"].profiles[currentProfile] and _G["Phoenix_UIDB"].profiles[currentProfile].install then
-            if self.debug then
-                print("Phoenix_UI: IsInstalled - Found install flag in Phoenix_UIDB for current profile")
-            end
-            return true
-        elseif _G["Phoenix_UIDB"].profiles["Default"] and _G["Phoenix_UIDB"].profiles["Default"].install then
-            if self.debug then
-                print("Phoenix_UI: IsInstalled - Found install flag in Phoenix_UIDB for Default profile")
-            end
-            return true
+    -- Print values to debug logs
+    if debug then
+        if self.db.profile then
+            print("Phoenix_UI: IsInstalled - Local db.profile.install = " .. tostring(self.db.profile.install))
         end
-    elseif self.debug then
-        print("Phoenix_UI: IsInstalled - Phoenix_UIDB or profiles not found")
+        
+        if _G["Phoenix_UIDB"] and _G["Phoenix_UIDB"].profiles then
+            if _G["Phoenix_UIDB"].profiles[currentProfile] then
+                print("Phoenix_UI: IsInstalled - Global UIDB current profile install = " .. 
+                      tostring(_G["Phoenix_UIDB"].profiles[currentProfile].install))
+            end
+            
+            if _G["Phoenix_UIDB"].profiles["Default"] then
+                print("Phoenix_UI: IsInstalled - Global UIDB Default profile install = " .. 
+                      tostring(_G["Phoenix_UIDB"].profiles["Default"].install))
+            end
+        end
     end
     
-    -- Then check the AceDB value
-    if self.db.profile.install then
-        if self.debug then
-            print("Phoenix_UI: IsInstalled - Found install flag in AceDB profile")
+    -- First check the local AceDB value since it's most reliable
+    if self.db.profile.install == true then
+        if debug then
+            print("Phoenix_UI: IsInstalled - Found install flag in AceDB profile - returning TRUE")
         end
         return true
     end
     
-    -- Not installed, add debug output
-    if self.debug then
-        print("Phoenix_UI: IsInstalled - No install flag found, returning false")
+    -- Then check if the global variable has the install flag set
+    if _G["Phoenix_UIDB"] and _G["Phoenix_UIDB"].profiles then
+        -- Current profile check
+        if _G["Phoenix_UIDB"].profiles[currentProfile] and 
+           _G["Phoenix_UIDB"].profiles[currentProfile].install == true then
+            if debug then
+                print("Phoenix_UI: IsInstalled - Found install flag in Phoenix_UIDB for current profile - returning TRUE")
+            end
+            
+            -- Copy to local for next time
+            self.db.profile.install = true
+            
+            return true
+        end
+        
+        -- Default profile check as fallback
+        if _G["Phoenix_UIDB"].profiles["Default"] and 
+           _G["Phoenix_UIDB"].profiles["Default"].install == true then
+            if debug then
+                print("Phoenix_UI: IsInstalled - Found install flag in Phoenix_UIDB for Default profile - returning TRUE")
+            end
+            
+            -- Copy to local for next time
+            self.db.profile.install = true
+            
+            return true
+        end
+    elseif debug then
+        print("Phoenix_UI: IsInstalled - Phoenix_UIDB or profiles not found")
     end
     
+    -- Not installed, add debug output
+    if debug then
+        print("Phoenix_UI: IsInstalled - No install flag found, returning FALSE")
+    end
+    
+    -- Always return a boolean value
     return false
 end
 
 -- Set installation status to true and save more robustly
 function Phoenix_UI:SetInstalled()
+    -- Make sure to clearly debug this critical function
+    local debug = self.debug
+    
+    -- Log function entry
+    if debug then
+        print("Phoenix_UI: SetInstalled - Function called")
+    end
+    
     -- Ensure database exists
     if not self.db or not self.db.profile then
-        if self.debug then
+        if debug then
             print("Phoenix_UI: SetInstalled - DB or profile not available")
         end
         return false
@@ -1051,9 +1106,10 @@ function Phoenix_UI:SetInstalled()
     
     -- Set installation flag in AceDB
     self.db.profile.install = true
+    self.db.profile.reset = true  -- Also set reset flag to ensure full initialization
     
     -- Add debug output if enabled
-    if self.debug then
+    if debug then
         print("Phoenix_UI: SetInstalled - Setting install flag for profile: " .. currentProfile)
     end
     
@@ -1071,44 +1127,70 @@ function Phoenix_UI:SetInstalled()
         
         -- Set installation flag
         _G["Phoenix_UIDB"].profiles[currentProfile].install = true
+        _G["Phoenix_UIDB"].profiles[currentProfile].reset = true
         
         -- Also set in Default profile for safety
         if not _G["Phoenix_UIDB"].profiles["Default"] then
             _G["Phoenix_UIDB"].profiles["Default"] = {}
         end
         _G["Phoenix_UIDB"].profiles["Default"].install = true
+        _G["Phoenix_UIDB"].profiles["Default"].reset = true
         
         -- Directly set timestamp to help with debugging
         _G["Phoenix_UIDB"].__installTime = GetTime()
+        
+        if debug then
+            print("Phoenix_UI: SetInstalled - Updated global variables")
+        end
+    elseif debug then
+        print("Phoenix_UI: SetInstalled - Warning: Global Phoenix_UIDB not available")
     end
     
     -- Save all tab settings to ensure everything is properly saved
     if self.SaveAllTabSettings then
         self:SaveAllTabSettings()
+        if debug then
+            print("Phoenix_UI: SetInstalled - SaveAllTabSettings completed")
+        end
     end
     
     -- Force save to ensure persistence
     if self.ForceSaveDB then
         self:ForceSaveDB()
+        if debug then
+            print("Phoenix_UI: SetInstalled - ForceSaveDB completed")
+        end
     elseif self.SaveDB then
         self:SaveDB(true)
+        if debug then
+            print("Phoenix_UI: SetInstalled - SaveDB completed")
+        end
     end
     
     -- Directly flush saved variables to disk
     pcall(function()
         if FlushSettingsDB then
             FlushSettingsDB()
+            if debug then
+                print("Phoenix_UI: SetInstalled - FlushSettingsDB completed")
+            end
         elseif FlushSavedVariables then
             FlushSavedVariables()
+            if debug then
+                print("Phoenix_UI: SetInstalled - FlushSavedVariables completed")
+            end
         end
     end)
     
+    -- Verify installation was successful
+    local installSuccessful = self:IsInstalled()
+    
     -- Add debug output if enabled
-    if self.debug then
-        print("Phoenix_UI: SetInstalled - Install flag has been set and saved")
+    if debug then
+        print("Phoenix_UI: SetInstalled - Installation " .. (installSuccessful and "successful" or "FAILED"))
     end
     
-    return true
+    return installSuccessful
 end
 
 -- Synchronize module settings between local and global databases
@@ -1187,9 +1269,9 @@ function Phoenix_UI:SyncModuleSettings(forceSave)
             if not localTime and not globalTime then
                 return "unknown"
             elseif not localTime then
-                return "global"
-            elseif not globalTime then
                 return "local"
+            elseif not globalTime then
+                return "global"
             else
                 -- Both have timestamps, compare them
                 return (localTime > globalTime) and "local" or "global"
@@ -1612,4 +1694,89 @@ Phoenix_UI.OnInitialize = function(self)
     C_Timer.After(2, function()
         self:InitSaveGuard()
     end)
+end
+
+-- Add a reset function that can be called via /pui reset
+function Phoenix_UI:ResetInstallation()
+    local debug = true -- Always show debug for this critical operation
+    
+    print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Resetting installation status...")
+    
+    -- Check database exists
+    if not self.db or not self.db.profile then
+        print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Error - Database not available!")
+        return false
+    end
+    
+    -- Get current profile
+    local currentProfile = self.db.keys and self.db.keys.profile or "Default"
+    print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Resetting profile: " .. currentProfile)
+    
+    -- Reset local flags
+    self.db.profile.install = nil
+    self.db.profile.reset = nil
+    
+    -- Reset global flags
+    if _G["Phoenix_UIDB"] and _G["Phoenix_UIDB"].profiles then
+        if _G["Phoenix_UIDB"].profiles[currentProfile] then
+            _G["Phoenix_UIDB"].profiles[currentProfile].install = nil
+            _G["Phoenix_UIDB"].profiles[currentProfile].reset = nil
+            print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Reset flags in current profile")
+        end
+        
+        if _G["Phoenix_UIDB"].profiles["Default"] then
+            _G["Phoenix_UIDB"].profiles["Default"].install = nil
+            _G["Phoenix_UIDB"].profiles["Default"].reset = nil
+            print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Reset flags in Default profile")
+        end
+        
+        -- Clear install timestamp
+        _G["Phoenix_UIDB"].__installTime = nil
+    else
+        print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Warning - Global Phoenix_UIDB not available!")
+    end
+    
+    -- Force save
+    if self.ForceSaveDB then
+        self:ForceSaveDB()
+    elseif self.SaveDB then
+        self:SaveDB(true)
+    end
+    
+    -- Flush to disk
+    pcall(function()
+        if FlushSettingsDB then
+            FlushSettingsDB()
+        elseif FlushSavedVariables then
+            FlushSavedVariables()
+        end
+    end)
+    
+    -- Verify reset
+    local isInstalled = self:IsInstalled()
+    if isInstalled then
+        print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: ERROR - Failed to reset installation status!")
+        return false
+    else
+        print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Installation reset successful. Please reload your UI.")
+        print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Type /reload to apply changes.")
+        return true
+    end
+end
+
+-- Add handling for "reset" in the slash command function
+function Phoenix_UI:SlashCommand(input)
+    -- Check if we have input
+    input = input and input:trim() or ""
+    
+    if input == "reset" then
+        -- Handle reset command
+        self:ResetInstallation()
+        return
+    end
+    
+    -- Handle other existing commands...
+    if self.Config then
+        self:Config()
+    end
 end 

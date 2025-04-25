@@ -79,6 +79,11 @@ function DetailsSkin:IsDetailsLoaded()
     return _G._detalhes ~= nil
 end
 
+-- Check if Details! is loaded, but never prevent UI display
+function DetailsSkin:ShouldEnableOptions()
+    return self:IsDetailsLoaded()
+end
+
 -- Create the skin profile for Details!
 function DetailsSkin:CreateSkinProfile()
     -- Check if Details exists

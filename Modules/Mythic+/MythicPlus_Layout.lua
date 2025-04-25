@@ -28,8 +28,28 @@ function Layout:OnEnable()
             {
                 desc = {
                     type = 'description',
-                    label = L["MYTHIC_PLUS_DESC"] or 'Enhanced Mythic+ features for Phoenix UI',
+                    label = L["MYTHIC_PLUS_DESC"] or [[Enhanced Mythic+ features for Phoenix UI.
+
+|cffff9900Note: You can configure all settings below even without having a keystone or being in a Mythic+ dungeon. Your configured settings will be automatically applied when you obtain a keystone or enter a Mythic+ dungeon.|r
+
+Some features might appear disabled until their prerequisites are met, but all configurations are saved.]],
                     column = 12
+                }
+            },
+            {
+                keystoneStatus = {
+                    type = 'text',
+                    label = function()
+                        local MythicPlus = Phoenix_UI:GetModule("MythicPlus")
+                        if MythicPlus and MythicPlus:ShouldEnableOptions() then
+                            return '|cff00ff00You have an active keystone or are in a Mythic+ dungeon. All options are enabled.|r'
+                        end
+                        return '|cffff9900You do not currently have a keystone or are not in a Mythic+ dungeon. Configure options below and they will be applied when conditions are met.|r'
+                    end,
+                    fontSize = 'medium',
+                    fontStyle = 'normal',
+                    column = 12,
+                    order = 1
                 }
             },
             {
@@ -39,7 +59,7 @@ function Layout:OnEnable()
                     label = ENABLE,
                     tooltip = L["MYTHIC_PLUS_ENABLE_DESC"] or 'Toggle all Mythic+ enhancements',
                     column = 12,
-                    order = 1
+                    order = 2
                 }
             },
             {
@@ -56,7 +76,7 @@ function Layout:OnEnable()
                     tooltip = L["TIMER_DESC"] or 'Enhanced timer display',
                     column = 6,
                     order = 1,
-                    disabled = function() return not db.enabled end
+                    disabled = function() return not MythicPlus:ShouldEnableOptions() or not db.enabled end
                 },
                 showObjectives = {
                     key = 'showObjectives',
@@ -65,7 +85,7 @@ function Layout:OnEnable()
                     tooltip = L["ENEMY_FORCES_DESC"] or 'Track progress towards enemy forces requirement',
                     column = 6,
                     order = 2,
-                    disabled = function() return not db.enabled end
+                    disabled = function() return not MythicPlus:ShouldEnableOptions() or not db.enabled end
                 }
             },
             {
@@ -76,7 +96,7 @@ function Layout:OnEnable()
                     tooltip = L["DEATH_TRACKER_DESC"] or 'Track deaths during Mythic+ runs',
                     column = 6,
                     order = 3,
-                    disabled = function() return not db.enabled end
+                    disabled = function() return not MythicPlus:ShouldEnableOptions() or not db.enabled end
                 },
                 enhanceKeystones = {
                     key = 'enhanceKeystones',
@@ -85,7 +105,7 @@ function Layout:OnEnable()
                     tooltip = L["KEYSTONE_LINK_DESC"] or 'Enhanced keystone links in chat',
                     column = 6,
                     order = 4,
-                    disabled = function() return not db.enabled end
+                    disabled = function() return not MythicPlus:ShouldEnableOptions() or not db.enabled end
                 }
             },
             {
@@ -102,7 +122,7 @@ function Layout:OnEnable()
                     tooltip = L["TIMER_DESC"] or 'Enhanced timer display',
                     column = 6,
                     order = 1,
-                    disabled = function() return not db.enabled or not db.showTimer end
+                    disabled = function() return not MythicPlus:ShouldEnableOptions() or not db.enabled or not db.showTimer end
                 },
                 timerStyle = {
                     key = 'timerStyle',
@@ -111,7 +131,7 @@ function Layout:OnEnable()
                     tooltip = L["TIMER_STYLE_DESC"] or 'Visual style of the timer',
                     column = 6,
                     order = 2,
-                    disabled = function() return not db.enabled or not db.showTimer or not db.enhancedTimer end,
+                    disabled = function() return not MythicPlus:ShouldEnableOptions() or not db.enabled or not db.showTimer or not db.enhancedTimer end,
                     options = {
                         ["PHOENIX"] = L["TIMER_STYLE_PHOENIX"] or "Phoenix UI",
                         ["CLASSIC"] = L["TIMER_STYLE_CLASSIC"] or "Classic",
@@ -127,7 +147,7 @@ function Layout:OnEnable()
                     tooltip = L["TIMER_CHEST_MARKERS_DESC"] or 'Show bonus chest time markers',
                     column = 6,
                     order = 3,
-                    disabled = function() return not db.enabled or not db.showTimer or not db.enhancedTimer end
+                    disabled = function() return not MythicPlus:ShouldEnableOptions() or not db.enabled or not db.showTimer or not db.enhancedTimer end
                 },
                 lockTimerFrame = {
                     key = 'lockTimerFrame',
@@ -136,7 +156,7 @@ function Layout:OnEnable()
                     tooltip = L["LOCK_TIMER_FRAME_DESC"] or 'Prevent the timer frame from being moved',
                     column = 6,
                     order = 4,
-                    disabled = function() return not db.enabled or not db.showTimer or not db.enhancedTimer end
+                    disabled = function() return not MythicPlus:ShouldEnableOptions() or not db.enabled or not db.showTimer or not db.enhancedTimer end
                 }
             },
             {
@@ -153,7 +173,7 @@ function Layout:OnEnable()
                     tooltip = L["ENEMY_FORCES_FORMAT_DESC"] or 'How to display enemy forces progress',
                     column = 6,
                     order = 1,
-                    disabled = function() return not db.enabled or not db.showObjectives end,
+                    disabled = function() return not MythicPlus:ShouldEnableOptions() or not db.enabled or not db.showObjectives end,
                     options = {
                         ["PERCENTAGE_ONLY"] = L["ENEMY_FORCES_PERCENTAGE"] or "Percentage only",
                         ["VALUE_ONLY"] = L["ENEMY_FORCES_VALUE"] or "Value only",
@@ -167,7 +187,7 @@ function Layout:OnEnable()
                     tooltip = L["ENEMY_FORCES_TOOLTIP_DESC"] or 'Display the amount of enemy forces progress each mob gives',
                     column = 6,
                     order = 2,
-                    disabled = function() return not db.enabled or not db.showObjectives end
+                    disabled = function() return not MythicPlus:ShouldEnableOptions() or not db.enabled or not db.showObjectives end
                 }
             },
             {
@@ -184,7 +204,7 @@ function Layout:OnEnable()
                     tooltip = L["DEATH_COUNTER_DESC"] or 'Show death counter in objective tracker',
                     column = 6,
                     order = 1,
-                    disabled = function() return not db.enabled or not db.deathPenalty end
+                    disabled = function() return not MythicPlus:ShouldEnableOptions() or not db.enabled or not db.deathPenalty end
                 },
                 showDeathDetails = {
                     key = 'showDeathDetails',
@@ -193,7 +213,7 @@ function Layout:OnEnable()
                     tooltip = L["DEATH_DETAILS_DESC"] or 'Show detailed death information',
                     column = 6,
                     order = 2,
-                    disabled = function() return not db.enabled or not db.deathPenalty or not db.deathTracker end
+                    disabled = function() return not MythicPlus:ShouldEnableOptions() or not db.enabled or not db.deathPenalty or not db.deathTracker end
                 }
             },
             {
@@ -229,7 +249,7 @@ function Layout:OnEnable()
             tooltip = L["DUNGEON_TOOLTIP"]:format(dungeonName) or "Show enemy forces values in " .. dungeonName,
             column = 6,
             order = index,
-            disabled = function() return not db.enabled or not db.showObjectives end
+            disabled = function() return not MythicPlus:ShouldEnableOptions() or not db.enabled or not db.showObjectives end
         }
         
         -- Start a new row after every 2 dungeons

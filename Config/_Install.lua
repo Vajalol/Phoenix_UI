@@ -10,11 +10,18 @@ function Module:OnEnable()
             return
         end
         
-        -- Now safely check if this is first install using our new function
-        local isInstalled = Phoenix_UI.IsInstalled and Phoenix_UI:IsInstalled()
+        -- DIRECT APPROACH: Check directly like SUI does, without relying on a separate function
+        local isInstalled = false
         
-        -- DEBUG - Enable this for troubleshooting
-        -- Phoenix_UI.debug = true
+        -- Check if already installed (direct profile check like SUI)
+        if Phoenix_UI.db.profile and Phoenix_UI.db.profile.install then
+            isInstalled = true
+        end
+        
+        -- Use the IsInstalled function as a backup if it exists
+        if not isInstalled and Phoenix_UI.IsInstalled and type(Phoenix_UI.IsInstalled) == "function" then
+            isInstalled = Phoenix_UI:IsInstalled()
+        end
         
         if not isInstalled then
             -- Tell the Core/Init.lua welcome panel not to show
@@ -72,81 +79,61 @@ function Module:OnEnable()
             Button:GetHighlightTexture():SetTexCoord(0.00390625, 0.87890625, 0.75195313, 0.83007813)
             Button:GetHighlightTexture():SetVertexColor(0.265, 0.320, 0.410, 1)
             Button:SetScript("OnClick", function()
-                -- Use our new function to safely set installed flag
-                if Phoenix_UI.SetInstalled then
-                    Phoenix_UI:SetInstalled()
-                    
-                    -- For extra safety, set install flags directly
+                -- SIMPLIFIED APPROACH: Set flag directly in both local and global databases like SUI does
+                
+                -- Set in local database
+                if Phoenix_UI.db and Phoenix_UI.db.profile then
                     Phoenix_UI.db.profile.install = true
-                    
-                    -- Also ensure all tabs get saved
-                    if Phoenix_UI.SaveAllTabSettings then
-                        Phoenix_UI:SaveAllTabSettings()
-                    end
-                    
-                    -- And force a save
-                    if Phoenix_UI.ForceSaveDB then
-                        Phoenix_UI:ForceSaveDB()
-                    elseif Phoenix_UI.SaveDB then
-                        Phoenix_UI:SaveDB(true)
-                    end
-                    
-                    -- Try to flush settings to disk immediately
-                    pcall(function()
-                        if FlushSettingsDB then
-                            FlushSettingsDB()
-                        elseif FlushSavedVariables then
-                            FlushSavedVariables()
-                        end
-                    end)
-                else
-                    -- Original implementation as fallback
-                    if Phoenix_UI.db and Phoenix_UI.db.profile then
-                        Phoenix_UI.db.profile.install = true
-                        Phoenix_UI.db.profile.reset = true
-                        
-                        -- Directly update the global Phoenix_UIDB to ensure persistence
-                        if _G["Phoenix_UIDB"] then
-                            -- Make sure profiles table exists
-                            if not _G["Phoenix_UIDB"].profiles then
-                                _G["Phoenix_UIDB"].profiles = {}
-                            end
-                            
-                            -- Get current profile
-                            local currentProfile = Phoenix_UI.db.keys and Phoenix_UI.db.keys.profile or "Default"
-                            
-                            -- Make sure current profile exists
-                            if not _G["Phoenix_UIDB"].profiles[currentProfile] then
-                                _G["Phoenix_UIDB"].profiles[currentProfile] = {}
-                            end
-                            
-                            -- Set install flag directly in the global variable
-                            _G["Phoenix_UIDB"].profiles[currentProfile].install = true
-                            
-                            -- Also set in Default profile for safety
-                            if not _G["Phoenix_UIDB"].profiles["Default"] then
-                                _G["Phoenix_UIDB"].profiles["Default"] = {}
-                            end
-                            _G["Phoenix_UIDB"].profiles["Default"].install = true
-                        end
-                        
-                        -- Force immediate save to disk
-                        if Phoenix_UI.ForceSaveDB then
-                            Phoenix_UI:ForceSaveDB()
-                        elseif Phoenix_UI.SaveDB then
-                            Phoenix_UI:SaveDB()
-                        end
-                        
-                        -- Try to flush settings to disk
-                        pcall(function()
-                            if FlushSettingsDB then
-                                FlushSettingsDB()
-                            elseif FlushSavedVariables then
-                                FlushSavedVariables()
-                            end
-                        end)
-                    end
+                    Phoenix_UI.db.profile.reset = true
                 end
+                
+                -- Set in global database for persistence
+                if _G["Phoenix_UIDB"] then
+                    -- Make sure profiles table exists
+                    if not _G["Phoenix_UIDB"].profiles then
+                        _G["Phoenix_UIDB"].profiles = {}
+                    end
+                    
+                    -- Get current profile
+                    local currentProfile = Phoenix_UI.db and Phoenix_UI.db.keys and Phoenix_UI.db.keys.profile or "Default"
+                    
+                    -- Make sure current profile exists
+                    if not _G["Phoenix_UIDB"].profiles[currentProfile] then
+                        _G["Phoenix_UIDB"].profiles[currentProfile] = {}
+                    end
+                    
+                    -- Set install flag directly in the global variable
+                    _G["Phoenix_UIDB"].profiles[currentProfile].install = true
+                    _G["Phoenix_UIDB"].profiles[currentProfile].reset = true
+                    
+                    -- Also set in Default profile for safety
+                    if not _G["Phoenix_UIDB"].profiles["Default"] then
+                        _G["Phoenix_UIDB"].profiles["Default"] = {}
+                    end
+                    _G["Phoenix_UIDB"].profiles["Default"].install = true
+                    _G["Phoenix_UIDB"].profiles["Default"].reset = true
+                end
+                
+                -- Try to also use the SetInstalled function if available, but don't rely on it
+                if Phoenix_UI.SetInstalled and type(Phoenix_UI.SetInstalled) == "function" then
+                    pcall(function() Phoenix_UI:SetInstalled() end)
+                end
+                
+                -- Force save if available
+                if Phoenix_UI.ForceSaveDB and type(Phoenix_UI.ForceSaveDB) == "function" then
+                    pcall(function() Phoenix_UI:ForceSaveDB() end)
+                elseif Phoenix_UI.SaveDB and type(Phoenix_UI.SaveDB) == "function" then
+                    pcall(function() Phoenix_UI:SaveDB(true) end)
+                end
+                
+                -- Try to flush settings to disk
+                pcall(function()
+                    if FlushSettingsDB then
+                        FlushSettingsDB()
+                    elseif FlushSavedVariables then
+                        FlushSavedVariables()
+                    end
+                end)
                 
                 local fadeInfo = {};
                 fadeInfo.mode = "OUT";
@@ -166,6 +153,7 @@ function Module:OnEnable()
         end
     end)
 end
+
 
 
 

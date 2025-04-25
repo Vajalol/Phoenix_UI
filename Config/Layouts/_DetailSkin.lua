@@ -33,7 +33,11 @@ function Layout:GetLayout()
             {
                 description = {
                     type = 'text',
-                    label = L['DetailSkin_Description'] or 'Phoenix UI skin for the Details! damage meter addon',
+                    label = L['DetailSkin_Description'] or [[Phoenix UI skin for the Details! damage meter addon.
+
+|cffff9900Note: You can configure all settings even if Details! is not currently installed. Once you install Details!, your configured settings will be applied automatically.|r
+
+If this tab appears empty, install Details! from your addon manager, then reload your UI to see the skin in action.]],
                     fontSize = 'medium',
                     fontStyle = 'normal',
                     column = 12,
@@ -73,6 +77,22 @@ function Layout:GetLayout()
                     type = 'text',
                     label = L['DetailSkin_Reload_Note'] or '|cffff8800Note: Changes may require a UI reload to take full effect.|r',
                     fontSize = 'small',
+                    fontStyle = 'normal',
+                    column = 12,
+                    order = 1
+                }
+            },
+            {
+                detailsStatus = {
+                    type = 'text',
+                    label = function()
+                        local DetailsSkin = Phoenix_UI:GetModule("DetailsSkin")
+                        if DetailsSkin and not DetailsSkin:IsDetailsLoaded() then
+                            return '|cffff9900Details! is not currently installed or loaded. Configure options below and they will be applied when Details! is available.|r'
+                        end
+                        return '|cff00ff00Details! is loaded. All options are enabled.|r'
+                    end,
+                    fontSize = 'medium',
                     fontStyle = 'normal',
                     column = 12,
                     order = 1
@@ -275,7 +295,11 @@ function Layout:GetLayout()
             {
                 infoText = {
                     type = 'text',
-                    label = L['Details_Info'] or 'This skin requires the Details! damage meter addon to be installed. Changes to these settings will apply next time Details! loads its windows.',
+                    label = L['Details_Info'] or [[|cffff9900DETAILS! ADDON REQUIRED|r
+
+This skin requires the Details! damage meter addon to be installed. Without Details!, this tab will appear empty.
+
+Install Details! from your addon manager, then reload your UI to access these settings. Changes to these settings will apply the next time Details! loads its windows.]],
                     fontSize = 'medium',
                     fontStyle = 'normal',
                     column = 12,

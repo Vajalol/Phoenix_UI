@@ -147,13 +147,16 @@ Phoenix_UIConfig.ScrollFrameMethods = {
 		-- Get the scroll frame dimensions
 		local scrollFrameHeight = self.scrollFrame:GetHeight()
 		
+		-- First get a reliable minimum height based on window size
+		local minimumHeight = scrollFrameHeight * 3  -- Triple the frame height for baseline
+		
 		-- Get total height of all child elements
 		local totalHeight = 0
 		local children = {self.scrollChild:GetChildren()}
 		
 		if #children == 0 then
-			-- If no children, use a minimum height
-			totalHeight = scrollFrameHeight * 2  -- Double the frame height for minimum padding
+			-- If no children, use minimum height
+			totalHeight = minimumHeight
 		else
 			-- Find the bottom-most point of any child element
 			for _, child in ipairs(children) do
@@ -169,18 +172,18 @@ Phoenix_UIConfig.ScrollFrameMethods = {
 				end
 			end
 			
-			-- Add generous extra padding to ensure scrolling works properly for all tabs
-			totalHeight = totalHeight + (scrollFrameHeight * 2)  -- Double window height as padding (increased from 1.5)
+			-- Add standard padding to ensure scrolling works properly
+			totalHeight = totalHeight + (scrollFrameHeight * 1.5)  -- 150% of window height as base padding
 		end
 		
-		-- Set the scroll child height to the calculated total
-		if totalHeight ~= self.scrollChild:GetHeight() then
-			self.scrollChild:SetHeight(totalHeight)
-		end
+		-- Ensure a minimum scroll area even when there's little content
+		-- This ensures all tabs have adequate scroll space regardless of content
+		totalHeight = math.max(totalHeight, minimumHeight)
 		
-		-- Add significant extra padding universally to ALL tabs to ensure good scrolling
-		-- 450px of universal padding helps ensure all tabs can scroll fully
-		totalHeight = totalHeight + 450
+		-- Always add fixed extra padding for all tabs
+		totalHeight = totalHeight + 300  -- Extra padding for all tabs
+		
+		-- Set the scroll child height 
 		self.scrollChild:SetHeight(totalHeight)
 	end,
 

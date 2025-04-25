@@ -360,4 +360,10 @@ function MythicPlus:IsInMythicPlus()
     return inMythicPlus
 end
 
+function MythicPlus:ShouldEnableOptions()
+    -- This will be used to determine if options should be enabled (true) or disabled (false)
+    -- But we'll always show the options regardless of this return value
+    return inMythicPlus or (currentKeystone and currentKeystone.level > 0)
+end
+
 Phoenix.Modules.MythicPlus = MythicPlus 
