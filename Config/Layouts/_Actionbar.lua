@@ -374,7 +374,7 @@ function Layout:OnEnable()
             {
                 bottomPadding = {
                     type = 'spacer',
-                    height = 150,
+                    height = 300,
                     column = 12,
                     order = 1
                 }

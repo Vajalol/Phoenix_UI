@@ -345,12 +345,8 @@ end
 function MoveAny:ApplyButtonStyle(button, styleOptions)
 	if not button or InCombatLockdown() then return end
 	
-	-- Ensure we have valid style options
-	styleOptions = styleOptions or {}
-	
-	-- Default to dark skin if we're missing settings
 	local borderStyle = styleOptions.buttonBorder or "default"
-	local glowStyle = styleOptions.glowEffect or "default" 
+	local glowStyle = styleOptions.glowEffect or "default"
 	local borderColor = styleOptions.borderColor or "default"
 	
 	-- Get button elements
@@ -359,89 +355,61 @@ function MoveAny:ApplyButtonStyle(button, styleOptions)
 	local highlightTexture = button:GetHighlightTexture()
 	local cooldown = button.cooldown
 	
-	-- Always set a dark background for consistent styling
-	if button.icon then
-		button.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) -- Slightly crop the icon
-	end
-	
-	-- Find icon texture if it exists in different places
-	local iconTexture = button.icon or button.Icon or button.IconTexture
-	if iconTexture then
-		iconTexture:SetTexCoord(0.08, 0.92, 0.08, 0.92) -- Slightly crop the icon
-	end
-
 	-- Apply border style
 	if normalTexture then
-		-- Set a specific texture for the normal border
-		-- Black border style
-		normalTexture:SetTexture("Interface\\Buttons\\UI-Quickslot")
-		normalTexture:SetVertexColor(0.15, 0.15, 0.15, 1)
-		normalTexture:SetDrawLayer("BACKGROUND", -8)
-		
-		-- Reset texture coords
-		normalTexture:SetTexCoord(0, 1, 0, 1)
-		
-		-- Adjust size to match the button
-		local buttonWidth, buttonHeight = button:GetSize()
-		normalTexture:SetSize(buttonWidth * 1.4, buttonHeight * 1.4)
-		normalTexture:ClearAllPoints()
-		normalTexture:SetPoint("CENTER", 0, 0)
-	end
-	
-	-- Set pushed texture with correct color
-	if pushedTexture then
-		pushedTexture:SetTexture("Interface\\Buttons\\UI-Quickslot-Depress")
-		pushedTexture:SetVertexColor(1, 1, 1, 0.5)
-	end
-	
-	-- Set highlight texture
-	if highlightTexture then
-		highlightTexture:SetTexture("Interface\\Buttons\\ButtonHilight-Square")
-		highlightTexture:SetBlendMode("ADD")
-		highlightTexture:SetVertexColor(0.8, 0.8, 0.8, 0.8)
-	end
-	
-	-- Style any cooldown frame
-	if cooldown then
-		cooldown:ClearAllPoints()
-		cooldown:SetPoint("TOPLEFT", button, "TOPLEFT", 2, -2)
-		cooldown:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -2, 2)
-	end
-	
-	-- Style the checked texture if it exists
-	if button.CheckedTexture or button:GetCheckedTexture() then
-		local checkedTexture = button.CheckedTexture or button:GetCheckedTexture()
-		if checkedTexture then
-			checkedTexture:SetTexture("Interface\\Buttons\\CheckButtonHilight")
-			checkedTexture:SetBlendMode("ADD")
-			checkedTexture:SetVertexColor(0.5, 0.5, 1, 0.6)
+		if borderStyle == "none" then
+			normalTexture:SetAlpha(0)
+		elseif borderStyle == "thin" then
+			normalTexture:SetAlpha(1)
+			normalTexture:SetScale(0.8)
+		elseif borderStyle == "thick" then
+			normalTexture:SetAlpha(1)
+			normalTexture:SetScale(1.1)
+		else -- default
+			normalTexture:SetAlpha(1)
+			normalTexture:SetScale(1)
 		end
+		
+		-- Always set a dark border color for consistent appearance
+		normalTexture:SetVertexColor(0.15, 0.15, 0.15, 1)
 	end
 	
-	-- Style the flash animation texture if it exists
-	if button.Flash then
-		button.Flash:SetTexture("Interface\\Buttons\\UI-QuickslotRed")
-		button.Flash:SetVertexColor(1, 0, 0, 0.5)
+	-- Make icons look nicer by trimming the borders slightly
+	if button.icon then
+		button.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) 
 	end
 	
-	-- Style the border if it exists (different from normalTexture)
-	if button.Border then
-		button.Border:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
-		button.Border:SetVertexColor(0.2, 0.2, 0.2, 1)
-		button.Border:SetBlendMode("ADD")
+	-- Set up glow effect - we'll use the existing Blizzard API and textures
+	if button.UpdateUsable then
+		hooksecurefunc(button, "UpdateUsable", function(self)
+			local isUsable, notEnoughMana = IsUsableAction(self.action)
+			
+			if glowStyle == "none" then
+				-- Disable all glows
+				if self.SpellActivationAlert then
+					self.SpellActivationAlert:Hide()
+				end
+			elseif glowStyle == "pixel" then
+				-- Use pixel glow for proc effects
+				if ActionButton_IsHighlighted(self) and not notEnoughMana then
+					if self.SpellActivationAlert then
+						if not self.SpellActivationAlert:IsShown() then
+							self.SpellActivationAlert:Show()
+							self.SpellActivationAlert:SetAlpha(0.5)
+						end
+					end
+				else
+					if self.SpellActivationAlert and self.SpellActivationAlert:IsShown() then
+						self.SpellActivationAlert:Hide()
+					end
+				end
+			end
+			-- For "default" and "auto", we let the default WoW behavior handle it
+		end)
 	end
-	
-	-- Set the button background to be dark
-	if button.SlotBackground and button.SlotBackground.Show then
-		button.SlotBackground:Show()
-		button.SlotBackground:SetVertexColor(0.15, 0.15, 0.15, 1)
-	end
-	
-	-- Mark button as having Phoenix styling applied
-	button.phoenixStyled = true
 end
 
--- Apply consistent styling to all action buttons
+-- Simple function to apply styles to all action buttons
 local function StyleAllActionButtons()
 	if InCombatLockdown() then return end
 	
@@ -453,28 +421,26 @@ local function StyleAllActionButtons()
 		if button then MoveAny:ApplyButtonStyle(button, styleOptions) end
 		
 		-- Style all MultiBar buttons
-		for _, prefix in pairs({"MultiBarBottomLeftButton", "MultiBarBottomRightButton", "MultiBarRightButton", "MultiBarLeftButton"}) do
-			local multiButton = _G[prefix .. i]
-			if multiButton then MoveAny:ApplyButtonStyle(multiButton, styleOptions) end
+		local multiBarRightButton = _G["MultiBarRightButton" .. i]
+		if multiBarRightButton then MoveAny:ApplyButtonStyle(multiBarRightButton, styleOptions) end
+		
+		local multiBarLeftButton = _G["MultiBarLeftButton" .. i]
+		if multiBarLeftButton then MoveAny:ApplyButtonStyle(multiBarLeftButton, styleOptions) end
+		
+		local multiBarBottomRightButton = _G["MultiBarBottomRightButton" .. i]
+		if multiBarBottomRightButton then MoveAny:ApplyButtonStyle(multiBarBottomRightButton, styleOptions) end
+		
+		local multiBarBottomLeftButton = _G["MultiBarBottomLeftButton" .. i]
+		if multiBarBottomLeftButton then MoveAny:ApplyButtonStyle(multiBarBottomLeftButton, styleOptions) end
+		
+		-- Pet buttons (limit to 10)
+		if i <= 10 then
+			local petButton = _G["PetActionButton" .. i]
+			if petButton then MoveAny:ApplyButtonStyle(petButton, styleOptions) end
+			
+			local stanceButton = _G["StanceButton" .. i]
+			if stanceButton then MoveAny:ApplyButtonStyle(stanceButton, styleOptions) end
 		end
-		
-		-- Style override action buttons (vehicle UI, etc)
-		local overrideButton = _G["OverrideActionBarButton" .. i]
-		if overrideButton then MoveAny:ApplyButtonStyle(overrideButton, styleOptions) end
-		
-		-- Style possession bar buttons
-		local possessButton = _G["PossessButton" .. i]
-		if possessButton then MoveAny:ApplyButtonStyle(possessButton, styleOptions) end
-	end
-	
-	-- Style pet buttons (different count)
-	for i = 1, 10 do
-		local petButton = _G["PetActionButton" .. i]
-		if petButton then MoveAny:ApplyButtonStyle(petButton, styleOptions) end
-		
-		-- Style stance buttons
-		local stanceButton = _G["StanceButton" .. i]
-		if stanceButton then MoveAny:ApplyButtonStyle(stanceButton, styleOptions) end
 	end
 	
 	-- Style extra action button
@@ -482,37 +448,20 @@ local function StyleAllActionButtons()
 	if extraActionButton then MoveAny:ApplyButtonStyle(extraActionButton, styleOptions) end
 end
 
--- Create a frame to handle button styling events
-local styleFrame = CreateFrame("Frame", nil, UIParent, "SecureHandlerStateTemplate")
-styleFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-styleFrame:RegisterEvent("ACTIONBAR_PAGE_CHANGED")
-styleFrame:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
-styleFrame:RegisterEvent("ACTIONBAR_UPDATE_STATE")
-styleFrame:RegisterEvent("ACTIONBAR_UPDATE_COOLDOWN")
-styleFrame:RegisterEvent("ACTIONBAR_UPDATE_USABLE")
-styleFrame:RegisterEvent("PET_BAR_UPDATE")
-styleFrame:RegisterEvent("PLAYER_TALENT_UPDATE")
-styleFrame:RegisterEvent("UPDATE_VEHICLE_ACTIONBAR")
-styleFrame:RegisterEvent("UPDATE_OVERRIDE_ACTIONBAR")
-styleFrame:RegisterEvent("UPDATE_POSSESS_BAR")
-styleFrame:RegisterEvent("UPDATE_BONUS_ACTIONBAR")
+-- Create a simple frame to handle button styling events
+local buttonStyleFrame = CreateFrame("Frame")
+buttonStyleFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+buttonStyleFrame:RegisterEvent("PLAYER_TALENT_UPDATE")
+buttonStyleFrame:RegisterEvent("UPDATE_VEHICLE_ACTIONBAR")
+buttonStyleFrame:RegisterEvent("UPDATE_OVERRIDE_ACTIONBAR")
+buttonStyleFrame:RegisterEvent("PET_BAR_UPDATE")
+buttonStyleFrame:RegisterEvent("ACTIONBAR_PAGE_CHANGED")
 
-styleFrame:SetScript("OnEvent", function(self, event, ...)
-	-- Don't run in combat to avoid taint
-	if InCombatLockdown() then 
-		self:RegisterEvent("PLAYER_REGEN_ENABLED")
-		return
-	end
-	
-	if event == "PLAYER_REGEN_ENABLED" then
-		self:UnregisterEvent("PLAYER_REGEN_ENABLED")
-	end
-	
-	-- Apply styles with a slight delay to ensure all UI elements are updated
+buttonStyleFrame:SetScript("OnEvent", function(self, event, ...)
 	C_Timer.After(0.1, StyleAllActionButtons)
 end)
 
--- Apply styles when the addon loads
+-- Apply styles when addon loads
 C_Timer.After(1, StyleAllActionButtons)
 
 -- Also apply styles when settings change

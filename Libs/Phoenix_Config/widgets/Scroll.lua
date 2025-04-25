@@ -153,7 +153,7 @@ Phoenix_UIConfig.ScrollFrameMethods = {
 		
 		if #children == 0 then
 			-- If no children, use a minimum height
-			totalHeight = scrollFrameHeight * 1.5
+			totalHeight = scrollFrameHeight * 2  -- Double the frame height for minimum padding
 		else
 			-- Find the bottom-most point of any child element
 			for _, child in ipairs(children) do
@@ -169,27 +169,22 @@ Phoenix_UIConfig.ScrollFrameMethods = {
 				end
 			end
 			
-			-- Add an extra full window height of padding to ensure generous scrolling space
-			totalHeight = totalHeight + scrollFrameHeight
+			-- Add generous extra padding to ensure scrolling works properly
+			totalHeight = totalHeight + (scrollFrameHeight * 1.5)  -- 150% of window height as extra padding
 		end
 		
-		-- Minimum height should be 2x the visible area to ensure scrolling works
-		totalHeight = math.max(totalHeight, scrollFrameHeight * 2)
-		
-		-- Set height and update scroll bar
-		self.scrollChild:SetHeight(totalHeight)
-		
-		-- Update the scroll bar
-		if self.scrollBar then
-			local maxScroll = math.max(0, totalHeight - scrollFrameHeight)
-			self.scrollBar:SetMinMaxValues(0, maxScroll)
-			
-			-- Force scroll bar to be visible if there's content to scroll
-			if maxScroll > 0 then
-				self.scrollBar:Show()
-			end
+		-- Set the scroll child height to the calculated total
+		if totalHeight ~= self.scrollChild:GetHeight() then
+			self.scrollChild:SetHeight(totalHeight)
 		end
-	end
+		
+		-- Always force showing the scrollbar for ActionBar and Tooltip tabs which need more space
+		local tabName = Phoenix_UI and Phoenix_UI.UI and Phoenix_UI.UI.currentTab
+		if tabName and (tabName == "Actionbar" or tabName == "Tooltip") then
+			totalHeight = totalHeight + 300  -- Extra padding for these specific tabs
+			self.scrollChild:SetHeight(totalHeight)
+		end
+	end,
 };
 
 function Phoenix_UIConfig:ScrollFrame(parent, width, height, scrollChild)
