@@ -7,6 +7,11 @@ function Module:OnEnable()
     TooltipFrame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -50, 120)
     TooltipFrame:SetSize(150, 25)
 
+    -- Initialize caches for performance
+    self.itemLevelCache = {}
+    self.pendingInspects = {}
+    self.slotItemLevels = {}
+    
     -- tooltip anchor
     if (db.mouseanchor) then
         hooksecurefunc("GameTooltip_SetDefaultAnchor", function(tooltip, parent)
@@ -72,7 +77,9 @@ function Module:OnEnable()
             local unitName, unit
             
             -- For WoW 10.0+, use the data parameter with TooltipDataProcessor
-            if data and data.guid then
+            local is_10_0_plus = data and data.guid
+            
+            if is_10_0_plus then
                 unit = data.guid and C_PlayerInfo and C_PlayerInfo.GetUnitByGUID and C_PlayerInfo.GetUnitByGUID(data.guid)
                 if not unit and data.token then
                     unit = data.token
@@ -100,372 +107,151 @@ function Module:OnEnable()
                 end
             end
             
-            --position raidicon
-            if unit and GetRaidTargetIndex(unit) then
-                local raidIconIndex = GetRaidTargetIndex(unit)
-                if GetRaidTargetIndex(unit) == 16 then
-                    GameTooltipTextLeft1:SetText(("%s"):format(unitName))
-                else
-                    GameTooltipTextLeft1:SetText(("%s %s"):format(ICON_LIST[raidIconIndex] .. "14|t", unitName))
-                end
-            end
-            if not UnitIsPlayer(unit) then
-                local reaction = UnitReaction(unit, "player")
-                if reaction then
-                    local color = FACTION_BAR_COLORS[reaction]
-                    if color then
-                        cfg.barColor = color
-                        GameTooltipStatusBar:SetStatusBarColor(color.r, color.g, color.b)
-                        GameTooltipTextLeft1:SetTextColor(color.r, color.g, color.b)
-                    end
-                end
-                --color textleft2 by classificationcolor
-                local unitClassification = UnitClassification(unit)
-                local levelLine
-                if string.find(GameTooltipTextLeft2:GetText() or "empty", "%a%s%d") then
-                    levelLine = GameTooltipTextLeft2
-                elseif GameTooltipTextLeft3 ~= nil and string.find(GameTooltipTextLeft3:GetText() or "empty", "%a%s%d") then
-                    GameTooltipTextLeft2:SetTextColor(unpack(cfg.guildColor))
-                    levelLine = GameTooltipTextLeft3
-                end
-                if levelLine then
-                    local l = UnitLevel(unit)
-                    local color = GetCreatureDifficultyColor((l > 0) and l or 999)
-                    levelLine:SetTextColor(color.r, color.g, color.b)
-                end
-                if unitClassification == "worldboss" or UnitLevel(unit) == -1 then
-                    self:AppendText(" |cffff0000[B]|r")
-                    GameTooltipTextLeft2:SetTextColor(unpack(cfg.bossColor))
-                elseif unitClassification == "rare" then
-                    self:AppendText(" |cffff9900[R]|r")
-                elseif unitClassification == "rareelite" then
-                    self:AppendText(" |cffff0000[R+]|r")
-                elseif unitClassification == "elite" then
-                    self:AppendText(" |cffff6666[E]|r")
-                end
-            else
-                --unit is any player
-                local _, unitClass = UnitClass(unit)
-                --color textleft1 and statusbar by class color
-                local color = RAID_CLASS_COLORS[unitClass]
-                cfg.barColor = color
-                GameTooltipStatusBar:SetStatusBarColor(color.r, color.g, color.b)
-                _G["GameTooltipTextLeft1"]:SetTextColor(color.r, color.g, color.b)
-                --color textleft2 by guildcolor
-                local guildName, guildRank = GetGuildInfo(unit)
-                if guildName then
-                    _G["GameTooltipTextLeft2"]:SetText("<" .. guildName .. "> [" .. guildRank .. "]")
-                    _G["GameTooltipTextLeft2"]:SetTextColor(unpack(cfg.guildColor))
-                end
-                local levelLine = guildName and _G["GameTooltipTextLeft3"] or _G["GameTooltipTextLeft2"]
-                local l = UnitLevel(unit)
-                local color = GetCreatureDifficultyColor((l > 0) and l or 999)
-                levelLine:SetTextColor(color.r, color.g, color.b)
-                --afk?
-                if UnitIsAFK(unit) then
-                    self:AppendText((" |cff%s<AFK>|r"):format(cfg.afkColorHex))
-                end
-            end
-            --dead?
-            if UnitIsDeadOrGhost(unit) then
-                _G["GameTooltipTextLeft1"]:SetTextColor(unpack(cfg.deadColor))
-            end
-            --target line
-            if (UnitExists(unit .. "target")) then
-                GameTooltip:AddDoubleLine(("|cff%s%s|r"):format(cfg.targetColorHex, "Target"),
-                    GetTarget(unit .. "target") or "Unknown")
-            end
-        end
-
-        local function SetStatusBarColor(self, r, g, b)
-            if not cfg.barColor then return end
-            if r == cfg.barColor.r and g == cfg.barColor.g and b == cfg.barColor.b then return end
-            self:SetStatusBarColor(cfg.barColor.r, cfg.barColor.g, cfg.barColor.b)
-        end
-
-        --hex class colors
-        for class, color in next, RAID_CLASS_COLORS do
-            classColorHex[class] = GetHexColor(color)
-        end
-        --hex reaction colors
-        --for idx, color in next, FACTION_BAR_COLORS do
-        for i = 1, #FACTION_BAR_COLORS do
-            factionColorHex[i] = GetHexColor(FACTION_BAR_COLORS[i])
-        end
-
-        cfg.targetColorHex = GetHexColor(cfg.targetColor)
-        cfg.afkColorHex = GetHexColor(cfg.afkColor)
-
-        --GameTooltipHeaderText:SetFont(cfg.fontFamily, 14)
-        --GameTooltipHeaderText:SetShadowOffset(1,-2)
-        --GameTooltipHeaderText:SetShadowColor(0,0,0,0.75)
-        --GameTooltipText:SetFont(cfg.fontFamily, 12, "NONE")
-        --GameTooltipText:SetShadowOffset(1,-2)
-        --GameTooltipText:SetShadowColor(0,0,0,0.75)
-        --Tooltip_Small:SetFont(cfg.fontFamily, 11, "NONE")
-        --Tooltip_Small:SetShadowOffset(1,-2)
-        --Tooltip_Small:SetShadowColor(0,0,0,0.75)
-
-        if (db.lifeontop) then
-            GameTooltipStatusBar:ClearAllPoints()
-            GameTooltipStatusBar:SetPoint("LEFT", 4.5, 0)
-            GameTooltipStatusBar:SetPoint("RIGHT", -4.5, 0)
-            GameTooltipStatusBar:SetPoint("TOP", 0, -3)
-            GameTooltipStatusBar:SetHeight(4)
-        else
-            GameTooltipStatusBar:ClearAllPoints()
-            GameTooltipStatusBar:SetPoint("LEFT", 4.5, 0)
-            GameTooltipStatusBar:SetPoint("RIGHT", -4.5, 0)
-            GameTooltipStatusBar:SetPoint("BOTTOM", 0, 3)
-            GameTooltipStatusBar:SetHeight(4)
-        end
-
-        --gametooltip statusbar bg
-        GameTooltipStatusBar.bg = GameTooltipStatusBar:CreateTexture(nil, "BACKGROUND", nil, -8)
-        GameTooltipStatusBar.bg:SetAllPoints()
-        GameTooltipStatusBar.bg:SetColorTexture(1, 1, 1)
-        GameTooltipStatusBar.bg:SetVertexColor(0, 0, 0, 0.5)
-
-        --GameTooltipStatusBar:SetStatusBarColor()
-        hooksecurefunc(GameTooltipStatusBar, "SetStatusBarColor", SetStatusBarColor)
-        --OnTooltipSetUnit
-        TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Unit, OnTooltipSetUnit)
-        --GameTooltip:HookScript("OnTooltipSetUnit", OnTooltipSetUnit)
-
-        --loop over menues
-        local menues = {
-            DropDownList1MenuBackdrop,
-            DropDownList2MenuBackdrop,
-        }
-        for i, menu in next, menues do
-            menu:SetScale(cfg.scale)
-        end
-
-        --TooltipAddSpellID
-        local function TooltipAddSpellID(self, spellid)
-            if not spellid then return end
-            if type(spellid) == "table" and #spellid == 1 then spellid = spellid[1] end
-            local frame, text
-            for i = 1, 15 do
-                frame = _G[self:GetName() .. "TextLeft" .. i]
-                if frame then text = frame:GetText() end
-                if text and string.find(text, "|cff0099ffID|r") then return end
-            end
-            self:AddDoubleLine("|cff0099ffID|r", spellid)
-            self:Show()
-        end
-
-        local function TooltipAddBuffSource(self, caster)
-            local name = caster and UnitName(caster)
-            if name then
-                self:AddDoubleLine("|cff0099ffCast by|r", name, nil, nil, nil, 1, 1, 1)
-                self:Show()
-            end
-        end
-
-        --hooksecurefunc GameTooltip SetUnitBuff
-        hooksecurefunc(GameTooltip, "SetUnitBuff", function(self, unitToken, index, filter)
-            -- Get the buff details
-            local auraData = C_UnitAuras.GetBuffDataByIndex(unitToken, index, filter)
-            if not auraData then return end
-
-            local spellId = select(10, AuraUtil.UnpackAuraData(auraData))
-            TooltipAddSpellID(self, spellId)
-            
-            -- Add enhanced aura information if enabled in settings
-            if db.detailedAuras then
-                -- Add aura source/caster
-                if db.auraSource then
-                    local sourceUnit = auraData.sourceUnit
-                    if sourceUnit then
-                        local name = UnitName(sourceUnit) or "Unknown"
-                        local _, class = UnitClass(sourceUnit)
-                        local color = class and RAID_CLASS_COLORS[class] or {r=1, g=1, b=1}
-                        self:AddDoubleLine("|cff0099ffCast by|r", name, nil, nil, nil, color.r, color.g, color.b)
-                    end
-                end
+            -- Get and cache raid icon data to avoid redundant API calls
+            local raidIconIndex = GetRaidTargetIndex(unit)
+            if raidIconIndex then
+                local firstLine = GameTooltipTextLeft1
+                local firstLineText = firstLine and firstLine:GetText() or ""
                 
-                -- Add duration information
-                if db.auraDuration then
-                    local duration = auraData.duration or 0
-                    local expirationTime = auraData.expirationTime
-                    
-                    if duration > 0 and expirationTime then
-                        local timeLeft = expirationTime - GetTime()
-                        local formattedTime = ""
-                        
-                        if timeLeft > 60 then
-                            formattedTime = string.format("%.0fm %.0fs", floor(timeLeft/60), timeLeft % 60)
-                        else
-                            formattedTime = string.format("%.1fs", timeLeft)
-                        end
-                        
-                        self:AddDoubleLine("|cff0099ffDuration|r", formattedTime, nil, nil, nil, 1, 1, 0)
-                    elseif duration == 0 then
-                        self:AddDoubleLine("|cff0099ffDuration|r", "Permanent", nil, nil, nil, 0, 1, 0)
-                    end
-                end
-                
-                -- Add aura type information
-                if db.auraType then
-                    local auraType = auraData.dispelName
-                    if auraType then
-                        local color = DebuffTypeColor[auraType] or {r=0.8, g=0.8, b=0.8}
-                        self:AddDoubleLine("|cff0099ffType|r", auraType, nil, nil, nil, color.r, color.g, color.b)
+                -- Only modify if needed and not already containing the icon
+                if not firstLineText:find("Interface\\TargetingFrame\\UI%-RaidTargetingIcon") then
+                    if raidIconIndex == 16 then
+                        firstLine:SetText(("%s"):format(unitName))
+                    else
+                        firstLine:SetText(("%s %s"):format(ICON_LIST[raidIconIndex] .. "14|t", unitName))
                     end
                 end
             end
-            
-            self:Show()
-        end)
-        
-        -- SetUnitDebuff hook for enhanced debuff information
-        hooksecurefunc(GameTooltip, "SetUnitDebuff", function(self, unitToken, index, filter)
-            -- Get the debuff details
-            local auraData = C_UnitAuras.GetDebuffDataByIndex(unitToken, index, filter)
-            if not auraData then return end
 
-            local spellId = select(10, AuraUtil.UnpackAuraData(auraData))
-            TooltipAddSpellID(self, spellId)
-            
-            -- Add enhanced aura information if enabled in settings
-            if db.detailedAuras then
-                -- Add aura source/caster
-                if db.auraSource then
-                    local sourceUnit = auraData.sourceUnit
-                    if sourceUnit then
-                        local name = UnitName(sourceUnit) or "Unknown"
-                        local _, class = UnitClass(sourceUnit)
-                        local color = class and RAID_CLASS_COLORS[class] or {r=1, g=1, b=1}
-                        self:AddDoubleLine("|cff0099ffCast by|r", name, nil, nil, nil, color.r, color.g, color.b)
-                    end
-                end
-                
-                -- Add duration information
-                if db.auraDuration then
-                    local duration = auraData.duration or 0
-                    local expirationTime = auraData.expirationTime
-                    
-                    if duration > 0 and expirationTime then
-                        local timeLeft = expirationTime - GetTime()
-                        local formattedTime = ""
-                        
-                        if timeLeft > 60 then
-                            formattedTime = string.format("%.0fm %.0fs", floor(timeLeft/60), timeLeft % 60)
-                        else
-                            formattedTime = string.format("%.1fs", timeLeft)
-                        end
-                        
-                        self:AddDoubleLine("|cff0099ffDuration|r", formattedTime, nil, nil, nil, 1, 1, 0)
-                    elseif duration == 0 then
-                        self:AddDoubleLine("|cff0099ffDuration|r", "Permanent", nil, nil, nil, 0, 1, 0)
-                    end
-                end
-                
-                -- Add aura type information
-                if db.auraType then
-                    local auraType = auraData.dispelName
-                    if auraType then
-                        local color = DebuffTypeColor[auraType] or {r=0.8, g=0.8, b=0.8}
-                        self:AddDoubleLine("|cff0099ffType|r", auraType, nil, nil, nil, color.r, color.g, color.b)
-                    end
-                end
+            --unit is any player
+            local _, unitClass = UnitClass(unit)
+            --color textleft1 and statusbar by class color
+            local color = RAID_CLASS_COLORS[unitClass]
+            cfg.barColor = color
+            GameTooltipStatusBar:SetStatusBarColor(color.r, color.g, color.b)
+            _G["GameTooltipTextLeft1"]:SetTextColor(color.r, color.g, color.b)
+            --color textleft2 by guildcolor
+            local guildName, guildRank = GetGuildInfo(unit)
+            if guildName then
+                _G["GameTooltipTextLeft2"]:SetText("<" .. guildName .. "> [" .. guildRank .. "]")
+                _G["GameTooltipTextLeft2"]:SetTextColor(unpack(cfg.guildColor))
             end
-            
-            self:Show()
-        end)
-
-        --hooksecurefunc GameTooltip SetUnitAura
-        hooksecurefunc(GameTooltip, "SetUnitAura", function(self, unit, index, filter)
-            if not db.detailedAuras then return end
-            
-            -- Validate unit parameter before proceeding 
-            if not unit or not UnitExists(unit) then return end
-            
-            -- Use C_UnitAuras API with proper error checking
-            if not C_UnitAuras or not C_UnitAuras.GetAuraDataByIndex then return end
-            
-            -- Safely get aura data with error handling
-            local auraData
-            local success, err = pcall(function()
-                auraData = C_UnitAuras.GetAuraDataByIndex(unit, index, filter)
-            end)
-            
-            if not success or not auraData then return end
-            
-            local name = auraData.name
-            local spellId = auraData.spellId
-            local duration = auraData.duration
-            local expirationTime = auraData.expirationTime
-            local source = auraData.sourceUnit
-            local debuffType = auraData.dispelName
-            
-            if not name then return end
-            
-            -- Add spell ID if detailed auras enabled
-            self:AddLine(" ")
-            self:AddLine("Spell ID: " .. (spellId or "Unknown"), 0.7, 0.7, 1.0)
-            
-            -- Add aura source if available and enabled
-            if db.auraSource and source and UnitExists(source) then
-                local _, sourceClass = UnitClass(source)
-                local color = sourceClass and RAID_CLASS_COLORS[sourceClass] or NORMAL_FONT_COLOR
-                self:AddLine("Source: " .. UnitName(source), color.r, color.g, color.b)
-            end
-            
-            -- Add remaining time if enabled
-            if db.auraDuration and duration and duration > 0 then
-                local timeLeft = expirationTime - GetTime()
-                local formattedTime
-                
-                if timeLeft >= 60 then
-                    formattedTime = math.floor(timeLeft / 60) .. "m " .. math.floor(timeLeft % 60) .. "s"
-                else
-                    formattedTime = math.floor(timeLeft) .. "s"
-                end
-                
-                self:AddLine("Duration: " .. formattedTime, 1, 0.82, 0)
-            end
-            
-            -- Add aura type if available and enabled
-            if db.auraType and debuffType then
-                local color = DebuffTypeColor[debuffType] or NORMAL_FONT_COLOR
-                self:AddLine("Type: " .. debuffType, color.r, color.g, color.b)
-            end
-            
-            self:Show()
-        end)
-
-        --hooksecurefunc SetItemRef
-        hooksecurefunc("SetItemRef", function(link)
-            local type, value = link:match("(%a+):(.+)")
-            if type == "spell" then
-                TooltipAddSpellID(ItemRefTooltip, value:match("([^:]+)"))
-            end
-        end)
-
-        --HookScript GameTooltip OnTooltipSetSpell
-        local function OnTooltipSetSpell(self, data)
-            TooltipAddSpellID(self, data.id)
-        end
-
-        local function OnMacroTooltipSetSpell(self)
-            if self:GetTooltipData() and self:GetTooltipData().lines and self:GetTooltipData().lines[2] and
-                self:GetTooltipData().lines[2].leftText then
-                local tooltipData = self:GetTooltipData()
-                local tooltipName = tooltipData.lines[2].leftText
-                local spellInfo   = C_Spell.GetSpellInfo(tooltipName)
-
-                if (spellInfo and spellInfo.spellID) then
-                    TooltipAddSpellID(self, spellInfo.spellID)
-                end
+            local levelLine = guildName and _G["GameTooltipTextLeft3"] or _G["GameTooltipTextLeft2"]
+            local l = UnitLevel(unit)
+            local color = GetCreatureDifficultyColor((l > 0) and l or 999)
+            levelLine:SetTextColor(color.r, color.g, color.b)
+            --afk?
+            if UnitIsAFK(unit) then
+                self:AppendText((" |cff%s<AFK>|r"):format(cfg.afkColorHex))
             end
         end
-
-        TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Macro, OnMacroTooltipSetSpell)
-        TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Spell, OnTooltipSetSpell)
-        TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.UnitAura, OnTooltipSetSpell)
+        --dead?
+        if UnitIsDeadOrGhost(unit) then
+            _G["GameTooltipTextLeft1"]:SetTextColor(unpack(cfg.deadColor))
+        end
+        --target line
+        if (UnitExists(unit .. "target")) then
+            GameTooltip:AddDoubleLine(("|cff%s%s|r"):format(cfg.targetColorHex, "Target"),
+                GetTarget(unit .. "target") or "Unknown")
+        end
     end
+
+    -- Make the GetItemLevel function available for DisplayUnit
+    Phoenix_UI:GetModule("Tooltip.Core").GetItemLevel = self.GetItemLevel
+    
+    -- Handle who's targeting configuration option
+    if db.whoTargeting then
+        self:SetupWhoTargeting()
+    end
+
+    -- Calculate average item level with optimized caching
+    function Module:GetItemLevel(unit)
+        if not unit or not UnitExists(unit) then return nil end
+        
+        -- Only show item level for players
+        if not UnitIsPlayer(unit) then return nil end
+        
+        local guid = UnitGUID(unit)
+        if not guid then return nil end
+        
+        -- Check cache first - add time validation to ensure fresher data
+        local now = GetTime()
+        if self.itemLevelCache[guid] then
+            -- Return cached value if recent enough (within last 5 minutes)
+            if now - self.itemLevelCache[guid].time < 300 then
+                return self.itemLevelCache[guid].itemLevel
+            end
+        end
+        
+        -- Throttle inspection requests to avoid spam
+        if CanInspect(unit) and not InCombatLockdown() and not self.pendingInspects[guid] and now - self.lastInspectRequest > 1.5 then
+            self.pendingInspects[guid] = unit
+            self.lastInspectRequest = now
+            NotifyInspect(unit)
+        end
+        
+        -- For player, we can get item level directly
+        if UnitIsUnit(unit, "player") then
+            local averageItemLevel = self:CalculateAverageItemLevel(unit)
+            self.itemLevelCache[guid] = {
+                itemLevel = averageItemLevel,
+                time = now
+            }
+            return averageItemLevel
+        end
+        
+        -- Return approximate item level from C_PlayerInfo if available
+        if C_PlayerInfo and C_PlayerInfo.GetPlayerItemLevel then
+            local approximateItemLevel = C_PlayerInfo.GetPlayerItemLevel(guid)
+            if approximateItemLevel and approximateItemLevel > 0 then
+                self.itemLevelCache[guid] = {
+                    itemLevel = approximateItemLevel,
+                    time = now
+                }
+                return approximateItemLevel
+            end
+        end
+        
+        -- Fallback to GetUnitItemLevel if available in newer versions
+        if C_PaperDollInfo and C_PaperDollInfo.GetUnitItemLevel then
+            local playerILvl = C_PaperDollInfo.GetUnitItemLevel(unit)
+            if playerILvl and playerILvl > 0 then
+                self.itemLevelCache[guid] = {
+                    itemLevel = playerILvl,
+                    time = now
+                }
+                return playerILvl
+            end
+        end
+        
+        return nil
+    end
+
+    -- Add a cache cleanup function to prevent memory bloat
+    function Module:CleanupCaches()
+        local now = GetTime()
+        
+        -- Clean item level cache (keep entries from the last 10 minutes)
+        for guid, data in pairs(self.itemLevelCache) do
+            if now - data.time > 600 then -- 10 minutes
+                self.itemLevelCache[guid] = nil
+            end
+        end
+        
+        -- Clear any pending inspects that are older than 5 seconds
+        for guid, _ in pairs(self.pendingInspects) do
+            self.pendingInspects[guid] = nil
+        end
+    end
+
+    -- Hook to PLAYER_ENTERING_WORLD to set up cache cleanup timer
+    TooltipFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+    TooltipFrame:SetScript("OnEvent", function(self, event)
+        if event == "PLAYER_ENTERING_WORLD" then
+            -- Run cache cleanup every 5 minutes
+            C_Timer.NewTicker(300, function() Module:CleanupCaches() end)
+        end
+    end)
 
     if (db.hideincombat) then
         local f = CreateFrame("Frame")
@@ -503,6 +289,76 @@ function Module:OnEnable()
             end
         end
     end
+end
+
+-- Handle the "who's targeting" functionality
+function Module:SetupWhoTargeting()
+    -- Only run this once
+    if self.whoTargetingSetup then return end
+    self.whoTargetingSetup = true
+    
+    -- Create a frame to update the who's targeting info
+    local targetingFrame = CreateFrame("Frame")
+    targetingFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
+    targetingFrame:RegisterEvent("UNIT_TARGET")
+    
+    local function UpdateTargetingInfo(tooltip, unit)
+        if not unit or not Phoenix_UI.db.profile.tooltip.whoTargeting then return end
+        if not UnitExists(unit) or not UnitIsPlayer(unit) then return end
+        
+        -- Only show for group members
+        if not UnitInParty(unit) and not UnitInRaid(unit) then return end
+        
+        local targeting = {}
+        local numGroup = IsInRaid() and GetNumGroupMembers() or IsInGroup() and GetNumSubgroupMembers() or 0
+        
+        if numGroup > 0 then
+            local prefix = IsInRaid() and "raid" or "party"
+            -- Include player in party
+            if prefix == "party" then
+                if UnitIsUnit("player" .. "target", unit) then
+                    table.insert(targeting, UnitName("player"))
+                end
+            end
+            
+            for i = 1, numGroup do
+                local groupUnit = prefix .. i
+                if UnitExists(groupUnit) and UnitIsUnit(groupUnit .. "target", unit) then
+                    table.insert(targeting, UnitName(groupUnit))
+                end
+            end
+        end
+        
+        if #targeting > 0 then
+            tooltip:AddLine("Targeted by: " .. table.concat(targeting, ", "), 0.8, 0.8, 1.0)
+        end
+    end
+    
+    hooksecurefunc(GameTooltip, "SetUnit", function(self)
+        local name, unit = self:GetUnit()
+        if unit then
+            UpdateTargetingInfo(self, unit)
+        end
+    end)
+    
+    -- Also hook into our DisplayUnit function for consistency
+    local originalDisplayUnit = Phoenix_UI:GetModule("Tooltip.Core").DisplayUnit
+    Phoenix_UI:GetModule("Tooltip.Core").DisplayUnit = function(self, tooltip, unit)
+        originalDisplayUnit(self, tooltip, unit)
+        UpdateTargetingInfo(tooltip, unit)
+    end
+    
+    targetingFrame:SetScript("OnEvent", function(self, event, unit)
+        -- Update tooltip if it's currently showing a unit
+        if GameTooltip:IsShown() then
+            local name, tooltipUnit = GameTooltip:GetUnit()
+            if tooltipUnit then
+                -- Refresh without hiding/showing to avoid flickering
+                UpdateTargetingInfo(GameTooltip, tooltipUnit)
+                GameTooltip:Show()
+            end
+        end
+    end)
 end
 
 -- Add a function to save tooltip settings specifically
@@ -887,7 +743,7 @@ function Module:DisplayUnit(tooltip, unit)
                           HIGHLIGHT_FONT_COLOR
             
             -- Use targetFormat from config to avoid confusion with "Target" label
-            local formatLabel = "Targeting"
+            local formatLabel = "Target"
             if db.targetFormat then
                 -- Get the format value based on the dropdown selection
                 local formats = {"Target", "Targeting", "Target >>", "Targets:"}
@@ -994,14 +850,19 @@ function Module:GetItemLevel(unit)
     local guid = UnitGUID(unit)
     if not guid then return nil end
     
-    -- Check cache first
+    -- Check cache first - add time validation to ensure fresher data
+    local now = GetTime()
     if self.itemLevelCache[guid] then
-        return self.itemLevelCache[guid].itemLevel
+        -- Return cached value if recent enough (within last 5 minutes)
+        if now - self.itemLevelCache[guid].time < 300 then
+            return self.itemLevelCache[guid].itemLevel
+        end
     end
     
-    -- Queue inspection if needed and we can inspect
-    if CanInspect(unit) and not InCombatLockdown() and not self.pendingInspects[guid] then
+    -- Throttle inspection requests to avoid spam
+    if CanInspect(unit) and not InCombatLockdown() and not self.pendingInspects[guid] and now - self.lastInspectRequest > 1.5 then
         self.pendingInspects[guid] = unit
+        self.lastInspectRequest = now
         NotifyInspect(unit)
     end
     
@@ -1010,7 +871,7 @@ function Module:GetItemLevel(unit)
         local averageItemLevel = self:CalculateAverageItemLevel(unit)
         self.itemLevelCache[guid] = {
             itemLevel = averageItemLevel,
-            time = GetTime()
+            time = now
         }
         return averageItemLevel
     end
@@ -1021,9 +882,21 @@ function Module:GetItemLevel(unit)
         if approximateItemLevel and approximateItemLevel > 0 then
             self.itemLevelCache[guid] = {
                 itemLevel = approximateItemLevel,
-                time = GetTime()
+                time = now
             }
             return approximateItemLevel
+        end
+    end
+    
+    -- Fallback to GetUnitItemLevel if available in newer versions
+    if C_PaperDollInfo and C_PaperDollInfo.GetUnitItemLevel then
+        local playerILvl = C_PaperDollInfo.GetUnitItemLevel(unit)
+        if playerILvl and playerILvl > 0 then
+            self.itemLevelCache[guid] = {
+                itemLevel = playerILvl,
+                time = now
+            }
+            return playerILvl
         end
     end
     
@@ -1092,6 +965,3 @@ function Module:CalculateAverageItemLevel(unit, storeSlotLevels)
     
     return averageItemLevel, itemLevelBySlot
 end
-
-
-

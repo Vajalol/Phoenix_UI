@@ -156,23 +156,17 @@ function Layout:OnEnable()
                     initialValue = true,
                     order = 1
                 },
-                targetFormat = {
-                    key = 'targetFormat',
-                    type = 'dropdown',
-                    label = 'Target Text Format',
-                    tooltip = 'Choose how target information is displayed',
-                    options = {
-                        { value = 'Target', text = 'Target' },
-                        { value = 'Targeting', text = 'Targeting' },
-                        { value = 'Target >>', text = 'Target >>' },
-                        { value = 'Targets:', text = 'Targets:' }
-                    },
-                    initialValue = 2,
+                roleIcons = {
+                    key = 'roleIcons',
+                    type = 'checkbox',
+                    label = 'Role Icons',
+                    tooltip = 'Show role icons (tank, healer, DPS) in tooltips',
                     column = 4,
+                    initialValue = true,
                     order = 2
                 },
-                showExtendedTargeting = {
-                    key = 'showExtendedTargeting',
+                whoTargeting = {
+                    key = 'whoTargeting',
                     type = 'checkbox',
                     label = 'Show Who\'s Targeting',
                     tooltip = 'Show all players who are targeting this unit',
@@ -188,7 +182,7 @@ function Layout:OnEnable()
                     key = 'showHealth',
                     type = 'checkbox',
                     label = 'Health Text',
-                    tooltip = 'Show health information in tooltips',
+                    tooltip = 'Display health values in tooltips',
                     column = 4,
                     initialValue = true,
                     order = 1
@@ -197,16 +191,16 @@ function Layout:OnEnable()
                     key = 'showItemLevel',
                     type = 'checkbox',
                     label = 'Item Level',
-                    tooltip = 'Show average item level for players',
+                    tooltip = 'Display player\'s item level in tooltips',
                     column = 4,
                     initialValue = true,
                     order = 2
                 },
-                roleIcons = {
-                    key = 'roleIcons',
+                showSpellID = {
+                    key = 'showSpellID',
                     type = 'checkbox',
-                    label = 'Role Icons',
-                    tooltip = 'Show role icons (tank, healer, DPS) in tooltips',
+                    label = 'Spell IDs',
+                    tooltip = 'Display spell IDs for abilities and effects',
                     column = 4,
                     initialValue = true,
                     order = 3
@@ -321,6 +315,3 @@ function Layout:OnEnable()
         },
     }
 end
-
-
-

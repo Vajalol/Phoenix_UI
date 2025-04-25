@@ -139,15 +139,39 @@ function Layout:OnEnable()
                     order = 1,
                     onChange = chatSettingChanged
                 },
-                historyLines = {
+                historyCount = {
                     key = 'history.lines',
                     type = 'slider',
                     label = 'History Lines',
-                    tooltip = 'Number of chat lines to save',
+                    tooltip = 'Number of chat lines to save in history',
                     min = 100,
                     max = 1000,
                     step = 100,
                     initialValue = 500,
+                    column = 8,
+                    order = 2,
+                    onChange = chatSettingChanged
+                }
+            },
+            {
+                advancedSearch = {
+                    key = 'history.advancedSearch',
+                    type = 'checkbox',
+                    label = 'Advanced Search',
+                    tooltip = 'Enable enhanced chat history search with improved filtering',
+                    column = 4,
+                    order = 1,
+                    onChange = chatSettingChanged
+                },
+                maxSearchResults = {
+                    key = 'history.maxSearchResults',
+                    type = 'slider',
+                    label = 'Max Search Results',
+                    tooltip = 'Maximum number of search results to display',
+                    min = 25,
+                    max = 200,
+                    step = 25,
+                    initialValue = 100,
                     column = 8,
                     order = 2,
                     onChange = chatSettingChanged
@@ -229,13 +253,52 @@ function Layout:OnEnable()
                     type = 'slider',
                     label = 'Emoji Size',
                     tooltip = 'Size of emoji icons in chat',
-                    min = 12,
-                    max = 24,
+                    min = 8,
+                    max = 32,
                     step = 1,
                     initialValue = 16,
                     column = 8,
                     order = 2,
                     onChange = chatSettingChanged
+                }
+            },
+            {
+                emojiCacheSize = {
+                    key = 'emoji.cacheSize',
+                    type = 'slider',
+                    label = 'Emoji Cache Size',
+                    tooltip = 'Number of messages to cache for emoji processing (higher = better performance, more memory)',
+                    min = 50,
+                    max = 500,
+                    step = 50,
+                    initialValue = 100,
+                    column = 8,
+                    order = 1,
+                    onChange = chatSettingChanged
+                },
+                clearEmojiCache = {
+                    key = 'clearEmojiCache',
+                    type = 'button',
+                    label = 'Clear Emoji Cache',
+                    tooltip = 'Clear emoji message cache to free memory',
+                    column = 4,
+                    order = 2,
+                    onClick = function()
+                        -- Clear emoji cache via the module if available
+                        local emojiModule = Phoenix_UI:GetModule("Chat.Emoji", true)
+                        if emojiModule and emojiModule.ClearCache then
+                            emojiModule:ClearCache()
+                            Phoenix_UI:Print("Emoji cache cleared")
+                        else
+                            -- Fallback: clear via global variable if available
+                            if Phoenix_UI.ChatEmojiCache then
+                                Phoenix_UI.ChatEmojiCache = {}
+                                Phoenix_UI:Print("Emoji cache cleared")
+                            else
+                                Phoenix_UI:Print("Emoji cache not available")
+                            end
+                        end
+                    end
                 }
             },
             {
@@ -446,28 +509,16 @@ function Layout:OnEnable()
                     order = 1,
                     onChange = chatSettingChanged
                 },
-                virtualScrolling = {
-                    key = 'performance.virtualScrolling',
+                useModernUI = {
+                    key = 'performance.useModernUI',
                     type = 'checkbox',
-                    label = 'Virtual Scrolling',
-                    tooltip = 'Optimize chat display when scrolling through history',
-                    column = 3,
+                    label = 'Modern UI Elements',
+                    tooltip = 'Use modern UI elements and APIs for better compatibility with recent WoW versions',
+                    column = 6,
                     order = 2,
-                    onChange = chatSettingChanged
-                },
-                throttleUpdates = {
-                    key = 'performance.throttleUpdates',
-                    type = 'checkbox',
-                    label = 'Throttle Updates',
-                    tooltip = 'Limit chat frame updates during high activity',
-                    column = 3,
-                    order = 3,
                     onChange = chatSettingChanged
                 }
             }
         },
     }
 end
-
-
-

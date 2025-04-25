@@ -1,3 +1,4 @@
+---@class PhoenixUI_ChatHistoryModule : AceModule
 local Module = Phoenix_UI:NewModule("Chat.History");
 
 function Module:OnEnable()
@@ -8,10 +9,16 @@ function Module:OnEnable()
         db.history = {
             enabled = true,
             lines = 500,
-            advancedSearch = true
+            advancedSearch = true,
+            maxSearchResults = 100
         }
     elseif db.history.advancedSearch == nil then
         db.history.advancedSearch = true
+    end
+    
+    -- Add default search result limit if missing
+    if not db.history.maxSearchResults then
+        db.history.maxSearchResults = 100
     end
     
     -- Exit if chat history is disabled
@@ -19,6 +26,36 @@ function Module:OnEnable()
     
     -- Search frame reference
     local searchFrame
+    
+    -- Add a cache for frequently accessed message history
+    local historyCache = {}
+    local function GetCachedHistory(chatID)
+        if not historyCache[chatID] then
+            -- Only cache if Phoenix_UI.chatHistory exists
+            if Phoenix_UI.chatHistory and Phoenix_UI.chatHistory[chatID] then
+                -- Create a filtered copy that contains only non-nil messages
+                historyCache[chatID] = {}
+                for i, msg in ipairs(Phoenix_UI.chatHistory[chatID]) do
+                    if msg and msg.text then
+                        table.insert(historyCache[chatID], msg)
+                    end
+                end
+            else
+                -- Return empty table if history doesn't exist
+                return {}
+            end
+        end
+        return historyCache[chatID]
+    end
+    
+    -- Function to invalidate cache when history changes
+    local function InvalidateHistoryCache(chatID)
+        if chatID then
+            historyCache[chatID] = nil
+        else
+            historyCache = {}
+        end
+    end
     
     -- Get timestamp text format
     local function GetTimeStampText(timestamp)
@@ -32,6 +69,38 @@ function Module:OnEnable()
             date.hour, date.min)
     end
     
+    -- Function to apply backdrop with proper API compatibility
+    local function ApplyBackdrop(frame, r, g, b, a)
+        -- Check for modern UI setting
+        local useModernUI = db.performance and db.performance.useModernUI
+        
+        -- Ensure proper backdrop handling for Shadowlands+ compatibility
+        if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE and not frame.SetBackdrop then
+            Mixin(frame, BackdropTemplateMixin)
+        end
+        
+        -- Apply backdrop
+        frame:SetBackdrop({
+            bgFile = useModernUI and "Interface\\Buttons\\WHITE8X8" or "Interface\\DialogFrame\\UI-DialogBox-Background",
+            edgeFile = useModernUI and "Interface\\Tooltips\\UI-Tooltip-Border" or "Interface\\DialogFrame\\UI-DialogBox-Border",
+            edgeSize = 16,
+            tile = true, 
+            tileSize = 16,
+            insets = { left = 4, right = 4, top = 4, bottom = 4 }
+        })
+        
+        -- Apply colors
+        if useModernUI then
+            -- More modern, semi-transparent look
+            frame:SetBackdropColor(r or 0.05, g or 0.05, b or 0.05, a or 0.85)
+            frame:SetBackdropBorderColor(0.3, 0.3, 0.3, 0.8)
+        else
+            -- Classic look
+            frame:SetBackdropColor(r or 0, g or 0, b or 0, a or 0.9)
+            frame:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
+        end
+    end
+    
     -- Create search UI
     local function CreateSearchFrame()
         if searchFrame then return searchFrame end
@@ -41,14 +110,10 @@ function Module:OnEnable()
         frame:SetSize(600, 400)
         frame:SetPoint("CENTER")
         frame:SetFrameStrata("DIALOG")
-        frame:SetBackdrop({
-            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-            edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-            edgeSize = 16,
-            tile = true, tileSize = 16,
-            insets = { left = 4, right = 4, top = 4, bottom = 4 }
-        })
-        frame:SetBackdropColor(0, 0, 0, 0.9)
+        
+        -- Apply backdrop with compatibility handling
+        ApplyBackdrop(frame)
+        
         frame:EnableMouse(true)
         frame:SetMovable(true)
         frame:RegisterForDrag("LeftButton")
@@ -136,41 +201,80 @@ function Module:OnEnable()
         
         -- Method to perform search
         function frame:PerformSearch()
-            local searchText = self.searchBox:GetText()
-            if not searchText or searchText == "" then return end
-            
-            -- Clear previous results
-            self:ClearResults()
-            
-            -- Get chat history
-            local results = {}
-            local totalFound = 0
-            
-            for chatID, messages in pairs(Phoenix_UI.chatHistory or {}) do
-                -- Check if filter matches
-                if self.filter == "all" or self.filter == chatID then
-                    for _, msgData in ipairs(messages) do
-                        -- Check if text matches
-                        if msgData.text and string.find(string.lower(msgData.text), string.lower(searchText), 1, true) then
-                            table.insert(results, {
-                                text = msgData.text,
-                                timestamp = msgData.timestamp or 0,
-                                chatID = chatID
-                            })
-                            totalFound = totalFound + 1
+            -- Wrap search in pcall for error protection
+            local success, result = pcall(function()
+                local searchText = self.searchBox:GetText()
+                if not searchText or searchText == "" then return end
+                
+                -- Clear previous results
+                self:ClearResults()
+                
+                -- Get chat history
+                local selectedFilter = self.filter or "all"
+                local results = {}
+                local totalFound = 0
+                local maxResults = db.history.maxSearchResults or 100
+                
+                -- Process each chat frame's history
+                for chatID = 1, NUM_CHAT_WINDOWS do
+                    -- Skip if we're filtering to a specific chat and this isn't it
+                    if selectedFilter == "all" or selectedFilter == chatID then
+                        -- Get cached history for this chat ID for better performance
+                        local history = GetCachedHistory(chatID)
+                        
+                        -- Skip empty history
+                        if history and #history > 0 then
+                            -- Convert search text to lowercase for case-insensitive matching
+                            local searchTextLower = searchText:lower()
                             
-                            -- Limit to 100 results for performance
-                            if totalFound >= 100 then break end
+                            -- Optimize search by using string.find with plain text search first
+                            for i = #history, 1, -1 do -- Search from newest to oldest
+                                local message = history[i]
+                                
+                                -- Skip nil entries (shouldn't happen with cache, but for safety)
+                                if message and message.text then
+                                    -- Remove color codes for matching
+                                    local plainText = message.text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+                                    
+                                    -- Fast plain text search
+                                    if plainText:lower():find(searchTextLower, 1, true) then
+                                        table.insert(results, {
+                                            chatID = chatID,
+                                            text = message.text,
+                                            timestamp = message.timestamp or 0,
+                                            chatType = message.chatType or "SYSTEM"
+                                        })
+                                        totalFound = totalFound + 1
+                                    end
+                                end
+                            end
                         end
+                    end
+                    
+                    -- Early exit if we've hit the limit
+                    if totalFound >= maxResults then 
+                        -- Add a note that results were limited
+                        if totalFound >= maxResults then
+                            table.insert(results, {
+                                chatID = 1,
+                                text = "|cffFF7D0APhoenix UI:|r Search results limited to " .. maxResults .. " matches. Try a more specific search.",
+                                timestamp = time(),
+                                chatType = "SYSTEM"
+                            })
+                        end
+                        break 
                     end
                 end
                 
-                -- Early exit if we've hit the limit
-                if totalFound >= 100 then break end
-            end
+                -- Display results
+                self:DisplayResults(results)
+            end)
             
-            -- Display results
-            self:DisplayResults(results)
+            -- Error handling
+            if not success and result then
+                -- Show error in chat
+                DEFAULT_CHAT_FRAME:AddMessage("|cffFF7D0APhoenix UI:|r Error in chat history search: " .. tostring(result))
+            end
         end
         
         -- Method to clear results
@@ -188,17 +292,13 @@ function Module:OnEnable()
             self.content.results = self.content.results or {}
             
             -- Update title with result count
-            self.title:SetText(string.format("Chat History Search - %d Results", #results))
-            
-            -- If no results
-            if #results == 0 then
-                local noResults = self.content:CreateFontString(nil, "OVERLAY")
-                noResults:SetFont(STANDARD_TEXT_FONT, 12)
-                noResults:SetTextColor(1, 1, 1)
-                noResults:SetPoint("CENTER", self.content, "CENTER", 0, 0)
-                noResults:SetText("No results found")
-                table.insert(self.content.results, noResults)
-                return
+            local resultCount = #results
+            if resultCount == 0 then
+                self.title:SetText("Chat History Search - No results found")
+            elseif resultCount == 1 then
+                self.title:SetText("Chat History Search - 1 result")
+            else
+                self.title:SetText("Chat History Search - " .. resultCount .. " results")
             end
             
             -- Sort by timestamp (newest first)
@@ -216,14 +316,8 @@ function Module:OnEnable()
                     resultFrame:SetPoint("TOPLEFT", previousFrame, "BOTTOMLEFT", 0, -5)
                 end
                 
-                -- Set backdrop
-                resultFrame:SetBackdrop({
-                    bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-                    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-                    edgeSize = 8,
-                    insets = { left = 2, right = 2, top = 2, bottom = 2 }
-                })
-                resultFrame:SetBackdropColor(0.1, 0.1, 0.1, 0.7)
+                -- Apply backdrop with modern UI if enabled
+                ApplyBackdrop(resultFrame, 0.1, 0.1, 0.1, 0.7)
                 
                 -- Chat name
                 local chatName = _G["ChatFrame" .. result.chatID] and _G["ChatFrame" .. result.chatID].name or "Chat " .. result.chatID
