@@ -1,10 +1,9 @@
 -- Phoenix UI: MythicPlus Layout
-local addonName, Phoenix = ...
-local Layout = Phoenix_UI:NewModule("Config.Layout.MythicPlus")
-local L = Phoenix.L or {['MythicPlus'] = 'Mythic+'}
+local Layout = Phoenix_UI:NewModule('Config.Layout.MythicPlus')
+local L = Phoenix_UI.L or {['MythicPlus'] = 'Mythic+'}
 
--- Get the Mythic+ module
-local MythicPlus = Phoenix_UI:GetModule("MythicPlus")
+-- Get the Mythic+ module - use Phoenix_UI, not Phoenix
+local MythicPlus = Phoenix_UI:GetModule("MythicPlus", true)
 
 -- Register the layout with Phoenix_UI configuration
 function Layout:OnEnable()

@@ -22,7 +22,7 @@ local FAQ = Phoenix_UI:GetModule("Config.Layout.FAQ")
 local Profiles = Phoenix_UI:GetModule("Config.Layout.Profiles")
 local WeakAurasIntegration = Phoenix_UI:GetModule("Config.Layout.WeakAurasIntegration")
 local CooldownTracker = Phoenix_UI:GetModule("Config.Layout.CooldownTracker")
-local MythicPlus = Phoenix_UI:GetModule("Config.Layout.MythicPlus")
+local MythicPlus = Phoenix_UI:GetModule("Config.Layout.MythicPlus", true)
 local DetailSkin = Phoenix_UI:GetModule("Config.Layout.DetailSkin")
 
 local Ace = LibStub("AceAddon-3.0")
