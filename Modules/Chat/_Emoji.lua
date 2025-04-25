@@ -117,76 +117,184 @@ local function ReplaceEmojis(text, forSendChat)
         return processedMessageCache[cacheKey]
     end
     
-    -- Skip more complex messages that would break with texture replacement
-    -- IMPORTANT: We need to be very careful with messages containing formatting
+    -- New approach: Handle formatting tags by processing text segments
     
-    -- Skip messages with item/spell links
-    if text:find("|H") then return text end
-    
-    -- Skip messages with color codes 
-    if text:find("|c") then return text end
-    
-    -- Skip messages with existing textures
-    if text:find("|T") then return text end
-    
-    -- Skip messages with other formatting codes
-    if text:find("|r") then return text end
-    
-    -- Safety check for invalid escape sequences
-    if text:find("||") then return text end
-    
-    -- Only allow replacing emojis when displaying, not when sending
-    -- This is crucial to avoid the "Invalid escape code in chat message" error
-    if forSendChat then
-        -- IMPORTANT: For sending, we should not try to add texture escape sequences
-        -- We'll simply return the original text
-        return text
-    end
-    
-    -- For display in chat, we can safely replace emoji codes with textures
-    local result = text
-    -- Track if the message has been modified
-    local modified = false
-    
-    -- Process each emoji code
-    for code, emoji in pairs(emojiTextures) do
-        if result:find(code, 1, true) then
-            -- Text patterns are literal strings, need to escape special chars
-            local pattern = code:gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1")
-            -- For display, we can safely use the display texture
-            local replacement = emoji.display
-            
-            -- Only do string.gsub if we actually have a match
-            local newResult, replacements = result:gsub(pattern, replacement)
-            if replacements > 0 and newResult ~= result then
-                result = newResult
+    -- First check if the message has any formatting. If not, process the whole thing
+    if not text:find("|") then
+        local modified = false
+        local result = text
+        
+        -- Process with simple emojis first
+        for code, name in pairs(emojiMap) do
+            -- Use plain text find to avoid pattern matching issues
+            if text:find(code, 1, true) then
+                local size = Phoenix_UI.db.profile.chat.emoji.size or 16
+                local textureString = emojiTextures[code] and emojiTextures[code].display or
+                    ("|T" .. EMOJI_PATH .. name .. ".tga:" .. size .. ":" .. size .. "|t")
+                
+                -- Replace emojis with texture strings (use plain flag for literal string replacement)
+                result = result:gsub(code, textureString, 1, true)
                 modified = true
             end
         end
-    end
-
-    -- Only add to cache if we actually modified something
-    if modified then
-        -- Manage cache size
-        if cacheCount >= MAX_CACHE_SIZE then
-            -- Clear cache when it gets too large
-            processedMessageCache = setmetatable({}, {
-                __mode = "k",
-                __index = function(t, k) return nil end
-            })
-            cacheCount = 0
+        
+        -- Only add to cache if we actually modified something
+        if modified then
+            -- Manage cache size
+            if cacheCount >= MAX_CACHE_SIZE then
+                -- Clear cache when it gets too large
+                processedMessageCache = setmetatable({}, {
+                    __mode = "k",
+                    __index = function(t, k) return nil end
+                })
+                cacheCount = 0
+            end
+            
+            processedMessageCache[cacheKey] = result
+            cacheCount = cacheCount + 1
         end
         
-        processedMessageCache[cacheKey] = result
-        cacheCount = cacheCount + 1
+        return result
+    else
+        -- Split the message into formatted and unformatted segments
+        local segments = {}
+        local currentPos = 1
+        local inFormat = false
+        local formatStartPos = 0
+        local formatCount = 0
+        
+        -- Find all formatting tags and extract segments between them
+        for i = 1, #text do
+            local char = text:sub(i, i)
+            
+            if char == "|" then
+                -- Check if this is a formatting tag or escaped |
+                local nextChar = text:sub(i+1, i+1)
+                
+                if nextChar == "|" then
+                    -- This is an escaped |, skip the next character
+                    i = i + 1
+                else
+                    if not inFormat then
+                        -- Start of a format tag, add preceding text as a segment
+                        if i > currentPos then
+                            table.insert(segments, {
+                                text = text:sub(currentPos, i-1),
+                                isFormat = false
+                            })
+                        end
+                        
+                        inFormat = true
+                        formatStartPos = i
+                        
+                        -- Look ahead to find the end of this format tag
+                        if nextChar == "c" then
+                            -- Color format |cAARRGGBB spans until |r
+                            formatCount = formatCount + 1
+                        elseif nextChar == "r" then
+                            -- End of color format |r
+                            formatCount = math.max(0, formatCount - 1)
+                        elseif nextChar == "T" then
+                            -- Texture format |T...|t
+                            -- Need to find the matching |t
+                        elseif nextChar == "H" then
+                            -- Hyperlink format |H...|h[...]|h
+                        end
+                    elseif nextChar == "t" and text:sub(formatStartPos, formatStartPos+1) == "|T" then
+                        -- End of texture tag
+                        table.insert(segments, {
+                            text = text:sub(formatStartPos, i+1),
+                            isFormat = true
+                        })
+                        inFormat = false
+                        currentPos = i + 2
+                    elseif nextChar == "h" then
+                        -- Could be the end of a hyperlink or part of the hyperlink text
+                        local prevText = text:sub(i-2, i-1)
+                        if prevText == "]|" then
+                            -- This is the end of a hyperlink
+                            table.insert(segments, {
+                                text = text:sub(formatStartPos, i+1),
+                                isFormat = true
+                            })
+                            inFormat = false
+                            currentPos = i + 2
+                        end
+                    elseif nextChar == "r" and formatCount > 0 then
+                        -- End of color format
+                        table.insert(segments, {
+                            text = text:sub(formatStartPos, i+1),
+                            isFormat = true
+                        })
+                        formatCount = formatCount - 1
+                        if formatCount == 0 then
+                            inFormat = false
+                            currentPos = i + 2
+                        end
+                    end
+                end
+            end
+        end
+        
+        -- Add the final segment
+        if currentPos <= #text then
+            table.insert(segments, {
+                text = text:sub(currentPos),
+                isFormat = inFormat
+            })
+        end
+        
+        -- Process only the non-format segments
+        local result = ""
+        for _, segment in ipairs(segments) do
+            if segment.isFormat then
+                -- Keep format segments as they are
+                result = result .. segment.text
+            else
+                -- Process non-format segments for emojis
+                local processedText = segment.text
+                local modified = false
+                
+                for code, name in pairs(emojiMap) do
+                    -- Use plain text find to avoid pattern matching issues
+                    if processedText:find(code, 1, true) then
+                        local size = Phoenix_UI.db.profile.chat.emoji.size or 16
+                        local textureString = emojiTextures[code] and emojiTextures[code].display or
+                            ("|T" .. EMOJI_PATH .. name .. ".tga:" .. size .. ":" .. size .. "|t")
+                        
+                        -- Replace emojis with texture strings (use plain flag for literal string replacement)
+                        processedText = processedText:gsub(code, textureString, 1, true)
+                        modified = true
+                    end
+                end
+                
+                result = result .. processedText
+            end
+        end
+        
+        -- Cache the processed message if modified
+        if result ~= text then
+            -- Manage cache size
+            if cacheCount >= MAX_CACHE_SIZE then
+                -- Clear cache when it gets too large
+                processedMessageCache = setmetatable({}, {
+                    __mode = "k",
+                    __index = function(t, k) return nil end
+                })
+                cacheCount = 0
+            end
+            
+            processedMessageCache[cacheKey] = result
+            cacheCount = cacheCount + 1
+        end
+        
+        -- Skip messages with broken formatting that could result from emoji replacement
+        if result:find("||") or result:find("|[^cHhTrt]") or result:find("|$") then
+            return text
+        end
+        
+        return result
     end
-    
-    -- Skip messages with broken formatting that could result from emoji replacement
-    if result:find("||") or result:find("|[^cHhTr]") or result:find("|$") then
-        return text
-    end
-    
-    return result
 end
 
 -- MESSAGE PREVIEW FUNCTION (only changes what you see in edit box, not what's sent)
@@ -216,12 +324,13 @@ end
 local function HookSendChatMessage(text, chatType, language, channel)
     -- Only process player-typed messages, not system messages
     if not text or text == "" then 
-        return 
+        return originalSendChatMessage(text, chatType, language, channel)
     end
     
     -- Check if emoji replacement is enabled
-    if not Phoenix_UI.db.profile.chat.emoji.enabled then
-        return text, chatType, language, channel
+    if not Phoenix_UI.db or not Phoenix_UI.db.profile or not Phoenix_UI.db.profile.chat or 
+       not Phoenix_UI.db.profile.chat.emoji or not Phoenix_UI.db.profile.chat.emoji.enabled then
+        return originalSendChatMessage(text, chatType, language, channel)
     end
     
     local modified = false
@@ -268,11 +377,7 @@ local function HookSendChatMessage(text, chatType, language, channel)
         return ":"..emojiName..":"
     end)
     
-    if modified then
-        return result, chatType, language, channel
-    else
-        return text, chatType, language, channel
-    end
+    return originalSendChatMessage(result, chatType, language, channel)
 end
 
 ---@diagnostic disable-next-line: duplicate-set-field
@@ -453,9 +558,7 @@ function Module:OnEnable()
     
     -- Hook the SendChatMessage function
     originalSendChatMessage = _G.SendChatMessage
-    _G.SendChatMessage = function(...)
-        return HookSendChatMessage(...)
-    end
+    _G.SendChatMessage = HookSendChatMessage
     
     -- Add emoji preview to edit boxes
     for i = 1, NUM_CHAT_WINDOWS do

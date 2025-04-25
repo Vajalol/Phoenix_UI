@@ -74,17 +74,8 @@ function Module:ProcessChatMessage(frame, event, message, ...)
         return false
     end
     
-    -- Skip messages that already contain emoji textures or complex formatting
-    if message and (
-        message:find("Interface\\AddOns\\Phoenix_UI\\Media\\emojis\\") or 
-        message:find("Blizzard_Professions") or
-        message:find("ChatlIcon%-Quality%-Tier") or
-        message:find("|T") or      -- Texture
-        message:find("|H") or      -- Hyperlink
-        message:find("|c%x%x%x%x%x%x%x%x") -- Color code
-    ) then
-        return false
-    end
+    -- Don't skip formatted messages anymore
+    -- This allows emoji processing in messages with links, colors, etc.
     
     -- Process chat message with various emoji handlers
     -- This is called by other modules through the ChatFrame filter
