@@ -65,6 +65,15 @@ local emojiMap = {
     [":blush:"] = "Blush",
 }
 
+-- Reverse emoji mapping table
+local reverseEmojiMap = {}
+for code, name in pairs(emojiMap) do
+    -- If multiple codes map to the same emoji, keep the shortest one for reverse lookup
+    if not reverseEmojiMap[name] or #code < #reverseEmojiMap[name] then
+        reverseEmojiMap[name] = code
+    end
+end
+
 -- -------------------------
 -- SIMPLIFIED EMOJI SYSTEM
 -- -------------------------
@@ -203,43 +212,67 @@ local function AddEmojiPreview(editbox)
     end)
 end
 
--- Replace emojis in outgoing chat messages
-local function HookSendChatMessage(text, chatType, ...)
-    -- Skip processing for addon/system messages and non-player chat
-    local safeTypes = {
-        SAY = true, YELL = true, PARTY = true, RAID = true, 
-        GUILD = true, OFFICER = true, WHISPER = true, 
-        CHANNEL = true, INSTANCE_CHAT = true
-    }
-    
-    -- Only process player chat messages that don't contain special formatting
-    if text and safeTypes[chatType] and not text:find("|") and not text:find("\124") then
-        -- Only process messages that potentially have emoji codes
-        -- Check if the message has at least one emoji code before processing
-        local hasEmoji = false
-        for code, _ in pairs(emojiTextures) do
-            if text:find(code) then
-                hasEmoji = true
-                break
-            end
-        end
-        
-        -- Only process if message actually contains emoji codes
-        if hasEmoji then
-            -- IMPORTANT: We CANNOT send texture escape sequences directly with SendChatMessage
-            -- Instead, we need to add a special identifier that the chat filter will recognize
-            
-            -- Method 1: Use a simpler approach - just pass the original text
-            -- The visual representation will be handled by the chat filters
-            return originalSendChatMessage(text, chatType, ...)
-            
-            -- NOTE: The actual emoji replacement is now handled by the chat message display filter
-            -- which converts emoji codes to textures when messages are displayed in chat
-        end
+-- Hook the SendChatMessage function to ensure proper emoji handling in outgoing messages
+local function HookSendChatMessage(text, chatType, language, channel)
+    -- Only process player-typed messages, not system messages
+    if not text or text == "" then 
+        return 
     end
     
-    -- Default: use original function with unmodified text
-    return originalSendChatMessage(text, chatType, ...)
+    -- Check if emoji replacement is enabled
+    if not Phoenix_UI.db.profile.chat.emoji.enabled then
+        return text, chatType, language, channel
+    end
+    
+    local modified = false
+    local result = text
+    
+    -- First: Handle any texture escape sequences in the message and convert them back to emoji codes
+    -- This handles existing texture paths that have been processed already
+    result = result:gsub("|T.-Interface\\AddOns\\Phoenix_UI\\Modules\\Chat\\Emojis\\([%w_]+)%.tga:[%d:]+|t", function(emojiName)
+        modified = true
+        -- Find the corresponding emoji code
+        for code, name in pairs(emojiMap) do
+            if name == emojiName then
+                return code
+            end
+        end
+        -- If no code is found, just return a placeholder
+        return ":"..emojiName..":"
+    end)
+    
+    -- Second: Handle any raw texture paths (without proper |T|t formatting)
+    -- Handle paths with brackets
+    result = result:gsub("%[Interface\\AddOns\\Phoenix_UI\\Modules\\Chat\\Emojis\\([%w_]+)%.tga%]", function(emojiName)
+        modified = true
+        -- Find the corresponding emoji code
+        for code, name in pairs(emojiMap) do
+            if name == emojiName then
+                return code
+            end
+        end
+        -- If no code is found, just return a placeholder
+        return ":"..emojiName..":"
+    end)
+    
+    -- Handle paths without brackets
+    result = result:gsub("Interface\\AddOns\\Phoenix_UI\\Modules\\Chat\\Emojis\\([%w_]+)%.tga", function(emojiName)
+        modified = true
+        -- Find the corresponding emoji code
+        for code, name in pairs(emojiMap) do
+            if name == emojiName then
+                return code
+            end
+        end
+        -- If no code is found, just return a placeholder
+        return ":"..emojiName..":"
+    end)
+    
+    if modified then
+        return result, chatType, language, channel
+    else
+        return text, chatType, language, channel
+    end
 end
 
 ---@diagnostic disable-next-line: duplicate-set-field
@@ -353,42 +386,33 @@ function Module:OnEnable()
     
     InitializeEmojis()
     
-    -- Set up chat message display filtering
+    -- Set up filters for chat messages to handle emoji codes and display them as textures
     local function SetupChatFilters()
-        -- Store original AddMessage function for each chat frame
-        local originalAddMessage = {}
+        -- Only register once
+        if Module.chatFiltersRegistered then return end
         
-        -- Function to filter and process chat messages for emojis
-        local function FilterMessageForEmojis(self, text, ...)
-            -- Skip non-text messages
-            if not text or type(text) ~= "string" then
-                return originalAddMessage[self](self, text, ...)
-            end
-            
-            -- Process the text through emoji replacer
-            local processedText = ReplaceEmojis(text, false)
-            
-            -- Call original handler with processed text
-            return originalAddMessage[self](self, processedText, ...)
+        -- Get the EmojiFilter function defined at the module level
+        local EmojiFilter = _G.EmojiFilter
+        
+        -- Register for all chat types
+        local chatTypes = {
+            "CHAT_MSG_SAY", "CHAT_MSG_YELL", "CHAT_MSG_PARTY", "CHAT_MSG_PARTY_LEADER",
+            "CHAT_MSG_RAID", "CHAT_MSG_RAID_LEADER", "CHAT_MSG_RAID_WARNING",
+            "CHAT_MSG_GUILD", "CHAT_MSG_OFFICER", "CHAT_MSG_WHISPER", "CHAT_MSG_WHISPER_INFORM",
+            "CHAT_MSG_CHANNEL", "CHAT_MSG_INSTANCE_CHAT", "CHAT_MSG_INSTANCE_CHAT_LEADER",
+            "CHAT_MSG_BN_WHISPER", "CHAT_MSG_BN_WHISPER_INFORM", "CHAT_MSG_BN_CONVERSATION"
+        }
+        
+        -- Register the filter for all chat types
+        for _, event in ipairs(chatTypes) do
+            ChatFrame_AddMessageEventFilter(event, EmojiFilter)
         end
         
-        -- Hook all chat frames
-        for i = 1, NUM_CHAT_WINDOWS do
-            local chatFrame = _G["ChatFrame" .. i]
-            if chatFrame and chatFrame.AddMessage then
-                -- Store original function
-                originalAddMessage[chatFrame] = chatFrame.AddMessage
-                
-                -- Replace with our filtered version
-                chatFrame.AddMessage = function(self, text, ...)
-                    return FilterMessageForEmojis(self, text, ...)
-                end
-            end
-        end
+        Module.chatFiltersRegistered = true
     end
     
     -- Set up chat filters after a brief delay to ensure UI is fully loaded
-    C_Timer.After(1, SetupChatFilters)
+    C_Timer.After(1, function() SetupChatFilters() end)
     
     -- Register our emoji replacement function with the chat module
     if not Phoenix_UI.ChatEmojiHandlers then
@@ -407,7 +431,10 @@ function Module:OnEnable()
     end)
     
     -- Hook the SendChatMessage function
-    SendChatMessage = HookSendChatMessage
+    originalSendChatMessage = _G.SendChatMessage
+    _G.SendChatMessage = function(...)
+        return HookSendChatMessage(...)
+    end
     
     -- Add emoji preview to edit boxes
     for i = 1, NUM_CHAT_WINDOWS do
@@ -532,7 +559,7 @@ function Module:OnEnable()
     
     -- Announce emoji system is enabled with debug status
     if Phoenix_UI.debug then
-        print("|cffFF7D0APhoenix UI:|r Emoji system enabled using SendChatMessage hook approach")
+        print("|cffFF7D0APhoenix UI:|r Emoji system enabled using chat filter approach")
     end
     
     -- Listen for settings changes and update cache size accordingly
@@ -572,3 +599,36 @@ function Module:ClearCache()
     -- Return success
     return true
 end
+
+-- Replace emojis in a message
+local function ReplaceEmojisInMessage(message, emojiSize)
+    if not message or message == "" then
+        return message
+    end
+    
+    -- Skip messages that already have formatting to avoid issues
+    if message:find("|c") or message:find("|r") or message:find("|H") or message:find("|h") or message:find("|T") then
+        return message
+    end
+    
+    -- Set default emoji size if not provided
+    emojiSize = emojiSize or (Phoenix_UI.db and Phoenix_UI.db.profile and 
+                           Phoenix_UI.db.profile.chat and 
+                           Phoenix_UI.db.profile.chat.emoji and 
+                           Phoenix_UI.db.profile.chat.emoji.size) or 16
+    
+    local replacedMessage = message
+    for code, name in pairs(emojiMap) do
+        if replacedMessage:find(code, 1, true) then -- Use plain search
+            local emojiPath = EMOJI_PATH .. name .. ".tga"
+            local textureString = "|T" .. emojiPath .. ":" .. emojiSize .. ":" .. emojiSize .. "|t"
+            -- Must use gsub with plain argument set to true to avoid pattern matching
+            replacedMessage = replacedMessage:gsub(code, textureString, 1, true)
+        end
+    end
+    
+    return replacedMessage
+end
+
+-- Register the module with Phoenix_UI
+Phoenix_UI:RegisterModule("Emoji", Module)

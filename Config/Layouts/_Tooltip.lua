@@ -311,6 +311,16 @@ function Layout:OnEnable()
                     order = 2,
                     initialValue = 0.3
                 }
+            },
+            
+            -- Add an empty row with padding to ensure enough scroll space
+            {
+                bottomPadding = {
+                    type = 'spacer',
+                    height = 100,
+                    column = 12,
+                    order = 1
+                }
             }
         },
     }

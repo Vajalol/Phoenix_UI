@@ -345,8 +345,12 @@ end
 function MoveAny:ApplyButtonStyle(button, styleOptions)
 	if not button or InCombatLockdown() then return end
 	
+	-- Ensure we have valid style options
+	styleOptions = styleOptions or {}
+	
+	-- Default to dark skin if we're missing settings
 	local borderStyle = styleOptions.buttonBorder or "default"
-	local glowStyle = styleOptions.glowEffect or "default"
+	local glowStyle = styleOptions.glowEffect or "default" 
 	local borderColor = styleOptions.borderColor or "default"
 	
 	-- Get button elements
@@ -355,66 +359,165 @@ function MoveAny:ApplyButtonStyle(button, styleOptions)
 	local highlightTexture = button:GetHighlightTexture()
 	local cooldown = button.cooldown
 	
+	-- Always set a dark background for consistent styling
+	if button.icon then
+		button.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) -- Slightly crop the icon
+	end
+	
+	-- Find icon texture if it exists in different places
+	local iconTexture = button.icon or button.Icon or button.IconTexture
+	if iconTexture then
+		iconTexture:SetTexCoord(0.08, 0.92, 0.08, 0.92) -- Slightly crop the icon
+	end
+
 	-- Apply border style
 	if normalTexture then
-		if borderStyle == "none" then
-			normalTexture:SetAlpha(0)
-		elseif borderStyle == "thin" then
-			normalTexture:SetAlpha(1)
-			normalTexture:SetScale(0.8)
-		elseif borderStyle == "thick" then
-			normalTexture:SetAlpha(1)
-			normalTexture:SetScale(1.1)
-		else -- default
-			normalTexture:SetAlpha(1)
-			normalTexture:SetScale(1)
+		-- Set a specific texture for the normal border
+		-- Black border style
+		normalTexture:SetTexture("Interface\\Buttons\\UI-Quickslot")
+		normalTexture:SetVertexColor(0.15, 0.15, 0.15, 1)
+		normalTexture:SetDrawLayer("BACKGROUND", -8)
+		
+		-- Reset texture coords
+		normalTexture:SetTexCoord(0, 1, 0, 1)
+		
+		-- Adjust size to match the button
+		local buttonWidth, buttonHeight = button:GetSize()
+		normalTexture:SetSize(buttonWidth * 1.4, buttonHeight * 1.4)
+		normalTexture:ClearAllPoints()
+		normalTexture:SetPoint("CENTER", 0, 0)
+	end
+	
+	-- Set pushed texture with correct color
+	if pushedTexture then
+		pushedTexture:SetTexture("Interface\\Buttons\\UI-Quickslot-Depress")
+		pushedTexture:SetVertexColor(1, 1, 1, 0.5)
+	end
+	
+	-- Set highlight texture
+	if highlightTexture then
+		highlightTexture:SetTexture("Interface\\Buttons\\ButtonHilight-Square")
+		highlightTexture:SetBlendMode("ADD")
+		highlightTexture:SetVertexColor(0.8, 0.8, 0.8, 0.8)
+	end
+	
+	-- Style any cooldown frame
+	if cooldown then
+		cooldown:ClearAllPoints()
+		cooldown:SetPoint("TOPLEFT", button, "TOPLEFT", 2, -2)
+		cooldown:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -2, 2)
+	end
+	
+	-- Style the checked texture if it exists
+	if button.CheckedTexture or button:GetCheckedTexture() then
+		local checkedTexture = button.CheckedTexture or button:GetCheckedTexture()
+		if checkedTexture then
+			checkedTexture:SetTexture("Interface\\Buttons\\CheckButtonHilight")
+			checkedTexture:SetBlendMode("ADD")
+			checkedTexture:SetVertexColor(0.5, 0.5, 1, 0.6)
 		end
 	end
 	
-	-- Apply border color
-	if normalTexture then
-		if borderColor == "class" then
-			local _, class = UnitClass("player")
-			local color = RAID_CLASS_COLORS[class]
-			if color then
-				normalTexture:SetVertexColor(color.r, color.g, color.b, 1)
-			end
-		elseif borderColor == "custom" and Phoenix_UI and Phoenix_UI:Color() then
-			local color = Phoenix_UI:Color()
-			normalTexture:SetVertexColor(color[1], color[2], color[3], 1)
-		else -- default
-			normalTexture:SetVertexColor(1, 1, 1, 1)
-		end
+	-- Style the flash animation texture if it exists
+	if button.Flash then
+		button.Flash:SetTexture("Interface\\Buttons\\UI-QuickslotRed")
+		button.Flash:SetVertexColor(1, 0, 0, 0.5)
 	end
 	
-	-- Set up glow effect - we'll use the existing Blizzard API and textures
-	if button.UpdateUsable then
-		hooksecurefunc(button, "UpdateUsable", function(self)
-			local isUsable, notEnoughMana = IsUsableAction(self.action)
-			
-			if glowStyle == "none" then
-				-- Disable all glows
-				if self.SpellActivationAlert then
-					self.SpellActivationAlert:Hide()
-				end
-			elseif glowStyle == "pixel" then
-				-- Use pixel glow for proc effects
-				if ActionButton_IsHighlighted(self) and not notEnoughMana then
-					if self.SpellActivationAlert then
-						if not self.SpellActivationAlert:IsShown() then
-							self.SpellActivationAlert:Show()
-							self.SpellActivationAlert:SetAlpha(0.5)
-						end
-					end
-				else
-					if self.SpellActivationAlert and self.SpellActivationAlert:IsShown() then
-						self.SpellActivationAlert:Hide()
-					end
-				end
-			end
-			-- For "default" and "auto", we let the default WoW behavior handle it
-		end)
+	-- Style the border if it exists (different from normalTexture)
+	if button.Border then
+		button.Border:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
+		button.Border:SetVertexColor(0.2, 0.2, 0.2, 1)
+		button.Border:SetBlendMode("ADD")
 	end
+	
+	-- Set the button background to be dark
+	if button.SlotBackground and button.SlotBackground.Show then
+		button.SlotBackground:Show()
+		button.SlotBackground:SetVertexColor(0.15, 0.15, 0.15, 1)
+	end
+	
+	-- Mark button as having Phoenix styling applied
+	button.phoenixStyled = true
+end
+
+-- Apply consistent styling to all action buttons
+local function StyleAllActionButtons()
+	if InCombatLockdown() then return end
+	
+	local styleOptions = (Phoenix_UI and Phoenix_UI.db and Phoenix_UI.db.profile.actionbar and Phoenix_UI.db.profile.actionbar.style) or {}
+	
+	-- Style regular action buttons
+	for i = 1, 12 do
+		local button = _G["ActionButton" .. i]
+		if button then MoveAny:ApplyButtonStyle(button, styleOptions) end
+		
+		-- Style all MultiBar buttons
+		for _, prefix in pairs({"MultiBarBottomLeftButton", "MultiBarBottomRightButton", "MultiBarRightButton", "MultiBarLeftButton"}) do
+			local multiButton = _G[prefix .. i]
+			if multiButton then MoveAny:ApplyButtonStyle(multiButton, styleOptions) end
+		end
+		
+		-- Style override action buttons (vehicle UI, etc)
+		local overrideButton = _G["OverrideActionBarButton" .. i]
+		if overrideButton then MoveAny:ApplyButtonStyle(overrideButton, styleOptions) end
+		
+		-- Style possession bar buttons
+		local possessButton = _G["PossessButton" .. i]
+		if possessButton then MoveAny:ApplyButtonStyle(possessButton, styleOptions) end
+	end
+	
+	-- Style pet buttons (different count)
+	for i = 1, 10 do
+		local petButton = _G["PetActionButton" .. i]
+		if petButton then MoveAny:ApplyButtonStyle(petButton, styleOptions) end
+		
+		-- Style stance buttons
+		local stanceButton = _G["StanceButton" .. i]
+		if stanceButton then MoveAny:ApplyButtonStyle(stanceButton, styleOptions) end
+	end
+	
+	-- Style extra action button
+	local extraActionButton = _G["ExtraActionButton1"]
+	if extraActionButton then MoveAny:ApplyButtonStyle(extraActionButton, styleOptions) end
+end
+
+-- Create a frame to handle button styling events
+local styleFrame = CreateFrame("Frame", nil, UIParent, "SecureHandlerStateTemplate")
+styleFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+styleFrame:RegisterEvent("ACTIONBAR_PAGE_CHANGED")
+styleFrame:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
+styleFrame:RegisterEvent("ACTIONBAR_UPDATE_STATE")
+styleFrame:RegisterEvent("ACTIONBAR_UPDATE_COOLDOWN")
+styleFrame:RegisterEvent("ACTIONBAR_UPDATE_USABLE")
+styleFrame:RegisterEvent("PET_BAR_UPDATE")
+styleFrame:RegisterEvent("PLAYER_TALENT_UPDATE")
+styleFrame:RegisterEvent("UPDATE_VEHICLE_ACTIONBAR")
+styleFrame:RegisterEvent("UPDATE_OVERRIDE_ACTIONBAR")
+styleFrame:RegisterEvent("UPDATE_POSSESS_BAR")
+styleFrame:RegisterEvent("UPDATE_BONUS_ACTIONBAR")
+
+styleFrame:SetScript("OnEvent", function(self, event, ...)
+	-- Don't run in combat to avoid taint
+	if InCombatLockdown() then 
+		self:RegisterEvent("PLAYER_REGEN_ENABLED")
+		return
+	end
+	
+	if event == "PLAYER_REGEN_ENABLED" then
+		self:UnregisterEvent("PLAYER_REGEN_ENABLED")
+	end
+	
+	-- Apply styles with a slight delay to ensure all UI elements are updated
+	C_Timer.After(0.1, StyleAllActionButtons)
+end)
+
+-- Apply styles when the addon loads
+C_Timer.After(1, StyleAllActionButtons)
+
+-- Also apply styles when settings change
+if Phoenix_UI then
+	Phoenix_UI:RegisterMessage("PHOENIX_UI_SETTINGS_CHANGED", StyleAllActionButtons)
 end
 
 -- Hook into the flash animation system to apply our custom settings
@@ -625,26 +728,26 @@ end
 
 function MoveAny:InitActionBarLayouts()
 	if MoveAny:GetWoWBuild() == "RETAIL" then
-		MASetPoint("MainMenuBar", "BOTTOM", MoveAny:GetMainPanel(), "BOTTOM", 0, 0, 1) -- MainMenuBar
-		MASetPoint("MultiBarBottomLeft", "BOTTOM", MoveAny:GetMainPanel(), "BOTTOM", 0, -60, 1) -- MultiBarBottomLeft
-		MASetPoint("MultiBarBottomRight", "BOTTOM", MoveAny:GetMainPanel(), "BOTTOM", 0, -120, 1) -- MultiBarBottomRight
-		MASetPoint("MultiBarRight", "RIGHT", MoveAny:GetMainPanel(), "RIGHT", 0, 0, 12) -- MultiBarRight
-		MASetPoint("MultiBarLeft", "RIGHT", MoveAny:GetMainPanel(), "RIGHT", -36, 0, 12) -- MultiBarLeft
-		MASetPoint("MultiBar" .. 5, "BOTTOM", MoveAny:GetMainPanel(), "BOTTOM", 0, 0, 1) -- "MultiBar" .. 5
-		MASetPoint("MultiBar" .. 6, "BOTTOM", MoveAny:GetMainPanel(), "BOTTOM", 0, 0, 1) -- "MultiBar" .. 6
-		MASetPoint("MultiBar" .. 7, "CENTER", MoveAny:GetMainPanel(), "CENTER", 0, 0, 1) -- "MultiBar" .. 7
-		MASetPoint("MultiBar" .. 8, "CENTER", MoveAny:GetMainPanel(), "CENTER", -360, 1 * 36, 1)
-		MASetPoint("MultiBar" .. 9, "CENTER", MoveAny:GetMainPanel(), "CENTER", -360, 2 * 36, 1)
+		MASetPoint("MainMenuBar", "BOTTOM", UIParent, "BOTTOM", 0, 0, 1) -- MainMenuBar
+		MASetPoint("MultiBarBottomLeft", "BOTTOM", UIParent, "BOTTOM", 0, -60, 1) -- MultiBarBottomLeft
+		MASetPoint("MultiBarBottomRight", "BOTTOM", UIParent, "BOTTOM", 0, -120, 1) -- MultiBarBottomRight
+		MASetPoint("MultiBarRight", "RIGHT", UIParent, "RIGHT", 0, 0, 12) -- MultiBarRight
+		MASetPoint("MultiBarLeft", "RIGHT", UIParent, "RIGHT", -36, 0, 12) -- MultiBarLeft
+		MASetPoint("MultiBar" .. 5, "BOTTOM", UIParent, "BOTTOM", 0, 0, 1) -- "MultiBar" .. 5
+		MASetPoint("MultiBar" .. 6, "BOTTOM", UIParent, "BOTTOM", 0, 0, 1) -- "MultiBar" .. 6
+		MASetPoint("MultiBar" .. 7, "CENTER", UIParent, "CENTER", 0, 0, 1) -- "MultiBar" .. 7
+		MASetPoint("MultiBar" .. 8, "CENTER", UIParent, "CENTER", -360, 1 * 36, 1)
+		MASetPoint("MultiBar" .. 9, "CENTER", UIParent, "CENTER", -360, 2 * 36, 1)
 	else
-		MASetPoint("MAActionBar" .. 1, "BOTTOM", MoveAny:GetMainPanel(), "BOTTOM", 0, 0, 1)
-		MASetPoint("MAActionBar" .. 3, "RIGHT", MoveAny:GetMainPanel(), "RIGHT", 0, 0, 12)
-		MASetPoint("MAActionBar" .. 4, "RIGHT", MoveAny:GetMainPanel(), "RIGHT", -36, 0, 12)
-		MASetPoint("MAActionBar" .. 5, "BOTTOM", MoveAny:GetMainPanel(), "BOTTOM", 360, 0, 2)
-		MASetPoint("MAActionBar" .. 6, "BOTTOM", MoveAny:GetMainPanel(), "BOTTOM", 0, 36, 1)
-		MASetPoint("MAActionBar" .. 7, "BOTTOM", MoveAny:GetMainPanel(), "BOTTOM", -360, 0, 2)
-		MASetPoint("MAActionBar" .. 8, "CENTER", MoveAny:GetMainPanel(), "CENTER", -360, 0 * 36, 1)
-		MASetPoint("MAActionBar" .. 9, "CENTER", MoveAny:GetMainPanel(), "CENTER", -360, 1 * 36, 1)
-		MASetPoint("MAActionBar" .. 10, "CENTER", MoveAny:GetMainPanel(), "CENTER", -360, 2 * 36, 1)
+		MASetPoint("MAActionBar" .. 1, "BOTTOM", UIParent, "BOTTOM", 0, 0, 1)
+		MASetPoint("MAActionBar" .. 3, "RIGHT", UIParent, "RIGHT", 0, 0, 12)
+		MASetPoint("MAActionBar" .. 4, "RIGHT", UIParent, "RIGHT", -36, 0, 12)
+		MASetPoint("MAActionBar" .. 5, "BOTTOM", UIParent, "BOTTOM", 360, 0, 2)
+		MASetPoint("MAActionBar" .. 6, "BOTTOM", UIParent, "BOTTOM", 0, 36, 1)
+		MASetPoint("MAActionBar" .. 7, "BOTTOM", UIParent, "BOTTOM", -360, 0, 2)
+		MASetPoint("MAActionBar" .. 8, "CENTER", UIParent, "CENTER", -360, 0 * 36, 1)
+		MASetPoint("MAActionBar" .. 9, "CENTER", UIParent, "CENTER", -360, 1 * 36, 1)
+		MASetPoint("MAActionBar" .. 10, "CENTER", UIParent, "CENTER", -360, 2 * 36, 1)
 	end
 end
 
@@ -774,7 +877,7 @@ function MoveAny:CustomBars()
 	for i = 1, MAMaxAB do
 		if i ~= 2 and i <= 6 and MoveAny:IsEnabled("ACTIONBARS", false) or MoveAny:IsEnabled("ACTIONBAR" .. i, false) then
 			local name = "MAActionBar" .. i
-			_G[name] = CreateFrame("Frame", name, MoveAny:GetMainPanel(), "SecureHandlerStateTemplate")
+			_G[name] = CreateFrame("Frame", name, UIParent, "SecureHandlerStateTemplate")
 			local bar = _G[name]
 			bar:SetFrameLevel(4)
 			bar:SetSize(36 * 12, 36)
@@ -938,7 +1041,7 @@ asabf:SetScript(
 	end
 )
 
-local f = CreateFrame("Frame", nil, MoveAny:GetMainPanel(), "SecureHandlerStateTemplate")
+local f = CreateFrame("Frame", nil, UIParent, "SecureHandlerStateTemplate")
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
 f:RegisterEvent("UPDATE_BONUS_ACTIONBAR")
 f:RegisterEvent("ACTIONBAR_PAGE_CHANGED")
@@ -1031,7 +1134,7 @@ f:SetScript(
 					]]
 				end
 
-				local AttributeChangedFrame = CreateFrame("Frame", nil, MoveAny:GetMainPanel(), "SecureHandlerAttributeTemplate")
+				local AttributeChangedFrame = CreateFrame("Frame", nil, UIParent, "SecureHandlerAttributeTemplate")
 				for i = 1, 12 do
 					local button = _G["ActionButton" .. i]
 					AttributeChangedFrame:SetFrameRef("ActionButton" .. i, button)

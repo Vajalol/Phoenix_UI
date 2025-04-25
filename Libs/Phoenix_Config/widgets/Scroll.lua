@@ -144,33 +144,51 @@ Phoenix_UIConfig.ScrollFrameMethods = {
 	UpdateScrollChildHeight = function(self)
 		if not self.scrollChild then return end
 		
+		-- Get the scroll frame dimensions
+		local scrollFrameHeight = self.scrollFrame:GetHeight()
+		
 		-- Get total height of all child elements
 		local totalHeight = 0
 		local children = {self.scrollChild:GetChildren()}
 		
 		if #children == 0 then
-			-- If no children, use the frame's height
-			totalHeight = self.scrollFrame:GetHeight()
+			-- If no children, use a minimum height
+			totalHeight = scrollFrameHeight * 1.5
 		else
-			-- Find the bottom-most point of any child
+			-- Find the bottom-most point of any child element
 			for _, child in ipairs(children) do
 				if child:IsShown() then
-					local _, _, _, y = child:GetPoint(1)
-					if y and type(y) == "number" then
-						-- Adjust negative y point (from top) and add element height
-						local childBottom = math.abs(y) + child:GetHeight()
-						totalHeight = math.max(totalHeight, childBottom)
+					-- Get the position and size info
+					local childHeight = child:GetHeight() or 0
+					local point, _, _, _, y = child:GetPoint(1)
+					if point and y and type(y) == "number" then
+						-- Calculate the bottom position of this element
+						local bottomPos = math.abs(y) + childHeight
+						totalHeight = math.max(totalHeight, bottomPos)
 					end
 				end
 			end
 			
-			-- Add padding
-			totalHeight = totalHeight + 150
+			-- Add an extra full window height of padding to ensure generous scrolling space
+			totalHeight = totalHeight + scrollFrameHeight
 		end
+		
+		-- Minimum height should be 2x the visible area to ensure scrolling works
+		totalHeight = math.max(totalHeight, scrollFrameHeight * 2)
 		
 		-- Set height and update scroll bar
 		self.scrollChild:SetHeight(totalHeight)
-		self.scrollBar:SetMinMaxValues(0, math.max(0, totalHeight - self.scrollFrame:GetHeight()))
+		
+		-- Update the scroll bar
+		if self.scrollBar then
+			local maxScroll = math.max(0, totalHeight - scrollFrameHeight)
+			self.scrollBar:SetMinMaxValues(0, maxScroll)
+			
+			-- Force scroll bar to be visible if there's content to scroll
+			if maxScroll > 0 then
+				self.scrollBar:Show()
+			end
+		end
 	end
 };
 

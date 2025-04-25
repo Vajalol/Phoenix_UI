@@ -2471,27 +2471,28 @@ function Gui:OnEnable()
         tabs.buttons[tab].selected = true
         tabs.buttons[tab]:SetBackdropColor(0.4, 0.1, 0, 0.7)
         
-        -- Special handling for tabs with scrolling issues
-        if tab == "Tooltip" or tab == "Cooldown Tracker" or tab == "idTip" or tab == "Map" then
-            -- Force recalculation of scroll frame heights
+        -- Reset scroll position for scrollable content
+        if tabs.container and tabs.container.scrollFrame then
+            tabs.container.scrollFrame:SetVerticalScroll(0)
+        end
+        
+        -- If the tab has a scrollbar, reset its position
+        if tabs.container and tabs.container.scrollBar then
+            tabs.container.scrollBar:SetValue(0)
+        end
+        
+        -- If there's a panel associated with the tab and it has a scrollChild
+        if Phoenix_UI.UI and Phoenix_UI.UI.panels and Phoenix_UI.UI.panels[tab] and 
+           Phoenix_UI.UI.panels[tab].scrollChild then
+            -- Force a recalculation of the scroll child height
             C_Timer.After(0.1, function()
-                -- Find all scroll frames in this tab and update them
-                if tabs.pages[tab] then
-                    for _, child in pairs({tabs.pages[tab]:GetChildren()}) do
-                        if child.UpdateScrollChildHeight then
-                            child:UpdateScrollChildHeight()
-                        end
-                        
-                        -- Also check one level deeper
-                        for _, grandchild in pairs({child:GetChildren()}) do
-                            if grandchild.UpdateScrollChildHeight then
-                                grandchild:UpdateScrollChildHeight()
-                            end
-                        end
-                    end
+                if Phoenix_UI.UI.panels[tab].UpdateScrollChildHeight then
+                    Phoenix_UI.UI.panels[tab]:UpdateScrollChildHeight()
                 end
             end)
         end
+        
+        return true
     end
     
     -- Connect click handlers to all tab buttons
