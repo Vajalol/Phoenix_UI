@@ -1,5 +1,86 @@
 local Layout = Phoenix_UI:NewModule('Config.Layout.Tooltip')
 
+-- Create a dedicated tooltip settings change handler
+local function tooltipSettingChanged(element, value)
+    -- Use the centralized handler function if available
+    if Phoenix_UI.CreateModuleSettingChangedHandler then
+        -- Call the centralized handler directly
+        Phoenix_UI:CreateModuleSettingChangedHandler("tooltip")(element, value)
+    else
+        -- Fallback implementation if the central handler isn't available
+        -- Get the database
+        local db = Phoenix_UI.db
+        
+        -- Store the value in the database
+        if element.dataKey and db.profile.tooltip then
+            -- Get the field name without the tooltip. prefix
+            local fieldName = element.dataKey:gsub("^tooltip%.", "")
+            
+            -- Handle nested fields if needed
+            if fieldName:find("%.") then
+                local parts = {}
+                for part in fieldName:gmatch("[^%.]+") do
+                    table.insert(parts, part)
+                end
+                
+                -- Navigate to the right spot in the table
+                local current = db.profile.tooltip
+                for i = 1, #parts-1 do
+                    if not current[parts[i]] then
+                        current[parts[i]] = {}
+                    end
+                    current = current[parts[i]]
+                end
+                
+                -- Set the value
+                current[parts[#parts]] = value
+            else
+                -- Direct setting
+                db.profile.tooltip[fieldName] = value
+            end
+            
+            -- Debug output
+            if Phoenix_UI.debug then
+                print("PHX-UI: Tooltip setting changed:", element.dataKey, "=", tostring(value))
+            end
+            
+            -- Force an immediate save
+            if Phoenix_UI.SaveDB then
+                Phoenix_UI:SaveDB()
+                
+                -- Ensure it's written to disk
+                if FlushSavedVariables then
+                    FlushSavedVariables()
+                elseif FlushSettingsDB then
+                    FlushSettingsDB()
+                end
+            end
+            
+            -- Also directly update global savedvariables
+            if _G["Phoenix_UIDB"] and _G["Phoenix_UIDB"].profiles then
+                local currentProfile = db.keys and db.keys.profile or "Default"
+                if not _G["Phoenix_UIDB"].profiles[currentProfile] then
+                    _G["Phoenix_UIDB"].profiles[currentProfile] = {}
+                end
+                if not _G["Phoenix_UIDB"].profiles[currentProfile].tooltip then
+                    _G["Phoenix_UIDB"].profiles[currentProfile].tooltip = {}
+                end
+                
+                -- Deep copy to ensure all changes are preserved
+                _G["Phoenix_UIDB"].profiles[currentProfile].tooltip = CopyTable(db.profile.tooltip)
+                _G["Phoenix_UIDB"].profiles[currentProfile].tooltip.__updated = GetTime()
+            end
+            
+            -- Also trigger UI refresh
+            if Phoenix_UI.UI and Phoenix_UI.UI.RefreshConfig then
+                C_Timer.After(0.1, function()
+                    Phoenix_UI.UI:RefreshConfig()
+                end)
+            end
+        end
+    end
+end
+
 function Layout:OnEnable()
     -- Database
     local db = Phoenix_UI.db
@@ -30,7 +111,8 @@ function Layout:OnEnable()
                     },
                     initialValue = 1,
                     column = 12,
-                    order = 1
+                    order = 1,
+                    onChange = tooltipSettingChanged
                 }
             },
             
@@ -50,7 +132,8 @@ function Layout:OnEnable()
                     label = 'Anchor to Mouse',
                     tooltip = 'Attach tooltip to mouse cursor position',
                     column = 4,
-                    order = 1
+                    order = 1,
+                    onChange = tooltipSettingChanged
                 },
                 lifeontop = {
                     key = 'lifeontop',
@@ -58,7 +141,8 @@ function Layout:OnEnable()
                     label = 'Health Bar on Top',
                     tooltip = 'Show health bar at the top of tooltips',
                     column = 4,
-                    order = 2
+                    order = 2,
+                    onChange = tooltipSettingChanged
                 },
                 hideincombat = {
                     key = 'hideincombat',
@@ -66,7 +150,8 @@ function Layout:OnEnable()
                     tooltip = 'Hide tooltips while in combat',
                     label = 'Hide in Combat',
                     column = 4,
-                    order = 3
+                    order = 3,
+                    onChange = tooltipSettingChanged
                 }
             },
             
@@ -90,7 +175,8 @@ function Layout:OnEnable()
                     step = 0.05,
                     column = 6,
                     order = 1,
-                    initialValue = 0.9
+                    initialValue = 0.9,
+                    onChange = tooltipSettingChanged
                 },
                 borderColor = {
                     key = 'borderColor',
@@ -99,7 +185,8 @@ function Layout:OnEnable()
                     tooltip = 'Set the color of tooltip borders',
                     column = 6,
                     order = 2,
-                    initialValue = {r = 0.7, g = 0.7, b = 0.7, a = 1.0}
+                    initialValue = {r = 0.7, g = 0.7, b = 0.7, a = 1.0},
+                    onChange = tooltipSettingChanged
                 },
             },
             {
@@ -113,7 +200,8 @@ function Layout:OnEnable()
                     step = 1,
                     column = 6,
                     order = 1,
-                    initialValue = 7
+                    initialValue = 7,
+                    onChange = tooltipSettingChanged
                 },
                 powerBar = {
                     key = 'powerBar',
@@ -125,7 +213,8 @@ function Layout:OnEnable()
                     step = 1,
                     column = 6,
                     order = 2,
-                    initialValue = 7
+                    initialValue = 7,
+                    onChange = tooltipSettingChanged
                 },
             },
             {
@@ -327,4 +416,37 @@ function Layout:OnEnable()
             }
         },
     }
+end
+
+-- Add a refresh method to update controls with current values
+function Layout:Refresh()
+    -- Use the centralized refresh function if available
+    if Phoenix_UI.CreateModuleRefreshFunction then
+        -- Call the centralized refresh function
+        Phoenix_UI:CreateModuleRefreshFunction("tooltip")(self)
+    else
+        -- Fallback implementation if the central function isn't available
+        if not self.layout or not self.layout.rows then return end
+        
+        -- Get the config tabs
+        local config = Phoenix_UI.UI
+        if not config or not config.elements then return end
+        
+        -- Force the Tooltip tab to update with current database values
+        local db = Phoenix_UI.db
+        if db and db.profile and db.profile.tooltip then
+            -- Update our local database reference
+            self.layout.database = db.profile.tooltip
+            
+            -- Force a full rebuild if needed
+            if config.RefreshConfig then
+                config:RefreshConfig()
+            end
+        end
+        
+        -- Force all settings to be saved
+        if Phoenix_UI.ForceSaveDB then
+            Phoenix_UI:ForceSaveDB()
+        end
+    end
 end

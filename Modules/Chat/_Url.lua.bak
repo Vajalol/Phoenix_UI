@@ -30,8 +30,6 @@ function Module:OnEnable()
         "CHAT_MSG_CHANNEL",
         "CHAT_MSG_SYSTEM"
     } do
-        -- Temporarily disabled to fix emoji rendering
-        --[[
         ChatFrame_AddMessageEventFilter(event, function(self, event, str, ...)
             for _, pattern in pairs(patterns) do
                 local result, match = string.gsub(str, pattern, "|cff0394ff|Hurl:%1|h[%1]|h|r")
@@ -40,7 +38,6 @@ function Module:OnEnable()
                 end
             end
         end)
-        --]]
     end
 
     local SetHyperlink = _G.ItemRefTooltip.SetHyperlink
@@ -56,3 +53,6 @@ function Module:OnEnable()
         SetHyperlink(self, link, ...)
     end
 end
+
+
+

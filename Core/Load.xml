@@ -1,4 +1,5 @@
 <Ui xmlns='http://www.blizzard.com/wow/ui/'>
   <Include file='Init.lua'/>
   <Include file='VersionDetect.lua'/>
+  <Include file='Utilities.lua'/>
 </Ui>

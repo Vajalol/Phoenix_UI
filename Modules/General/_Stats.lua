@@ -278,8 +278,8 @@ function Module:OnEnable()
                         local newHeight = self.initialHeight - diffY
                         
                         -- Apply min/max constraints
-                        newWidth = max(120, min(300, newWidth))
-                        newHeight = max(150, min(300, newHeight))
+                        newWidth = max(120, min(600, newWidth))    -- Increased from 300 to 600
+                        newHeight = max(150, min(600, newHeight))  -- Increased from 300 to 600
                         
                         -- Apply the new size
                         PlayerStatsFrame:SetSize(newWidth, newHeight)
@@ -315,8 +315,8 @@ function Module:OnEnable()
     
     -- Create content frame to hold stat items
     local contentFrame = CreateFrame("Frame", nil, PlayerStatsFrame)
-    contentFrame:SetPoint("TOPLEFT", PlayerStatsFrame, "TOPLEFT", 10, -22)  -- Increased left padding from 8 to 10
-    contentFrame:SetPoint("BOTTOMRIGHT", PlayerStatsFrame, "BOTTOMRIGHT", -10, 10)  -- Increased right padding from 8 to 10 and bottom padding from 8 to 10
+    contentFrame:SetPoint("TOPLEFT", PlayerStatsFrame, "TOPLEFT", 14, -25)  -- Increased left padding from 10 to 14 and top padding from -22 to -25
+    contentFrame:SetPoint("BOTTOMRIGHT", PlayerStatsFrame, "BOTTOMRIGHT", -14, 14)  -- Increased right padding from -10 to -14 and bottom padding from 10 to 14
     
     -- Store reference at module level
     self.contentFrame = contentFrame
@@ -351,8 +351,8 @@ function Module:OnEnable()
     local function CreateStatDisplay(parent, name, color, statFunc, order, tooltip)
         local statFrame = CreateFrame("Frame", nil, parent)
         statFrame:SetHeight(statsTextSize + 5) -- Increased height
-        statFrame:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -((order-1) * (statsTextSize + 7))) -- Increased spacing from 6 to 7
-        statFrame:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, -((order-1) * (statsTextSize + 7)))
+        statFrame:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -((order-1) * (statsTextSize + 9))) -- Increased spacing from 7 to 9
+        statFrame:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, -((order-1) * (statsTextSize + 9)))
         
         local label = statFrame:CreateFontString(nil, "OVERLAY")
         label:SetFont(addonFont, statsTextSize, "THICKOUTLINE") -- Changed from OUTLINE to THICKOUTLINE
@@ -514,8 +514,8 @@ function Module:OnEnable()
     local separator = contentFrame:CreateTexture(nil, "ARTWORK")
     separator:SetHeight(2)  -- Increased height from 1 to 2
     separator:SetColorTexture(0.4, 0.4, 0.4, 0.8)  -- Slightly brighter color
-    separator:SetPoint("TOPLEFT", contentFrame, "TOPLEFT", 0, -((#primaryStats) * (statsTextSize + 7) + 5))  -- Added more spacing (5 instead of 3)
-    separator:SetPoint("TOPRIGHT", contentFrame, "TOPRIGHT", 0, -((#primaryStats) * (statsTextSize + 7) + 5))
+    separator:SetPoint("TOPLEFT", contentFrame, "TOPLEFT", 0, -((#primaryStats) * (statsTextSize + 9) + 5))  -- Added more spacing (5 instead of 3)
+    separator:SetPoint("TOPRIGHT", contentFrame, "TOPRIGHT", 0, -((#primaryStats) * (statsTextSize + 9) + 5))
     
     -- Store at module level
     self.separator = separator
@@ -552,7 +552,7 @@ function Module:OnEnable()
     -- Create cooldown timers section with enhanced positioning
     local cdHeader = contentFrame:CreateFontString(nil, "OVERLAY")
     cdHeader:SetFont(addonFont, statsTextSize, "THICKOUTLINE") -- Changed from OUTLINE to THICKOUTLINE
-    cdHeader:SetPoint("TOPLEFT", contentFrame, "TOPLEFT", 0, -(#stats * (statsTextSize + 7) + 15))  -- Increased spacing from 10 to 15
+    cdHeader:SetPoint("TOPLEFT", contentFrame, "TOPLEFT", 0, -(#stats * (statsTextSize + 9) + 15))  -- Increased spacing from 10 to 15
     cdHeader:SetText("Cooldowns")
     
     -- Store at module level
@@ -562,8 +562,8 @@ function Module:OnEnable()
     local cdSeparator = contentFrame:CreateTexture(nil, "ARTWORK")
     cdSeparator:SetHeight(2)  -- Increased height from 1 to 2
     cdSeparator:SetColorTexture(0.4, 0.4, 0.4, 0.8)  -- Slightly brighter color
-    cdSeparator:SetPoint("TOPLEFT", contentFrame, "TOPLEFT", 0, -(#stats * (statsTextSize + 7) + 12))  -- Adjusted spacing (12 instead of 8)
-    cdSeparator:SetPoint("TOPRIGHT", contentFrame, "TOPRIGHT", 0, -(#stats * (statsTextSize + 7) + 12))
+    cdSeparator:SetPoint("TOPLEFT", contentFrame, "TOPLEFT", 0, -(#stats * (statsTextSize + 9) + 12))  -- Adjusted spacing (12 instead of 8)
+    cdSeparator:SetPoint("TOPRIGHT", contentFrame, "TOPRIGHT", 0, -(#stats * (statsTextSize + 9) + 12))
     
     -- Store at module level
     self.cdSeparator = cdSeparator
@@ -571,8 +571,8 @@ function Module:OnEnable()
     -- Create bloodlust timer display with improved visuals
     local bloodlustCDFrame = CreateFrame("Frame", nil, contentFrame)
     bloodlustCDFrame:SetHeight(24)
-    bloodlustCDFrame:SetPoint("TOPLEFT", contentFrame, "TOPLEFT", 0, -(#stats * (statsTextSize + 7) + 32))
-    bloodlustCDFrame:SetPoint("TOPRIGHT", contentFrame, "TOPRIGHT", 0, -(#stats * (statsTextSize + 7) + 32))
+    bloodlustCDFrame:SetPoint("TOPLEFT", contentFrame, "TOPLEFT", 0, -(#stats * (statsTextSize + 9) + 32))
+    bloodlustCDFrame:SetPoint("TOPRIGHT", contentFrame, "TOPRIGHT", 0, -(#stats * (statsTextSize + 9) + 32))
     
     -- Store at module level
     self.bloodlustCDFrame = bloodlustCDFrame
@@ -609,8 +609,8 @@ function Module:OnEnable()
     -- Combat res timer display with improved visuals
     local combatResCDFrame = CreateFrame("Frame", nil, contentFrame)
     combatResCDFrame:SetHeight(24)
-    combatResCDFrame:SetPoint("TOPLEFT", contentFrame, "TOPLEFT", 0, -(#stats * (statsTextSize + 7) + 60))
-    combatResCDFrame:SetPoint("TOPRIGHT", contentFrame, "TOPRIGHT", 0, -(#stats * (statsTextSize + 7) + 60))
+    combatResCDFrame:SetPoint("TOPLEFT", contentFrame, "TOPLEFT", 0, -(#stats * (statsTextSize + 9) + 60))
+    combatResCDFrame:SetPoint("TOPRIGHT", contentFrame, "TOPRIGHT", 0, -(#stats * (statsTextSize + 9) + 60))
     
     -- Store at module level
     self.combatResCDFrame = combatResCDFrame
@@ -902,9 +902,9 @@ function Module:RefreshPlayerStats()
                 
                 -- Adjust position if primary stats are hidden
                 if not config.showPrimaryStats then
-                    stat:SetPoint("TOPLEFT", self.contentFrame, "TOPLEFT", 0, -((i-1) * (self.statsTextSize + 7)))
+                    stat:SetPoint("TOPLEFT", self.contentFrame, "TOPLEFT", 0, -((i-1) * (self.statsTextSize + 9)))
                 else
-                    stat:SetPoint("TOPLEFT", self.contentFrame, "TOPLEFT", 0, -((#self.primaryStats + 2 + (i-1)) * (self.statsTextSize + 7)))
+                    stat:SetPoint("TOPLEFT", self.contentFrame, "TOPLEFT", 0, -((#self.primaryStats + 2 + (i-1)) * (self.statsTextSize + 9)))
                 end
             else
                 stat:Hide()
@@ -921,10 +921,10 @@ function Module:RefreshPlayerStats()
             -- Adjust position based on which stat sections are visible
             local yOffset = 10
             if config.showSecondaryStats then
-                yOffset = yOffset + (#self.secondaryStats * (self.statsTextSize + 7))
+                yOffset = yOffset + (#self.secondaryStats * (self.statsTextSize + 9))
             end
             if config.showPrimaryStats then
-                yOffset = yOffset + (#self.primaryStats * (self.statsTextSize + 7))
+                yOffset = yOffset + (#self.primaryStats * (self.statsTextSize + 9))
             end
             
             self.cdHeader:SetPoint("TOPLEFT", self.contentFrame, "TOPLEFT", 0, -(yOffset))
@@ -994,7 +994,7 @@ function Module:RefreshPlayerStats()
                     parentIndex = #self.primaryStats + 2 + (i - #self.primaryStats - 1)
                 end
                 
-                stat:SetPoint("TOPLEFT", self.contentFrame, "TOPLEFT", 0, -((parentIndex-1) * (self.statsTextSize + 7)))
+                stat:SetPoint("TOPLEFT", self.contentFrame, "TOPLEFT", 0, -((parentIndex-1) * (self.statsTextSize + 9)))
             end
         end
         
@@ -1091,35 +1091,35 @@ end
 
 -- Dynamically calculate frame size based on content
 local function UpdateFrameSize()
-    local totalHeight = 22  -- Initial top padding
+    local totalHeight = 30  -- Increased initial top padding from 22 to 30
     
     -- Calculate height needed for stats
-    local statsHeight = #Module.primaryStats * (Module.statsTextSize + 7)
-    statsHeight = statsHeight + 10  -- Spacing after primary stats
+    local statsHeight = #Module.primaryStats * (Module.statsTextSize + 9)
+    statsHeight = statsHeight + 15  -- Increased spacing after primary stats
     
     -- Add secondary stats height if shown
     if Phoenix_UI.db.profile.general.playerStats and Phoenix_UI.db.profile.general.playerStats.showSecondaryStats ~= false then
-        statsHeight = statsHeight + #Module.secondaryStats * (Module.statsTextSize + 7)
-        statsHeight = statsHeight + 15  -- Extra spacing between sections
+        statsHeight = statsHeight + #Module.secondaryStats * (Module.statsTextSize + 9)
+        statsHeight = statsHeight + 20  -- Increased extra spacing between sections
     end
     
     -- Add cooldowns height if shown
     if Phoenix_UI.db.profile.general.playerStats and Phoenix_UI.db.profile.general.playerStats.showCooldowns ~= false then
-        statsHeight = statsHeight + 65  -- Space for header and two cooldown indicators
+        statsHeight = statsHeight + 80  -- Increased space for header and cooldown indicators from 65 to 80
     end
     
     -- Add bottom padding
-    statsHeight = statsHeight + 15
+    statsHeight = statsHeight + 30  -- Increased bottom padding from 15 to 30
     
-    -- Set minimum size
-    statsHeight = math.max(statsHeight, 200)
+    -- Set minimum size (increased for better visibility)
+    statsHeight = math.max(statsHeight, 250)  -- Increased from 200 to 250
     
     -- Update frame size
     if _G.Phoenix_PlayerStatsFrame then
         _G.Phoenix_PlayerStatsFrame:SetHeight(statsHeight)
         
         -- Also adjust width based on content
-        local baseWidth = 150
+        local baseWidth = 180  -- Increased from 150 to 180 for better readability
         local maxTextWidth = 0
         
         -- Find the longest text
@@ -1127,12 +1127,12 @@ local function UpdateFrameSize()
             if stat.labelText and stat.valueText then
                 local labelWidth = stat.labelText:GetStringWidth()
                 local valueWidth = stat.valueText:GetStringWidth()
-                maxTextWidth = math.max(maxTextWidth, labelWidth + valueWidth + 20)  -- 20 for padding
+                maxTextWidth = math.max(maxTextWidth, labelWidth + valueWidth + 30)  -- Increased padding from 20 to 30
             end
         end
         
-        -- Set width based on text, minimum 150
-        _G.Phoenix_PlayerStatsFrame:SetWidth(math.max(baseWidth, maxTextWidth + 25))
+        -- Set width based on text, with improved minimum width
+        _G.Phoenix_PlayerStatsFrame:SetWidth(math.max(baseWidth, maxTextWidth + 35))  -- Increased padding from 25 to 35
     end
 end
 

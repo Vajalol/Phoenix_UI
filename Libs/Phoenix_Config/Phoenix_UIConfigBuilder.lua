@@ -214,6 +214,44 @@ local function setDatabaseValue(db, key, value)
 		        end
 		    end
 		    
+		    -- Additional handling for actionbars - needs to be saved immediately
+		    if rootModule == "actionbars" then
+		        -- Force immediate save for actionbar settings
+		        if Phoenix_UI.SaveAllSettings then
+		            C_Timer.After(0.1, function()
+		                Phoenix_UI:SaveAllSettings()
+		            end)
+		            return -- Early return as SaveAllSettings will handle everything
+		        end
+		    end
+		    
+		    -- Additional handling for nameplates - needs to be saved immediately
+		    if rootModule == "nameplates" then
+		        -- Force immediate save for nameplates settings
+		        if Phoenix_UI.SaveAllSettings then
+		            C_Timer.After(0.1, function()
+		                Phoenix_UI:SaveAllSettings()
+		            end)
+		            return -- Early return as SaveAllSettings will handle everything
+		        end
+		    end
+		    
+		    -- Additional handling for remaining critical modules - needs to be saved immediately
+		    if rootModule == "tooltip" or rootModule == "mythicplus" or 
+		       rootModule == "misc" or rootModule == "map" or
+		       rootModule == "chat" or rootModule == "castbars" or
+		       rootModule == "cooldowntracker" or rootModule == "weakauras" or
+		       rootModule == "msbt" or rootModule == "buffoverlay" or
+		       rootModule == "buffs" or rootModule == "idtip" then
+		        -- Force immediate save for these module settings
+		        if Phoenix_UI.SaveAllSettings then
+		            C_Timer.After(0.1, function()
+		                Phoenix_UI:SaveAllSettings()
+		            end)
+		            return -- Early return as SaveAllSettings will handle everything
+		        end
+		    end
+		    
 		    -- Use a short delay to batch multiple changes
 		    C_Timer.After(0.1, function()
 		        -- Try different save methods in order of preference
@@ -328,7 +366,20 @@ function Phoenix_UIConfig:BuildElement(frame, row, info, dataKey, db)
 			el.dataKey:match("^display%.") or
 			el.dataKey:match("^cosmetic%.") or
 			el.dataKey:match("^automation%.") or
-			el.dataKey:match("^nameplates%.") -- Add nameplates settings
+			el.dataKey:match("^nameplates%.") or
+			el.dataKey:match("^actionbars%.") or 
+			el.dataKey:match("^tooltip%.") or 
+			el.dataKey:match("^mythicplus%.") or 
+			el.dataKey:match("^map%.") or 
+			el.dataKey:match("^chat%.") or 
+			el.dataKey:match("^castbars%.") or 
+			el.dataKey:match("^cooldowntracker%.") or 
+			el.dataKey:match("^weakauras%.") or 
+			el.dataKey:match("^msbt%.") or 
+			el.dataKey:match("^buffs%.") or
+			el.dataKey:match("^buffoverlay%.") or
+			el.dataKey:match("^idtip%.") or
+			el.dataKey:match("^misc%.")
 		)
 		
 		-- Handle save based on importance
@@ -387,7 +438,20 @@ function Phoenix_UIConfig:BuildElement(frame, row, info, dataKey, db)
 						self.dataKey:match("^display%.") or
 						self.dataKey:match("^cosmetic%.") or
 						self.dataKey:match("^automation%.") or
-						self.dataKey:match("^nameplates%.") -- Add nameplates settings
+						self.dataKey:match("^nameplates%.") or
+						self.dataKey:match("^actionbars%.") or 
+						self.dataKey:match("^tooltip%.") or 
+						self.dataKey:match("^mythicplus%.") or 
+						self.dataKey:match("^map%.") or 
+						self.dataKey:match("^chat%.") or 
+						self.dataKey:match("^castbars%.") or 
+						self.dataKey:match("^cooldowntracker%.") or 
+						self.dataKey:match("^weakauras%.") or 
+						self.dataKey:match("^msbt%.") or 
+						self.dataKey:match("^buffs%.") or
+						self.dataKey:match("^buffoverlay%.") or
+						self.dataKey:match("^idtip%.") or
+						self.dataKey:match("^misc%.")
 					)
 					
 					if needsImmediateSave then
@@ -432,7 +496,20 @@ function Phoenix_UIConfig:BuildElement(frame, row, info, dataKey, db)
 						self.dataKey:match("^display%.") or
 						self.dataKey:match("^cosmetic%.") or
 						self.dataKey:match("^automation%.") or
-						self.dataKey:match("^nameplates%.") -- Add nameplates settings
+						self.dataKey:match("^nameplates%.") or
+						self.dataKey:match("^actionbars%.") or 
+						self.dataKey:match("^tooltip%.") or 
+						self.dataKey:match("^mythicplus%.") or 
+						self.dataKey:match("^map%.") or 
+						self.dataKey:match("^chat%.") or 
+						self.dataKey:match("^castbars%.") or 
+						self.dataKey:match("^cooldowntracker%.") or 
+						self.dataKey:match("^weakauras%.") or 
+						self.dataKey:match("^msbt%.") or 
+						self.dataKey:match("^buffs%.") or
+						self.dataKey:match("^buffoverlay%.") or
+						self.dataKey:match("^idtip%.") or
+						self.dataKey:match("^misc%.")
 					)
 					
 					if needsImmediateSave then
@@ -767,7 +844,12 @@ function Phoenix_UIConfig:OnValueChanged(info, value)
 	local isImportantSetting = key:match("^general%.") or key:match("^display%.") or 
 	                           key:match("^theme") or key:match("^font") or key:match("^profile") or
 	                           key:match("^cosmetic%.") or key:match("^automation%.") or
-                                   key:match("^nameplates%.") -- Add nameplates to important settings
+                               key:match("^nameplates%.") or key:match("^actionbars%.") or 
+                               key:match("^tooltip%.") or key:match("^mythicplus%.") or 
+                               key:match("^map%.") or key:match("^chat%.") or key:match("^castbars%.") or 
+                               key:match("^cooldowntracker%.") or key:match("^weakauras%.") or 
+                               key:match("^msbt%.") or key:match("^buffs%.") or key:match("^buffoverlay%.") or
+                               key:match("^idtip%.") or key:match("^misc%.")
 	
 	-- Trigger Phoenix_UI to save the database if available
 	if Phoenix_UI and Phoenix_UI.SaveDB then

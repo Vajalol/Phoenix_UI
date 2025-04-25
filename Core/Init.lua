@@ -1,6 +1,9 @@
 Phoenix_UI = LibStub("AceAddon-3.0"):NewAddon("Phoenix_UI", "AceEvent-3.0", "AceComm-3.0", "AceSerializer-3.0", "AceConsole-3.0", "AceHook-3.0", "AceTimer-3.0")
 local addonName, addon = ...
 
+-- Enable debug mode temporarily to help diagnose settings issues
+Phoenix_UI.debug = true
+
 -- Define Phoenix_Options at the very top level for AddonCompartmentFunc
 -- This ensures it's always available regardless of load order
 _G.Phoenix_Options = function()
@@ -1805,6 +1808,25 @@ function Phoenix_UI:OnEnable()
         end
     end
     
+    -- Register diagnostic commands
+    SLASH_PHOENIX_DIAG1 = "/puidiag"
+    SlashCmdList["PHOENIX_DIAG"] = function() 
+        if self.DiagnoseProfileIssues then
+            self:DiagnoseProfileIssues()
+        else
+            print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Diagnostic functions not available.")
+        end
+    end
+    
+    SLASH_PHOENIX_REPAIR_PROFILE1 = "/puirepair"
+    SlashCmdList["PHOENIX_REPAIR_PROFILE"] = function() 
+        if self.RepairProfileAssignment then
+            self:RepairProfileAssignment() 
+        else
+            print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Repair functions not available.")
+        end
+    end
+    
     -- Check if install/reset is needed
     if self.db and self.db.profile then
         if self.db.profile.reset then
@@ -2343,4 +2365,108 @@ function Phoenix_UI:SaveAllSettings()
     end)
     
     return success
+end
+
+-- Add a reusable module setting changed handler function that can be used by all modules
+function Phoenix_UI:CreateModuleSettingChangedHandler(moduleName)
+    return function(element, value)
+        -- Get the database
+        local db = Phoenix_UI.db
+        
+        -- Store the value in the database
+        if element.dataKey and db.profile[moduleName] then
+            -- Get the field name without the module prefix
+            local fieldName = element.dataKey:gsub("^" .. moduleName .. "%%.", "")
+            
+            -- Handle nested fields if needed
+            if fieldName:find("%.") then
+                local parts = {}
+                for part in fieldName:gmatch("[^%.]+") do
+                    table.insert(parts, part)
+                end
+                
+                -- Navigate to the right spot in the table
+                local current = db.profile[moduleName]
+                for i = 1, #parts-1 do
+                    if not current[parts[i]] then
+                        current[parts[i]] = {}
+                    end
+                    current = current[parts[i]]
+                end
+                
+                -- Set the value
+                current[parts[#parts]] = value
+            else
+                -- Direct setting
+                db.profile[moduleName][fieldName] = value
+            end
+            
+            -- Debug output
+            if Phoenix_UI.debug then
+                print("PHX-UI: " .. moduleName .. " setting changed:", element.dataKey, "=", tostring(value))
+            end
+            
+            -- Force an immediate save
+            if Phoenix_UI.SaveDB then
+                Phoenix_UI:SaveDB()
+                
+                -- Ensure it's written to disk
+                if FlushSavedVariables then
+                    FlushSavedVariables()
+                elseif FlushSettingsDB then
+                    FlushSettingsDB()
+                end
+            end
+            
+            -- Also directly update global savedvariables
+            if _G["Phoenix_UIDB"] and _G["Phoenix_UIDB"].profiles then
+                local currentProfile = db.keys and db.keys.profile or "Default"
+                if not _G["Phoenix_UIDB"].profiles[currentProfile] then
+                    _G["Phoenix_UIDB"].profiles[currentProfile] = {}
+                end
+                if not _G["Phoenix_UIDB"].profiles[currentProfile][moduleName] then
+                    _G["Phoenix_UIDB"].profiles[currentProfile][moduleName] = {}
+                end
+                
+                -- Deep copy to ensure all changes are preserved
+                _G["Phoenix_UIDB"].profiles[currentProfile][moduleName] = CopyTable(db.profile[moduleName])
+                _G["Phoenix_UIDB"].profiles[currentProfile][moduleName].__updated = GetTime()
+            end
+            
+            -- Also trigger UI refresh
+            if Phoenix_UI.UI and Phoenix_UI.UI.RefreshConfig then
+                C_Timer.After(0.1, function()
+                    Phoenix_UI.UI:RefreshConfig()
+                end)
+            end
+        end
+    end
+end
+
+-- Add a reusable module refresh function
+function Phoenix_UI:CreateModuleRefreshFunction(moduleName)
+    return function(self)
+        if not self.layout or not self.layout.rows then return end
+        
+        -- Get the config tabs
+        local config = Phoenix_UI.UI
+        if not config or not config.elements then return end
+        
+        -- Force the tab to update with current database values
+        local db = Phoenix_UI.db
+        if db and db.profile and db.profile[moduleName] then
+            -- Update our local database reference
+            self.layout.database = db.profile[moduleName]
+            
+            -- Force a full rebuild if needed
+            if config.RefreshConfig then
+                config:RefreshConfig()
+            end
+        end
+        
+        -- Force all settings to be saved
+        if Phoenix_UI.ForceSaveDB then
+            Phoenix_UI:ForceSaveDB()
+        end
+    end
 end

@@ -273,7 +273,6 @@ function Module:OnEnable()
             end
             
             -- Hook AddMessage to catch all messages for history
-            --[[
             for i = 1, NUM_CHAT_WINDOWS do
                 local chat = _G[format("ChatFrame%s", i)]
                 if chat then
@@ -313,7 +312,6 @@ function Module:OnEnable()
                     end)
                 end
             end
-            --]]
             
             -- Restore chat history on login
             RestoreChatHistory()

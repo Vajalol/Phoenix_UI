@@ -74,9 +74,6 @@ function Module:ProcessChatMessage(frame, event, message, ...)
         return false
     end
     
-    -- Don't skip formatted messages anymore
-    -- This allows emoji processing in messages with links, colors, etc.
-    
     -- Process chat message with various emoji handlers
     -- This is called by other modules through the ChatFrame filter
     local success, result = pcall(function()
@@ -94,6 +91,7 @@ function Module:ProcessChatMessage(frame, event, message, ...)
             local processed = false
             local processedMessage = message
             
+            -- Use registered handlers for emoji processing
             for _, handler in pairs(Phoenix_UI.ChatEmojiHandlers or {}) do
                 if type(handler) == "function" then
                     local status, newMessage = pcall(handler, processedMessage)
@@ -152,20 +150,27 @@ function Module:OnEnable()
         "CHAT_MSG_INSTANCE_CHAT", "CHAT_MSG_INSTANCE_CHAT_LEADER", "CHAT_MSG_BN_WHISPER",
         "CHAT_MSG_BN_WHISPER_INFORM", "CHAT_MSG_CHANNEL", "CHAT_MSG_BN_CONVERSATION"
     }) do
-        -- Use our ProcessChatMessage function directly in the filter
+        -- First register our main chat processor
         ChatFrame_AddMessageEventFilter(event, function(f, e, msg, ...)
-            -- Skip processing if message contains emoji textures
-            if msg and msg:find("|T.-AddOns\\Phoenix_UI\\Modules\\Chat\\Emojis") then
-                return false, msg, ...
-            end
-            
-            -- Otherwise process normally
+            -- Process normally
             return self:ProcessChatMessage(f, e, msg, ...)
         end)
+        
+        -- Then register the emoji filter LAST so it's applied after all other processing
+        if _G.EmojiFilter then
+            -- We can't unregister filters directly in the WoW API
+            -- Just register it again, making it the last filter to run
+            ChatFrame_AddMessageEventFilter(event, _G.EmojiFilter)
+        end
+    end
+    
+    -- Ensure we've created the chat emoji handlers table if not already exists
+    if not Phoenix_UI.ChatEmojiHandlers then
+        Phoenix_UI.ChatEmojiHandlers = {}
     end
     
     -- Announce loaded status
     if Phoenix_UI.debug then
         print("|cffFF7D0APhoenix UI:|r Chat utils enabled. Type /phoenixchatdebug for diagnostics.")
     end
-end 
+end

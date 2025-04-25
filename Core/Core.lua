@@ -16,17 +16,16 @@ function Phoenix_UI:SaveDB(force)
     
     -- Ensure any pending changes are written to the database
     if self.db.profile then
-        -- Re-register defaults to ensure any new settings are properly initialized
-        self.db:RegisterDefaults(self.defaults)
+        -- IMPORTANT: We're removing the defaults registration here as it can override custom settings
+        -- self.db:RegisterDefaults(self.defaults)
         
         -- Get all module names from the tabs layout
         local allModules = {}
         
         -- First add the critical modules specifically (for backward compatibility)
         local criticalModules = {
-            "nameplates", "actionbars", "castbars", "buffs", "msbt", "idtip",
-            "general", "unitframes", "tooltip", "map", "chat", "misc",
-            "uiscaling", "profiles", "cooldownTracker"
+            "general", "unitframes", "actionbars", "nameplates", "castbars", "buffs", "msbt", "idtip",
+            "tooltip", "map", "chat", "misc", "uiscaling", "profiles", "cooldownTracker"
         }
         
         for _, moduleName in ipairs(criticalModules) do
@@ -51,6 +50,13 @@ function Phoenix_UI:SaveDB(force)
         
         -- Get current profile
         local currentProfile = self.db.keys and self.db.keys.profile or "Default"
+        
+        -- Add debug info marker to help track save issues
+        if debug then
+            print("Phoenix_UI: SaveDB saving to profile " .. currentProfile)
+        end
+        _G["Phoenix_UIDB"].__lastSaveMethod = "SaveDB"
+        _G["Phoenix_UIDB"].__lastSaveTime = GetTime()
         
         -- Ensure profiles exists in global DB
         if not _G["Phoenix_UIDB"].profiles then
@@ -396,6 +402,12 @@ function Phoenix_UI:ForceSaveDB()
         return false
     end
     
+    -- Debug info
+    local debug = self.debug or false
+    if debug then
+        print("Phoenix_UI: ForceSaveDB called")
+    end
+    
     -- First, commit any pending changes
     self:CommitPendingChanges()
     
@@ -426,6 +438,13 @@ function Phoenix_UI:ForceSaveDB()
     -- Get current profile
     local currentProfile = self.db.keys.profile or "Default"
     
+    -- Add debug info
+    if debug then
+        print("Phoenix_UI: ForceSaveDB saving to profile " .. currentProfile)
+    end
+    _G["Phoenix_UIDB"].__lastForceMethod = "ForceSaveDB"
+    _G["Phoenix_UIDB"].__lastForceTime = GetTime()
+    
     -- Ensure the global Phoenix_UIDB exists and has proper structure
     if _G["Phoenix_UIDB"] == nil then
         _G["Phoenix_UIDB"] = {}
@@ -437,6 +456,23 @@ function Phoenix_UI:ForceSaveDB()
     
     if _G["Phoenix_UIDB"].profiles[currentProfile] == nil then
         _G["Phoenix_UIDB"].profiles[currentProfile] = {}
+    end
+    
+    -- Ensure profileKeys exists and is set correctly
+    if not _G["Phoenix_UIDB"].profileKeys then
+        _G["Phoenix_UIDB"].profileKeys = {}
+    end
+    
+    -- Make sure this character is assigned to the correct profile
+    local playerName = UnitName("player")
+    local realmName = GetRealmName()
+    local playerKey = playerName .. " - " .. realmName
+    
+    if _G["Phoenix_UIDB"].profileKeys[playerKey] ~= currentProfile then
+        _G["Phoenix_UIDB"].profileKeys[playerKey] = currentProfile
+        if debug then
+            print("Phoenix_UI: Fixed profile key for " .. playerKey .. " to " .. currentProfile)
+        end
     end
     
     -- Initialize modified modules tracking if it doesn't exist
@@ -468,23 +504,8 @@ function Phoenix_UI:ForceSaveDB()
             -- Deep copy to ensure all changes are preserved
             _G["Phoenix_UIDB"].profiles[currentProfile][moduleName] = CopyTable(settings)
             
-            -- Also save to Default profile as a fallback
-            if currentProfile ~= "Default" then
-                if not _G["Phoenix_UIDB"].profiles["Default"] then
-                    _G["Phoenix_UIDB"].profiles["Default"] = {}
-                end
-                
-                if not _G["Phoenix_UIDB"].profiles["Default"][moduleName] then
-                    _G["Phoenix_UIDB"].profiles["Default"][moduleName] = {}
-                end
-                
-                -- Only copy critical settings to Default profile
-                for _, criticalModule in ipairs(criticalModules) do
-                    if moduleName == criticalModule then
-                        _G["Phoenix_UIDB"].profiles["Default"][moduleName] = CopyTable(settings)
-                        break
-                    end
-                end
+            if debug then
+                print("Phoenix_UI: ForceSaveDB saved module " .. moduleName)
             end
         end
     end
@@ -1779,4 +1800,189 @@ function Phoenix_UI:SlashCommand(input)
     if self.Config then
         self:Config()
     end
-end 
+end
+
+-- Implementation of the missing InitFromDB function
+function Phoenix_UI:InitFromDB()
+    local debug = self.debug or false
+    
+    if debug then
+        print("Phoenix_UI: InitFromDB called")
+    end
+    
+    -- Skip if already initialized
+    if self.dataInitialized then
+        return
+    end
+    
+    -- Verify database is available
+    if not self.db or not self.db.profile then
+        if debug then
+            print("Phoenix_UI: InitFromDB - Database not available")
+        end
+        return
+    end
+    
+    -- Get current profile
+    local currentProfile = self.db.keys and self.db.keys.profile or "Default"
+    
+    -- Check for global settings in Phoenix_UIDB
+    if _G["Phoenix_UIDB"] and _G["Phoenix_UIDB"].profiles then
+        -- Ensure current profile exists in global DB
+        if not _G["Phoenix_UIDB"].profiles[currentProfile] then
+            _G["Phoenix_UIDB"].profiles[currentProfile] = CopyTable(self.db.profile)
+        end
+        
+        -- Ensure critical settings tables exist in both local and global DB
+        local criticalModules = {
+            "general", "actionbars", "unitframes", "nameplates", "chat", 
+            "tooltip", "map", "fonts", "uiscaling", "buffs", "castbars",
+            "msbt", "idtip", "buffoverlay", "misc"
+        }
+        
+        -- Initialize missing settings tables in local DB
+        for _, moduleName in ipairs(criticalModules) do
+            if not self.db.profile[moduleName] then
+                self.db.profile[moduleName] = {}
+                
+                -- Try to recover from global savedvariables
+                if _G["Phoenix_UIDB"].profiles[currentProfile] and 
+                   _G["Phoenix_UIDB"].profiles[currentProfile][moduleName] then
+                    self.db.profile[moduleName] = CopyTable(_G["Phoenix_UIDB"].profiles[currentProfile][moduleName])
+                    
+                    if debug then
+                        print("Phoenix_UI: Recovered " .. moduleName .. " settings from global DB")
+                    end
+                end
+            end
+        end
+        
+        -- Synchronize between global and local DB
+        if self.SyncModuleSettings then
+            self:SyncModuleSettings()
+        end
+    end
+    
+    -- Mark as initialized to prevent re-initialization
+    self.dataInitialized = true
+    
+    if debug then
+        print("Phoenix_UI: InitFromDB complete")
+    end
+    
+    return true
+end
+
+-- Implementation of the missing OnPlayerEnteringWorld function
+function Phoenix_UI:OnPlayerEnteringWorld()
+    local debug = self.debug or false
+    
+    if debug then
+        print("Phoenix_UI: OnPlayerEnteringWorld called")
+    end
+    
+    -- Initialize from database if not already done
+    if not self.dataInitialized then
+        self:InitFromDB()
+    end
+    
+    -- Get current profile and playerKey
+    local currentProfile = self.db and self.db.keys and self.db.keys.profile or "Default"
+    local playerName = UnitName("player")
+    local realmName = GetRealmName()
+    local playerKey = playerName .. " - " .. realmName
+    
+    -- PROFILE CONSISTENCY CHECK - This is critical for fixing Default profile issues
+    if _G["Phoenix_UIDB"] and self.db and self.db.keys then
+        -- Ensure profileKeys exists
+        if not _G["Phoenix_UIDB"].profileKeys then
+            _G["Phoenix_UIDB"].profileKeys = {}
+            
+            if debug then
+                print("Phoenix_UI: Created missing profileKeys table")
+            end
+        end
+        
+        -- Check if there's a mismatch between AceDB and global profileKeys
+        local globalProfile = _G["Phoenix_UIDB"].profileKeys[playerKey]
+        if globalProfile ~= currentProfile then
+            -- Fix the mismatch by setting global profileKeys to match AceDB
+            _G["Phoenix_UIDB"].profileKeys[playerKey] = currentProfile
+            
+            if debug then
+                print("Phoenix_UI: Fixed profile mismatch. Global: " .. tostring(globalProfile) .. ", AceDB: " .. currentProfile)
+            end
+            
+            -- Also ensure the profile exists in the global table
+            if not _G["Phoenix_UIDB"].profiles then
+                _G["Phoenix_UIDB"].profiles = {}
+            end
+            
+            if not _G["Phoenix_UIDB"].profiles[currentProfile] then
+                -- Create the profile by copying from memory
+                _G["Phoenix_UIDB"].profiles[currentProfile] = CopyTable(self.db.profile)
+                
+                if debug then
+                    print("Phoenix_UI: Created missing profile in global table: " .. currentProfile)
+                end
+            end
+            
+            -- Set metadata
+            _G["Phoenix_UIDB"].__currentProfile = currentProfile
+            _G["Phoenix_UIDB"].__profileFixed = GetTime()
+            
+            -- Force a save to ensure the fix persists
+            self:ForceSettingsSave()
+        end
+    end
+    
+    -- Apply theme settings if needed
+    if self.ApplyTheme and self.db and self.db.profile and self.db.profile.general and self.db.profile.general.theme then
+        local themeName = self.db.profile.general.theme
+        self:ApplyTheme(themeName)
+        
+        if debug then
+            print("Phoenix_UI: Applied theme: " .. tostring(themeName))
+        end
+    end
+    
+    -- Synchronize settings between memory and saved variables
+    if self.SyncModuleSettings then
+        self:SyncModuleSettings()
+    end
+    
+    -- Verify data integrity with error handling
+    if self.VerifySavedVariables then
+        local success, error = pcall(function()
+            self:VerifySavedVariables()
+        end)
+        
+        if not success and debug then
+            print("Phoenix_UI: Error in VerifySavedVariables: " .. tostring(error))
+        end
+    end
+    
+    -- Apply UI scaling from profile
+    if self.db and self.db.profile and self.db.profile.uiscaling and self.db.profile.uiscaling.scale then
+        local scale = self.db.profile.uiscaling.scale
+        
+        -- Check for global scale apply function
+        if _G["Phoenix_UI_ApplyScale"] then
+            _G["Phoenix_UI_ApplyScale"](scale)
+            
+            if debug then
+                print("Phoenix_UI: Applied UI scale: " .. tostring(scale))
+            end
+        end
+    end
+    
+    -- Show welcome message if this is first login
+    if not self.hasShownWelcome then
+        C_Timer.After(1, function()
+            print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Welcome to Phoenix_UI by VortexQ8, Type /pui to open panel")
+        end)
+        self.hasShownWelcome = true
+    end
+    
+    return true
+end

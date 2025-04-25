@@ -823,6 +823,8 @@
         "PetJournalPetCardPetInfo",
         "GameTooltip_Hide",
         "PetBattlePrimaryAbilityTooltip",
-        "UIFrameFlash"
+        "UIFrameFlash",
+        "STANDARD_TEXT_FONT",
+        "ChatFrame_RemoveMessageEventFilter"
     ]
 }
