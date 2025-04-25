@@ -603,6 +603,9 @@ function Gui:OnEnable()
                     print("PHX-UI: Force SaveDB called from QueueSave")
                 end
             end)
+        else
+            -- Just mark that changes are pending for the existing timer
+            config.pendingChangesRequested = true
         end
     end
     
@@ -658,9 +661,9 @@ function Gui:OnEnable()
         end
         
         -- Force save using the most robust method
-        if Phoenix_UI and Phoenix_UI.ForceSaveDB then
+        if Phoenix_UI.ForceSaveDB then
             Phoenix_UI:ForceSaveDB()
-        elseif Phoenix_UI and Phoenix_UI.SaveDB then
+        elseif Phoenix_UI.SaveDB then
             Phoenix_UI:SaveDB()
         end
         
@@ -786,79 +789,100 @@ function Gui:OnEnable()
             -- Only queue a save if one isn't already pending
             if not config.saveTimer then
                 config.pendingChangesRequested = true
-                config.saveTimer = C_Timer.NewTimer(0.5, function()
+                
+                -- Create a new timer with a short delay to batch rapid changes
+                config.saveTimer = C_Timer.After(0.3, function() -- Reduced delay for faster response
                     config.saveTimer = nil
-                    if Phoenix_UI and config.pendingChangesRequested then
-                        config.pendingChangesRequested = false
-                        
-                        -- Create and show save indicator
-                        if not config.miniSaveIndicator then
-                            config.miniSaveIndicator = CreateFrame("Frame", nil, config)
-                            config.miniSaveIndicator:SetSize(24, 24)
-                            config.miniSaveIndicator:SetPoint("TOPRIGHT", config, "TOPRIGHT", -10, -10)
-                            config.miniSaveIndicator:SetFrameStrata("DIALOG")
-                            
-                            -- Checkmark icon
-                            config.miniSaveIndicator.icon = config.miniSaveIndicator:CreateTexture(nil, "OVERLAY")
-                            config.miniSaveIndicator.icon:SetAllPoints()
-                            config.miniSaveIndicator.icon:SetTexture("Interface\\AddOns\\Phoenix_UI\\Media\\Icons\\Checkmark")
-                            -- Fallback if custom texture not available
-                            if not config.miniSaveIndicator.icon:GetTexture() then
-                                config.miniSaveIndicator.icon:SetTexture("Interface\\RAIDFRAME\\ReadyCheck-Ready")
+                    
+                    -- Clear the pending changes flag
+                    config.hasPendingChanges = false
+                    
+                    -- Commit any pending changes
+                    self:CommitPendingChanges()
+                    
+                    -- Process pending changes specifically using InstantSave if available
+                    if Phoenix_UI.InstantSave and self.pendingChanges then
+                        for element, _ in pairs(self.pendingChanges) do
+                            if element and element.dbReference and element.dataKey and element.GetValue then
+                                local value = element:GetValue()
+                                if value ~= nil then
+                                    -- Try to parse the module name and key for direct InstantSave
+                                    local moduleName = element.dataKey:match("^([^%.]+)")
+                                    local key = element.dataKey:match("^[^%.]+%.(.+)$")
+                                    
+                                    if moduleName and key then
+                                        -- Use InstantSave for immediate saving
+                                        Phoenix_UI:InstantSave(moduleName, key, value)
+                                    end
+                                end
                             end
-                            config.miniSaveIndicator.icon:SetVertexColor(0.2, 1, 0.2, 0.9)
-                            
-                            -- Animation
-                            config.miniSaveIndicator.animGroup = config.miniSaveIndicator:CreateAnimationGroup()
-                            
-                            -- Scale in quickly
-                            local grow = config.miniSaveIndicator.animGroup:CreateAnimation("Scale")
-                            grow:SetScale(1.5, 1.5)
-                            grow:SetDuration(0.2)
-                            grow:SetSmoothing("IN")
-                            grow:SetOrder(1)
-                            
-                            -- Hold
-                            local hold = config.miniSaveIndicator.animGroup:CreateAnimation("Scale")
-                            hold:SetScale(1, 1)
-                            hold:SetDuration(0.5)
-                            hold:SetSmoothing("NONE")
-                            hold:SetOrder(2)
-                            
-                            -- Scale out with fade
-                            local shrink = config.miniSaveIndicator.animGroup:CreateAnimation("Scale")
-                            shrink:SetScale(0.5, 0.5)
-                            shrink:SetDuration(0.3)
-                            shrink:SetSmoothing("OUT")
-                            shrink:SetOrder(3)
-                            
-                            local fade = config.miniSaveIndicator.animGroup:CreateAnimation("Alpha")
-                            fade:SetFromAlpha(1)
-                            fade:SetToAlpha(0)
-                            fade:SetDuration(0.3)
-                            fade:SetSmoothing("OUT")
-                            fade:SetOrder(3)
-                            
-                            -- Hide on finish
-                            config.miniSaveIndicator.animGroup:SetScript("OnFinished", function()
-                                config.miniSaveIndicator:Hide()
-                            end)
                         end
                         
-                        -- Show and play animation
-                        config.miniSaveIndicator:Show()
-                        config.miniSaveIndicator:SetAlpha(1)
-                        config.miniSaveIndicator:SetScale(1)
-                        config.miniSaveIndicator.animGroup:Play()
-                        
-                        -- Use ForceSaveDB for better persistence
-                        if Phoenix_UI.ForceSaveDB then
-                            Phoenix_UI:ForceSaveDB()
-                        elseif Phoenix_UI.SaveDB then
-                            Phoenix_UI:SaveDB()
+                        -- Clear pending changes after processing
+                        self.pendingChanges = {}
+                    end
+                    
+                    -- Save the database with the most robust method available
+                    if Phoenix_UI.ForceSaveDB then
+                        Phoenix_UI:ForceSaveDB()
+                    elseif Phoenix_UI.SaveDB then
+                        Phoenix_UI:SaveDB()
+                    end
+                    
+                    -- Force an immediate flush to disk
+                    pcall(function()
+                        if FlushSettingsDB then
+                            FlushSettingsDB()
+                        elseif FlushSavedVariables then
+                            FlushSavedVariables()
                         end
+                    end)
+                    
+                    -- Add verification timestamp for save tracking
+                    if _G["Phoenix_UIDB"] then
+                        _G["Phoenix_UIDB"].__queue_saved = GetTime()
                     end
                 end)
+                
+                -- Create a safety timer that ensures changes are saved even if the normal timer fails
+                if not self.safetySaveTimer then
+                    self.safetySaveTimer = C_Timer.NewTicker(2, function()
+                        if self.hasPendingChanges and not self.saveTimer then
+                            -- Clear the pending changes flag
+                            self.hasPendingChanges = false
+                            
+                            -- Commit changes and force save
+                            self:CommitPendingChanges()
+                            
+                            -- Process any remaining pending changes
+                            if Phoenix_UI.InstantSave and self.pendingChanges then
+                                for element, _ in pairs(self.pendingChanges) do
+                                    if element and element.dbReference and element.dataKey and element.GetValue then
+                                        local value = element:GetValue()
+                                        if value ~= nil then
+                                            local moduleName = element.dataKey:match("^([^%.]+)")
+                                            local key = element.dataKey:match("^[^%.]+%.(.+)$")
+                                            
+                                            if moduleName and key then
+                                                Phoenix_UI:InstantSave(moduleName, key, value)
+                                            end
+                                        end
+                                    end
+                                end
+                                
+                                -- Clear pending changes
+                                self.pendingChanges = {}
+                            end
+                            
+                            -- Save using the most robust method available
+                            if Phoenix_UI.ForceSaveDB then
+                                Phoenix_UI:ForceSaveDB()
+                            elseif Phoenix_UI.SaveDB then
+                                Phoenix_UI:SaveDB()
+                            end
+                        end
+                    end)
+                end
             else
                 -- Just mark that changes are pending for the existing timer
                 config.pendingChangesRequested = true
@@ -1240,20 +1264,36 @@ function Gui:OnEnable()
             end
         end
         
-        -- Call original function, but with performance optimization
-        -- We'll inject a variable to communicate which modules we've already processed
-        if not originalCommitPendingChanges.__optimizationApplied then
-            -- We need to monkey patch this only once
-            originalCommitPendingChanges.__optimizationApplied = true
+        -- Store original function before using it to prevent errors
+        if originalCommitPendingChanges then
+            -- Call original function, but with performance optimization
+            -- We'll inject a variable to communicate which modules we've already processed
+            if not Phoenix_UI.UI.__originalCommitPendingChangesUnoptimized then
+                -- Store the original in a safe place
+                Phoenix_UI.UI.__originalCommitPendingChangesUnoptimized = originalCommitPendingChanges
+            end
             
-            -- Store the original in a safe place
-            Phoenix_UI.UI.__originalCommitPendingChangesUnoptimized = originalCommitPendingChanges
-            
-            -- Call it with our optimizations
+            -- Call the original function
             originalCommitPendingChanges(self)
         else
-            -- Call the original with our optimizations applied
-            Phoenix_UI.UI.__originalCommitPendingChangesUnoptimized(self)
+            -- Fallback if originalCommitPendingChanges is nil
+            if Phoenix_UI.UI.__originalCommitPendingChangesUnoptimized then
+                Phoenix_UI.UI.__originalCommitPendingChangesUnoptimized(self)
+            else
+                -- Last resort fallback implementation if no original function is available
+                if self.pendingChanges then
+                    for element in pairs(self.pendingChanges) do
+                        if element and element.dataKey and element.dbReference and element.GetValue then
+                            local success, value = pcall(function() return element:GetValue() end)
+                            if success and value ~= nil then
+                                local dbPath = element.dataKey:gsub("%.", ",%s")
+                                element.dbReference[dbPath] = value
+                            end
+                        end
+                    end
+                    self.pendingChanges = {}
+                end
+            end
         end
     end
     
@@ -2563,273 +2603,268 @@ function PhoenixConfig:CreateOptions()
                 type = 'group',
                 childGroups = 'tab',
                 args = {
-                    General = {
-                        name = 'General', type = 'group', order = 1,
+                    layout = {
+                        type = 'group',
+                        inline = true,
+                        name = '',
                         args = {
-                            layout = {
-                                type = 'group',
-                                inline = true,
-                                name = '',
-                                args = {
-                                    load = {
-                                        name = 'Config',
-                                        type = 'execute',
-                                        func = function()
-                                            local layout = self:GetModule('Config.Layout.General')
-                                            
-                                            -- Get and build layout options
-                                            local opts = {}
-                                            self:BuildOptions(layout, opts)
-                                            
-                                            -- Set
-                                            ACD:Open('Phoenix_UI_Config')
-                                            ACD:SelectGroup('Phoenix_UI_Config', 'General', 'General')
-                                            
-                                            ACR:NotifyChange('Phoenix_UI_Config')
-                                        end,
-                                        hidden = true,
-                                    },
-                                },
+                            load = {
+                                name = 'Config',
+                                type = 'execute',
+                                func = function()
+                                    local layout = self:GetModule('Config.Layout.General')
+                                    
+                                    -- Get and build layout options
+                                    local opts = {}
+                                    self:BuildOptions(layout, opts)
+                                    
+                                    -- Set
+                                    ACD:Open('Phoenix_UI_Config')
+                                    ACD:SelectGroup('Phoenix_UI_Config', 'General', 'General')
+                                    
+                                    ACR:NotifyChange('Phoenix_UI_Config')
+                                end,
+                                hidden = true,
                             },
                         },
                     },
-                    Unitframes = {
-                        name = 'Unitframes', type = 'group', order = 2,
+                },
+            },
+            Unitframes = {
+                name = 'Unitframes', type = 'group', order = 2,
+                args = {
+                    layout = {
+                        type = 'group',
+                        inline = true,
+                        name = '',
                         args = {
-                            layout = {
-                                type = 'group',
-                                inline = true,
-                                name = '',
-                                args = {
-                                    load = {
-                                        name = 'Config',
-                                        type = 'execute',
-                                        func = function()
-                                            local layout = self:GetModule('Config.Layout.Unitframes')
-                                            
-                                            -- Get and build layout options
-                                            local opts = {}
-                                            self:BuildOptions(layout, opts)
-                                            
-                                            -- Set
-                                            ACD:Open('Phoenix_UI_Config')
-                                            ACD:SelectGroup('Phoenix_UI_Config', 'General', 'Unitframes')
-                                            
-                                            ACR:NotifyChange('Phoenix_UI_Config')
-                                        end,
-                                        hidden = true,
-                                    },
-                                },
+                            load = {
+                                name = 'Config',
+                                type = 'execute',
+                                func = function()
+                                    local layout = self:GetModule('Config.Layout.Unitframes')
+                                    
+                                    -- Get and build layout options
+                                    local opts = {}
+                                    self:BuildOptions(layout, opts)
+                                    
+                                    -- Set
+                                    ACD:Open('Phoenix_UI_Config')
+                                    ACD:SelectGroup('Phoenix_UI_Config', 'General', 'Unitframes')
+                                    
+                                    ACR:NotifyChange('Phoenix_UI_Config')
+                                end,
+                                hidden = true,
                             },
                         },
                     },
-                    Nameplates = {
-                        name = 'Nameplates', type = 'group', order = 3,
+                },
+            },
+            Nameplates = {
+                name = 'Nameplates', type = 'group', order = 3,
+                args = {
+                    layout = {
+                        type = 'group',
+                        inline = true,
+                        name = '',
                         args = {
-                            layout = {
-                                type = 'group',
-                                inline = true,
-                                name = '',
-                                args = {
-                                    load = {
-                                        name = 'Config',
-                                        type = 'execute',
-                                        func = function()
-                                            local layout = self:GetModule('Config.Layout.Nameplates')
-                                            
-                                            -- Get and build layout options
-                                            local opts = {}
-                                            self:BuildOptions(layout, opts)
-                                            
-                                            -- Set
-                                            ACD:Open('Phoenix_UI_Config')
-                                            ACD:SelectGroup('Phoenix_UI_Config', 'General', 'Nameplates')
-                                            
-                                            ACR:NotifyChange('Phoenix_UI_Config')
-                                        end,
-                                        hidden = true,
-                                    },
-                                },
+                            load = {
+                                name = 'Config',
+                                type = 'execute',
+                                func = function()
+                                    local layout = self:GetModule('Config.Layout.Nameplates')
+                                    
+                                    -- Get and build layout options
+                                    local opts = {}
+                                    self:BuildOptions(layout, opts)
+                                    
+                                    -- Set
+                                    ACD:Open('Phoenix_UI_Config')
+                                    ACD:SelectGroup('Phoenix_UI_Config', 'General', 'Nameplates')
+                                    
+                                    ACR:NotifyChange('Phoenix_UI_Config')
+                                end,
+                                hidden = true,
                             },
                         },
                     },
-                    Actionbar = {
-                        name = 'Actionbar', type = 'group', order = 4,
+                },
+            },
+            Actionbar = {
+                name = 'Actionbar', type = 'group', order = 4,
+                args = {
+                    layout = {
+                        type = 'group',
+                        inline = true,
+                        name = '',
                         args = {
-                            layout = {
-                                type = 'group',
-                                inline = true,
-                                name = '',
-                                args = {
-                                    load = {
-                                        name = 'Config',
-                                        type = 'execute',
-                                        func = function()
-                                            local layout = self:GetModule('Config.Layout.Actionbar')
-                                            
-                                            -- Get and build layout options
-                                            local opts = {}
-                                            self:BuildOptions(layout, opts)
-                                            
-                                            -- Set
-                                            ACD:Open('Phoenix_UI_Config')
-                                            ACD:SelectGroup('Phoenix_UI_Config', 'General', 'Actionbar')
-                                            
-                                            ACR:NotifyChange('Phoenix_UI_Config')
-                                        end,
-                                        hidden = true,
-                                    },
-                                },
+                            load = {
+                                name = 'Config',
+                                type = 'execute',
+                                func = function()
+                                    local layout = self:GetModule('Config.Layout.Actionbar')
+                                    
+                                    -- Get and build layout options
+                                    local opts = {}
+                                    self:BuildOptions(layout, opts)
+                                    
+                                    -- Set
+                                    ACD:Open('Phoenix_UI_Config')
+                                    ACD:SelectGroup('Phoenix_UI_Config', 'General', 'Actionbar')
+                                    
+                                    ACR:NotifyChange('Phoenix_UI_Config')
+                                end,
+                                hidden = true,
                             },
                         },
                     },
-                    Castbars = {
-                        name = 'Castbars', type = 'group', order = 5,
+                },
+            },
+            Castbars = {
+                name = 'Castbars', type = 'group', order = 5,
+                args = {
+                    layout = {
+                        type = 'group',
+                        inline = true,
+                        name = '',
                         args = {
-                            layout = {
-                                type = 'group',
-                                inline = true,
-                                name = '',
-                                args = {
-                                    load = {
-                                        name = 'Config',
-                                        type = 'execute',
-                                        func = function()
-                                            local layout = self:GetModule('Config.Layout.Castbars')
-                                            
-                                            -- Get and build layout options
-                                            local opts = {}
-                                            self:BuildOptions(layout, opts)
-                                            
-                                            -- Set
-                                            ACD:Open('Phoenix_UI_Config')
-                                            ACD:SelectGroup('Phoenix_UI_Config', 'General', 'Castbars')
-                                            
-                                            ACR:NotifyChange('Phoenix_UI_Config')
-                                        end,
-                                        hidden = true,
-                                    },
-                                },
+                            load = {
+                                name = 'Config',
+                                type = 'execute',
+                                func = function()
+                                    local layout = self:GetModule('Config.Layout.Castbars')
+                                    
+                                    -- Get and build layout options
+                                    local opts = {}
+                                    self:BuildOptions(layout, opts)
+                                    
+                                    -- Set
+                                    ACD:Open('Phoenix_UI_Config')
+                                    ACD:SelectGroup('Phoenix_UI_Config', 'General', 'Castbars')
+                                    
+                                    ACR:NotifyChange('Phoenix_UI_Config')
+                                end,
+                                hidden = true,
                             },
                         },
                     },
-                    IdTip = {
-                        name = 'IdTip', type = 'group', order = 6,
+                },
+            },
+            IdTip = {
+                name = 'IdTip', type = 'group', order = 6,
+                args = {
+                    layout = {
+                        type = 'group',
+                        inline = true,
+                        name = '',
                         args = {
-                            layout = {
-                                type = 'group',
-                                inline = true,
-                                name = '',
-                                args = {
-                                    load = {
-                                        name = 'Config',
-                                        type = 'execute',
-                                        func = function()
-                                            local layout = self:GetModule('Config.Layout.IdTip')
-                                            
-                                            -- Get and build layout options
-                                            local opts = {}
-                                            self:BuildOptions(layout, opts)
-                                            
-                                            -- Set
-                                            ACD:Open('Phoenix_UI_Config')
-                                            ACD:SelectGroup('Phoenix_UI_Config', 'General', 'IdTip')
-                                            
-                                            ACR:NotifyChange('Phoenix_UI_Config')
-                                        end,
-                                        hidden = true,
-                                    },
-                                },
+                            load = {
+                                name = 'Config',
+                                type = 'execute',
+                                func = function()
+                                    local layout = self:GetModule('Config.Layout.IdTip')
+                                    
+                                    -- Get and build layout options
+                                    local opts = {}
+                                    self:BuildOptions(layout, opts)
+                                    
+                                    -- Set
+                                    ACD:Open('Phoenix_UI_Config')
+                                    ACD:SelectGroup('Phoenix_UI_Config', 'General', 'IdTip')
+                                    
+                                    ACR:NotifyChange('Phoenix_UI_Config')
+                                end,
+                                hidden = true,
                             },
                         },
                     },
-                    Buffs = {
-                        name = 'Buffs', type = 'group', order = 7,
+                },
+            },
+            Buffs = {
+                name = 'Buffs', type = 'group', order = 7,
+                args = {
+                    layout = {
+                        type = 'group',
+                        inline = true,
+                        name = '',
                         args = {
-                            layout = {
-                                type = 'group',
-                                inline = true,
-                                name = '',
-                                args = {
-                                    load = {
-                                        name = 'Config',
-                                        type = 'execute',
-                                        func = function()
-                                            local layout = self:GetModule('Config.Layout.Buffs')
-                                            
-                                            -- Get and build layout options
-                                            local opts = {}
-                                            self:BuildOptions(layout, opts)
-                                            
-                                            -- Set
-                                            ACD:Open('Phoenix_UI_Config')
-                                            ACD:SelectGroup('Phoenix_UI_Config', 'General', 'Buffs')
-                                            
-                                            ACR:NotifyChange('Phoenix_UI_Config')
-                                        end,
-                                        hidden = true,
-                                    },
-                                },
+                            load = {
+                                name = 'Config',
+                                type = 'execute',
+                                func = function()
+                                    local layout = self:GetModule('Config.Layout.Buffs')
+                                    
+                                    -- Get and build layout options
+                                    local opts = {}
+                                    self:BuildOptions(layout, opts)
+                                    
+                                    -- Set
+                                    ACD:Open('Phoenix_UI_Config')
+                                    ACD:SelectGroup('Phoenix_UI_Config', 'General', 'Buffs')
+                                    
+                                    ACR:NotifyChange('Phoenix_UI_Config')
+                                end,
+                                hidden = true,
                             },
                         },
                     },
-                    Misc = {
-                        name = 'Misc', type = 'group', order = 8,
+                },
+            },
+            Misc = {
+                name = 'Misc', type = 'group', order = 8,
+                args = {
+                    layout = {
+                        type = 'group',
+                        inline = true,
+                        name = '',
                         args = {
-                            layout = {
-                                type = 'group',
-                                inline = true,
-                                name = '',
-                                args = {
-                                    load = {
-                                        name = 'Config',
-                                        type = 'execute',
-                                        func = function()
-                                            local layout = self:GetModule('Config.Layout.Misc')
-                                            
-                                            -- Get and build layout options
-                                            local opts = {}
-                                            self:BuildOptions(layout, opts)
-                                            
-                                            -- Set
-                                            ACD:Open('Phoenix_UI_Config')
-                                            ACD:SelectGroup('Phoenix_UI_Config', 'General', 'Misc')
-                                            
-                                            ACR:NotifyChange('Phoenix_UI_Config')
-                                        end,
-                                        hidden = true,
-                                    },
-                                },
+                            load = {
+                                name = 'Config',
+                                type = 'execute',
+                                func = function()
+                                    local layout = self:GetModule('Config.Layout.Misc')
+                                    
+                                    -- Get and build layout options
+                                    local opts = {}
+                                    self:BuildOptions(layout, opts)
+                                    
+                                    -- Set
+                                    ACD:Open('Phoenix_UI_Config')
+                                    ACD:SelectGroup('Phoenix_UI_Config', 'General', 'Misc')
+                                    
+                                    ACR:NotifyChange('Phoenix_UI_Config')
+                                end,
+                                hidden = true,
                             },
                         },
                     },
-                    Msbt = {
-                        name = 'MSBT', type = 'group', order = 9,
+                },
+            },
+            Msbt = {
+                name = 'MSBT', type = 'group', order = 9,
+                args = {
+                    layout = {
+                        type = 'group',
+                        inline = true,
+                        name = '',
                         args = {
-                            layout = {
-                                type = 'group',
-                                inline = true,
-                                name = '',
-                                args = {
-                                    load = {
-                                        name = 'Config',
-                                        type = 'execute',
-                                        func = function()
-                                            local layout = self:GetModule('Config.Layout.Msbt')
-                                            
-                                            -- Get and build layout options
-                                            local opts = {}
-                                            self:BuildOptions(layout, opts)
-                                            
-                                            -- Set
-                                            ACD:Open('Phoenix_UI_Config')
-                                            ACD:SelectGroup('Phoenix_UI_Config', 'General', 'Msbt')
-                                            
-                                            ACR:NotifyChange('Phoenix_UI_Config')
-                                        end,
-                                        hidden = true,
-                                    },
-                                },
+                            load = {
+                                name = 'Config',
+                                type = 'execute',
+                                func = function()
+                                    local layout = self:GetModule('Config.Layout.Msbt')
+                                    
+                                    -- Get and build layout options
+                                    local opts = {}
+                                    self:BuildOptions(layout, opts)
+                                    
+                                    -- Set
+                                    ACD:Open('Phoenix_UI_Config')
+                                    ACD:SelectGroup('Phoenix_UI_Config', 'General', 'Msbt')
+                                    
+                                    ACR:NotifyChange('Phoenix_UI_Config')
+                                end,
+                                hidden = true,
                             },
                         },
                     },

@@ -144,16 +144,19 @@ function Module:OnEnable()
             if UnitIsAFK(unit) then
                 self:AppendText((" |cff%s<AFK>|r"):format(cfg.afkColorHex))
             end
+            
+            --dead?
+            if UnitIsDeadOrGhost(unit) then
+                _G["GameTooltipTextLeft1"]:SetTextColor(unpack(cfg.deadColor))
+            end
+            
+            --target line
+            if (UnitExists(unit .. "target")) then
+                GameTooltip:AddDoubleLine(("|cff%s%s|r"):format(cfg.targetColorHex, "Target"),
+                    GetTarget(unit .. "target") or "Unknown")
+            end
         end
-        --dead?
-        if UnitIsDeadOrGhost(unit) then
-            _G["GameTooltipTextLeft1"]:SetTextColor(unpack(cfg.deadColor))
-        end
-        --target line
-        if (UnitExists(unit .. "target")) then
-            GameTooltip:AddDoubleLine(("|cff%s%s|r"):format(cfg.targetColorHex, "Target"),
-                GetTarget(unit .. "target") or "Unknown")
-        end
+        
     end
 
     -- Make the GetItemLevel function available for DisplayUnit
