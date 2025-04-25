@@ -135,8 +135,18 @@ local function UpdateSliderValue(widget, value, defaultValue)
     if not widget then return end
     
     -- Ensure value is a valid number
-    if value == nil or type(value) ~= "number" then
+    if value == nil or type(value) ~= "number" or value ~= value then -- Check for NaN
         value = defaultValue
+    end
+    
+    -- Ensure default is valid as well
+    if defaultValue == nil or type(defaultValue) ~= "number" or defaultValue ~= defaultValue then
+        defaultValue = 0
+    end
+    
+    -- Ensure widget has the right methods
+    if not widget.SetValue or type(widget.SetValue) ~= "function" then
+        return
     end
     
     -- Use pcall to catch any errors during value updates
@@ -162,15 +172,20 @@ local function InitializeSlider(slider, widget, min, max, defaultValue)
     -- Safety check
     if not slider or not slider.SetValue then return end
     
+    -- Ensure min/max are valid numbers
+    min = (type(min) == "number" and min) or 0
+    max = (type(max) == "number" and max) or 100
+    defaultValue = (type(defaultValue) == "number" and defaultValue) or min
+    
     -- Set up a protected call to avoid errors
     local function safeSetValue(value)
         -- Validate the value
-        if value == nil or type(value) ~= "number" then
-            value = defaultValue or min or 0
+        if value == nil or type(value) ~= "number" or value ~= value then -- Check for NaN
+            value = defaultValue or min
         end
         
         -- Clamp value to valid range
-        value = math.max(min or 0, math.min(max or 100, value))
+        value = math.max(min, math.min(max, value))
         
         -- Set the value with protection
         local success = pcall(function()
@@ -183,13 +198,13 @@ local function InitializeSlider(slider, widget, min, max, defaultValue)
     
     -- Try to get a valid initial value
     local initialValue
-    if widget.get then
+    if widget.get and type(widget.get) == "function" then
         initialValue = widget.get()
     end
     
     -- If no valid value from get(), try initialValue or default
-    if initialValue == nil or type(initialValue) ~= "number" then
-        initialValue = widget.initialValue or defaultValue or min or 0
+    if initialValue == nil or type(initialValue) ~= "number" or initialValue ~= initialValue then
+        initialValue = widget.initialValue or defaultValue or min
     end
     
     -- Apply the value
@@ -211,13 +226,18 @@ function module:HookSliderCreation()
     
     -- Create a safer version that handles errors
     Phoenix_UIConfig.Slider = function(self, parent, width, height, value, vertical, min, max)
+        -- Ensure parent exists
+        if not parent then return nil end
+        
         -- Ensure input parameters are valid
-        min = min or 0
-        max = max or 100
-        value = value or min
+        min = type(min) == "number" and min or 0
+        max = type(max) == "number" and max or 100
+        value = type(value) == "number" and value or min
+        width = type(width) == "number" and width or 100
+        height = type(height) == "number" and height or 20
         
         -- Validate value
-        if value == nil or type(value) ~= "number" then
+        if value == nil or type(value) ~= "number" or value ~= value then -- Check for NaN
             value = min
         end
         
@@ -225,15 +245,44 @@ function module:HookSliderCreation()
         value = math.max(min, math.min(max, value))
         
         -- Create the slider with protected call
-        local success, slider = pcall(function()
+        local success, slider
+        success, slider = pcall(function()
             return originalSlider(self, parent, width, height, value, vertical, min, max)
         end)
         
-        if not success then
+        if not success or not slider then
             -- If creation failed, try with default values
-            return pcall(function()
-                return originalSlider(self, parent, width or 100, height or 20, min, vertical, min, max)
+            success, slider = pcall(function()
+                return originalSlider(self, parent, 100, 20, min, vertical, min, max)
             end)
+            
+            -- If it still fails, give up
+            if not success or not slider then
+                return nil
+            end
+        end
+        
+        -- If slider was created successfully, ensure method safety
+        if slider and not slider.protected then
+            -- Keep a reference to the original SetValue
+            local originalSetValue = slider.SetValue
+            
+            -- Create a protected version
+            slider.SetValue = function(self, val)
+                if not val or type(val) ~= "number" or val ~= val then
+                    val = value -- Use original value as fallback
+                end
+                
+                -- Clamp value to range
+                val = math.max(min, math.min(max, val))
+                
+                -- Use protected call
+                pcall(function()
+                    originalSetValue(self, val)
+                end)
+            end
+            
+            slider.protected = true
         end
         
         return slider

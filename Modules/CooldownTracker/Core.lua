@@ -53,8 +53,9 @@ local defaults = {
 
 -- GetDB is currently a local function but needs to be exposed to other modules
 local function GetDB()
-    if not Phoenix_UI.db or not Phoenix_UI.db.profile then
-        return defaults
+    if not Phoenix_UI or not Phoenix_UI.db or not Phoenix_UI.db.profile then
+        -- Return a copy of defaults to avoid modifying the original
+        return CopyTable(defaults)
     end
     
     -- Create cooldownTracker table if it doesn't exist
@@ -62,7 +63,20 @@ local function GetDB()
         Phoenix_UI.db.profile.cooldownTracker = CopyTable(defaults)
     end
     
-    return Phoenix_UI.db.profile.cooldownTracker
+    -- Ensure critical sections exist
+    local db = Phoenix_UI.db.profile.cooldownTracker
+    
+    -- Check and repair general settings
+    if not db.general then 
+        db.general = CopyTable(defaults.general)
+    end
+    
+    -- Check and repair cooldownText settings
+    if not db.cooldownText then
+        db.cooldownText = CopyTable(defaults.cooldownText)
+    end
+    
+    return db
 end
 
 -- Expose GetDB for other modules to use

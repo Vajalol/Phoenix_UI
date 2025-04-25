@@ -362,20 +362,21 @@ local callbacks = {}
 function Module:RegisterCallback(event, callback)
     if not event or type(callback) ~= "function" then return end
     
+    callbacks = callbacks or {}
     callbacks[event] = callbacks[event] or {}
     tinsert(callbacks[event], callback)
-    
-    self:LogDebug("Registered callback for event: " .. tostring(event))
 end
 
 -- Fire a callback for a specific event
 function Module:FireCallback(event, ...)
-    if not event or not callbacks[event] then return end
+    if not event then return end
+    
+    callbacks = callbacks or {}
+    if not callbacks[event] then return end
     
     for _, callback in ipairs(callbacks[event]) do
-        local success, err = pcall(callback, self, ...)
-        if not success then
-            self:LogError("Error in callback for event " .. tostring(event) .. ": " .. tostring(err))
+        if type(callback) == "function" then
+            pcall(callback, self, ...)
         end
     end
 end

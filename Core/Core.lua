@@ -314,8 +314,9 @@ function Phoenix_UI:CommitPendingChanges()
             local Themes = self:GetModule("Data.Themes", true)
             if Themes and Themes.data then
                 local currentTheme = self.db.profile.general.theme
-                local themeExists = false
                 
+                -- Ensure the current theme exists in the themes data
+                local themeExists = false
                 for _, themeData in ipairs(Themes.data) do
                     if themeData.value == currentTheme then
                         themeExists = true
@@ -325,16 +326,20 @@ function Phoenix_UI:CommitPendingChanges()
                 
                 -- If theme doesn't exist, use "PhoenixFlame" or "Default" as fallback
                 if not themeExists then
+                    -- Try PhoenixFlame first, then fall back to Default if needed
+                    local fallbackTheme = "PhoenixFlame"
+                    local fallbackExists = false
+                    
                     for _, themeData in ipairs(Themes.data) do
-                        if themeData.value == "PhoenixFlame" then
-                            self.db.profile.general.theme = "PhoenixFlame"
-                            themeExists = true
+                        if themeData.value == fallbackTheme then
+                            fallbackExists = true
                             break
                         end
                     end
                     
-                    -- Fall back to Default if PhoenixFlame isn't found
-                    if not themeExists then
+                    if fallbackExists then
+                        self.db.profile.general.theme = fallbackTheme
+                    else
                         self.db.profile.general.theme = "Default"
                     end
                     
@@ -1393,8 +1398,11 @@ function Phoenix_UI:SaveAllTabSettings()
     
     -- Define all tab modules to save
     local allTabs = {
-        "general", "unitframes", "nameplates", "actionbars", "castbars", 
-        "buffs", "tooltip", "map", "chat", "misc", "uiscaling", 
+        "general", "unitframes", "nameplates", 
+        "actionbar", "actionbars",
+        "castbar", "castbars",
+        "buff", "buffs",
+        "tooltip", "map", "chat", "misc", "uiscaling", 
         "msbt", "idtip", "buffoverlay", "cooldownTracker"
     }
     

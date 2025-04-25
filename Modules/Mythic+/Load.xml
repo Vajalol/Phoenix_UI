@@ -15,5 +15,5 @@
     
     <!-- Configuration -->
     <Script file="_Config.lua"/>
-    <Script file="TabIntegration.lua"/>
+    <Script file="MythicPlus_Layout.lua"/>
 </Ui> 

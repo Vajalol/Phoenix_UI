@@ -15,6 +15,9 @@ L["DETAILS_SKIN_APPLY"] = "Apply Skin to Details!"
 L["DETAILS_SKIN_APPLIED"] = "Phoenix skin has been applied to Details!"
 L["DETAILS_SKIN_ERROR"] = "Details! addon is not loaded or not found"
 L["DETAILS_SKIN_MISSING"] = "Details! addon is required for this feature"
+L["DETAILS_SKIN_TWW"] = "The War Within skin has been applied to Details!"
+L["DETAILS_PROFILE_TWW"] = "The War Within profile has been imported to Details!"
+L["DETAILS_RESET"] = "Details! has been reset to default settings"
 
 -- Get a reference to the skin profile
 local skinProfile = {}
@@ -93,8 +96,8 @@ function DetailsSkin:CreateSkinProfile()
     -- Create the basic skin profile
     local skin = {
         -- Skin info
-        skin_name = "Phoenix_UI",
-        author = "Phoenix_UI",
+        skin_name = "The War Within",
+        author = "Phoenix_UI (inspired by Karl-HeinzSchneider)",
         version = Phoenix_UI.version or "1.0",
         
         -- General appearance
@@ -181,103 +184,37 @@ function DetailsSkin:CreateSkinProfile()
             },
         },
         row_info = {
-            ["textL_outline"] = true,
-            ["texture_highlight"] = "Interface\\FriendsFrame\\UI-FriendsList-Highlight",
-            ["textR_outline"] = true,
-            ["icon_file"] = textures.barTexture,
-            ["textL_outline_small"] = true,
-            ["texture_background_file"] = textures.background,
-            ["textL_outline_small_color"] = {
-                0, -- [1]
-                0, -- [2]
-                0, -- [3]
-                1, -- [4]
+            texture = "Interface\\AddOns\\Phoenix_UI\\Modules\\Detail-Skin\\Media\\Textures\\bar.blp",
+            texture_background = "Interface\\AddOns\\Phoenix_UI\\Modules\\Detail-Skin\\Media\\Textures\\background.blp",
+            texture_background_class_color = false,
+            fixed_texture_background_color = {0.1254, 0.1254, 0.1254, 0.3},
+            icon_file = "Interface\\AddOns\\Phoenix_UI\\Modules\\Detail-Skin\\Media\\Textures\\ClassIconsTWW.blp",
+            start_after_icon = true,
+            percent_type = 1,
+            alpha = 1,
+            alpha_background = 0.8,
+            textL_enable_custom_text = false,
+            textR_enable_custom_text = false,
+            textL_show_number = true,
+            textR_show_number = false,
+            textR_custom_text = "{data1} ({data2}, {data3}%)",
+            texture_custom = "",
+            texture_highlight = "Interface\\FriendsFrame\\UI-FriendsList-Highlight",
+            textL_outline = true,
+            textR_outline = true,
+            textL_outline_small = true,
+            textL_class_colors = true,
+            textR_class_colors = true,
+            textR_outline_small = true,
+            fixed_text_color = {1, 1, 1},
+            space = {
+                right = 0,
+                left = 0,
+                between = 1,
             },
-            ["percent_type"] = 1,
-            ["fixed_text_color"] = {
-                1, -- [1]
-                1, -- [2]
-                1, -- [3]
-            },
-            ["space"] = {
-                ["right"] = 0,
-                ["left"] = 0,
-                ["between"] = 1,
-            },
-            ["texture_background_class_color"] = false,
-            ["start_after_icon"] = true,
-            ["fast_ps_update"] = false,
-            ["textR_separator_color"] = {
-                0, -- [1]
-                0, -- [2]
-                0, -- [3]
-                1, -- [4]
-            },
-            ["textR_show_data"] = {
-                true, -- [1]
-                true, -- [2]
-                false, -- [3]
-            },
-            ["textL_enable_custom_text"] = false,
-            ["fixed_texture_color"] = {
-                unpack(colors.barFill),
-            },
-            ["textL_show_number"] = true,
-            ["icon_size_offset"] = 0,
-            ["texture_custom_file"] = textures.barTexture,
-            ["backdrop"] = {
-                ["enabled"] = false,
-                ["size"] = 12,
-                ["color"] = {
-                    1, -- [1]
-                    1, -- [2]
-                    1, -- [3]
-                    1, -- [4]
-                },
-                ["texture"] = "Details BarBorder 2",
-            },
-            ["textR_bracket"] = "(",
-            ["models"] = {
-                ["upper_model"] = "Spells\\AcidBreath_SuperGreen.M2",
-                ["lower_model"] = "World\\EXPANSION02\\DOODADS\\Coldarra\\COLDARRALOCUS.m2",
-                ["upper_alpha"] = 0.5,
-                ["lower_enabled"] = false,
-                ["lower_alpha"] = 0.1,
-                ["upper_enabled"] = false,
-            },
-            ["textL_class_colors"] = true,
-            ["alpha"] = 1,
-            ["no_icon"] = false,
-            ["texture"] = textures.barTexture,
-            ["texture_background"] = textures.background,
-            ["font_face_file"] = "Interface\\Addons\\Details\\fonts\\Accidental Presidency.ttf",
-            ["height"] = 20,
-            ["font_size"] = 12,
-            ["texture_class_colors"] = true,
-            ["font_face"] = "Accidental Presidency",
-            ["textL_custom_text"] = "{data1}. {data3}{data2}",
-            ["fixed_texture_background_color"] = {
-                unpack(colors.barBackground),
-            },
-            ["textR_custom_text"] = "{data1} ({data2}, {data3}%)",
-            ["texture_custom"] = "",
-            ["textR_class_colors"] = true,
-            ["textR_outline_small_color"] = {
-                0, -- [1]
-                0, -- [2]
-                0, -- [3]
-                1, -- [4]
-            },
-            ["textL_class_colors"] = true,
-            ["textR_enable_custom_text"] = false,
-            ["fixed_text_color"] = {
-                1, -- [1]
-                1, -- [2]
-                1, -- [3]
-            },
-            ["texture_background_class_color"] = false,
-            ["textR_outline_small"] = true,
-            ["texture_background_alpha"] = 0.8,
+            point = "BOTTOM",
+            textL_class_colors = true,
+            textR_class_colors = true,
         },
         
         -- Window appearance
@@ -385,107 +322,171 @@ function DetailsSkin:CreateSkinProfile()
     return skin
 end
 
--- Apply the skin to Details!
+-- Apply the The War Within skin to Details!
 function DetailsSkin:ApplySkin()
     -- Check if Details exists
     if not self:IsDetailsLoaded() then
-        self:Debug("Details not found, cannot apply skin")
-        if Phoenix_UI and Phoenix_UI.ShowNotification then
-            Phoenix_UI:ShowNotification(L["DETAILS_SKIN"], L["DETAILS_SKIN_ERROR"], "Interface\\Icons\\INV_Misc_PheonixPet_01", 5)
-        end
+        Phoenix_UI:Print(L["DETAILS_SKIN_ERROR"])
         return false
     end
     
     local Details = _G._detalhes
     
-    -- Create the skin if it doesn't exist
-    if not skinProfile or next(skinProfile) == nil then
-        skinProfile = self:CreateSkinProfile()
-    end
-    
-    if not skinProfile then
-        self:Debug("Failed to create skin profile")
+    -- Create the skin profile
+    local skin = self:CreateSkinProfile()
+    if not skin then
         return false
     end
     
-    -- Register the skin with Details!
-    Details:InstallSkin("Phoenix_UI", skinProfile)
+    -- Update with The War Within specific settings
+    skin.skin_name = "The War Within"
+    skin.icon_anchor_main = {-1, -5}
+    skin.row_info = {
+        texture = "Interface\\AddOns\\Phoenix_UI\\Modules\\Detail-Skin\\Media\\Textures\\bar.blp",
+        texture_background = "Interface\\AddOns\\Phoenix_UI\\Modules\\Detail-Skin\\Media\\Textures\\background.blp",
+        texture_background_class_color = false,
+        fixed_texture_background_color = {0.1254, 0.1254, 0.1254, 0.3},
+        icon_file = "Interface\\AddOns\\Phoenix_UI\\Modules\\Detail-Skin\\Media\\Textures\\ClassIconsTWW.blp",
+        start_after_icon = true,
+        percent_type = 1,
+        alpha = 1,
+        alpha_background = 0.8,
+        textL_enable_custom_text = false,
+        textR_enable_custom_text = false,
+        textL_show_number = true,
+        textR_show_number = false,
+        textR_custom_text = "{data1} ({data2}, {data3}%)",
+        texture_custom = "",
+        texture_highlight = "Interface\\FriendsFrame\\UI-FriendsList-Highlight",
+        textL_outline = true,
+        textR_outline = true,
+        textL_outline_small = true,
+        textL_class_colors = true,
+        textR_class_colors = true,
+        textR_outline_small = true,
+        fixed_text_color = {1, 1, 1},
+        space = {
+            right = 0,
+            left = 0,
+            between = 1,
+        },
+        point = "BOTTOM",
+        textL_class_colors = true,
+        textR_class_colors = true,
+    }
     
-    -- Apply the skin to all windows
-    for i = 1, Details:GetNumInstances() do
-        local instance = Details:GetInstance(i)
-        if instance then
-            instance:ChangeSkin("Phoenix_UI")
-        end
-    end
-    
-    -- Save Details! settings
-    Details:SaveConfig()
-    
-    -- Show success notification
-    if Phoenix_UI and Phoenix_UI.ShowNotification then
-        Phoenix_UI:ShowNotification(L["DETAILS_SKIN"], L["DETAILS_SKIN_APPLIED"], "Interface\\Icons\\INV_Misc_PheonixPet_01", 5)
-    end
-    
-    self:Debug("Phoenix skin applied to Details!")
-    return true
-end
-
--- Handle button click from Phoenix_UI panel
-function DetailsSkin:OnApplySkinButtonClick()
-    self:ApplySkin()
-end
-
--- Command to apply the skin
-function DetailsSkin:ApplySkinCommand(input)
-    self:ApplySkin()
-end
-
--- Initialize the module
-function DetailsSkin:OnInitialize()
-    -- Register slash command
-    self:RegisterChatCommand("phoenixskin", "ApplySkinCommand")
-    
-    -- Create the skin profile
-    self:CreateSkinProfile()
-    
-    self:Debug("Details Skin module initialized")
-end
-
--- Register with the general tab in Phoenix UI
-function DetailsSkin:RegisterWithUI()
-    -- Wait for Phoenix_UI to be ready
-    if Phoenix_UI and Phoenix_UI.RegisterGeneralOption then
-        Phoenix_UI:RegisterGeneralOption({
-            name = "DetailsSkin",
-            text = L["DETAILS_SKIN_APPLY"],
-            tooltip = L["DETAILS_SKIN_DESC"],
-            type = "button",
-            onClick = function() DetailsSkin:OnApplySkinButtonClick() end,
-            enabled = function() return DetailsSkin:IsDetailsLoaded() end,
-            disabledTooltip = L["DETAILS_SKIN_MISSING"]
-        })
+    -- Try to install the skin
+    local installed = false
+    if Details.InstallSkin then
+        installed = Details:InstallSkin(skin)
     else
-        -- Try again when Phoenix_UI is ready
-        Phoenix_UI:RegisterMessage("PHOENIX_UI_READY", function()
-            if Phoenix_UI and Phoenix_UI.RegisterGeneralOption then
-                Phoenix_UI:RegisterGeneralOption({
-                    name = "DetailsSkin",
-                    text = L["DETAILS_SKIN_APPLY"],
-                    tooltip = L["DETAILS_SKIN_DESC"],
-                    type = "button",
-                    onClick = function() DetailsSkin:OnApplySkinButtonClick() end,
-                    enabled = function() return DetailsSkin:IsDetailsLoaded() end,
-                    disabledTooltip = L["DETAILS_SKIN_MISSING"]
-                })
+        Phoenix_UI:Print("Error: Details! InstallSkin function not found.")
+        return false
+    end
+    
+    -- Check if installation was successful
+    if installed then
+        Phoenix_UI:Print(L["DETAILS_SKIN_TWW"])
+        return true
+    else
+        Phoenix_UI:Print("Error: Failed to install The War Within skin to Details!")
+        return false
+    end
+end
+
+-- Import The War Within profile into Details!
+function DetailsSkin:ImportProfile()
+    -- Check if Details exists
+    if not self:IsDetailsLoaded() then
+        Phoenix_UI:Print(L["DETAILS_SKIN_ERROR"])
+        return false
+    end
+    
+    -- Check if we have the profile data
+    if not self.defaultProfile then
+        Phoenix_UI:Print("Error: Default profile data not found!")
+        return false
+    end
+    
+    local Details = _G._detalhes
+    
+    -- Import the profile
+    if Details.ImportProfile then
+        local success = Details:ImportProfile(self.defaultProfile, "The War Within")
+        if success then
+            Phoenix_UI:Print(L["DETAILS_PROFILE_TWW"])
+            return true
+        else
+            Phoenix_UI:Print("Error: Failed to import profile!")
+            return false
+        end
+    else
+        Phoenix_UI:Print("Error: Details! ImportProfile function not found.")
+        return false
+    end
+end
+
+-- Reset Details! to default settings
+function DetailsSkin:ResetDetails()
+    -- Check if Details exists
+    if not self:IsDetailsLoaded() then
+        Phoenix_UI:Print(L["DETAILS_SKIN_ERROR"])
+        return false
+    end
+    
+    local Details = _G._detalhes
+    
+    -- Reset to default settings
+    if Details.ResetProfile then
+        Details:ResetProfile()
+        Phoenix_UI:Print(L["DETAILS_RESET"])
+        return true
+    else
+        Phoenix_UI:Print("Error: Details! ResetProfile function not found.")
+        return false
+    end
+end
+
+-- Apply the skin when the module is enabled if auto-apply is enabled
+function DetailsSkin:OnEnable()
+    -- Ensure DB structure
+    if not Phoenix_UI.db.profile.addons then
+        Phoenix_UI.db.profile.addons = {}
+    end
+    if not Phoenix_UI.db.profile.addons.details then
+        Phoenix_UI.db.profile.addons.details = {
+            enableSkin = true,
+            autoApply = false
+        }
+    end
+    
+    -- Register slash command to apply the skin
+    self:RegisterChatCommand("tww", function(input)
+        if input == "import" then
+            self:ImportProfile()
+        else
+            self:ApplySkin()
+        end
+    end)
+    
+    -- Apply the skin if auto-apply is enabled
+    if Phoenix_UI.db.profile.addons.details.autoApply then
+        C_Timer.After(2, function()
+            self:ApplySkin()
+        end)
+    end
+    
+    -- Listen for Details! to load
+    if not self:IsDetailsLoaded() then
+        self:RegisterEvent("ADDON_LOADED", function(event, addonName)
+            if addonName == "Details" or addonName == "Details!" then
+                if Phoenix_UI.db.profile.addons.details.autoApply then
+                    C_Timer.After(2, function()
+                        self:ApplySkin()
+                    end)
+                end
+                self:UnregisterEvent("ADDON_LOADED")
             end
         end)
     end
-end
-
--- Module enabled
-function DetailsSkin:OnEnable()
-    -- Register with Phoenix_UI
-    self:RegisterWithUI()
-    self:Debug("Details Skin module enabled")
 end 

@@ -43,12 +43,135 @@ function Config:SetupConfig()
                         set = function(info, value)
                             Module.db.enabled = value
                             Module:UpdateSettings()
+                            
+                            -- If we're disabling the module, trigger a message
+                            if not value then
+                                Module:SendMessage("PHOENIX_MYTHICPLUS_DISABLED")
+                            else
+                                Module:SendMessage("PHOENIX_MYTHICPLUS_ENABLED")
+                            end
+                            
+                            -- Notify the user
+                            if value then
+                                Module:Print(L["MYTHIC_PLUS"] .. " " .. L["ENABLED"])
+                            else
+                                Module:Print(L["MYTHIC_PLUS"] .. " " .. L["DISABLED"])
+                            end
                         end
+                    },
+                    enabledInfo = {
+                        type = "description",
+                        name = "|cffff8800" .. L["MYTHIC_PLUS_ENABLE_DESC"] or "Toggling this option will enable or disable all Mythic+ enhancements." .. "|r",
+                        order = 4,
+                        fontSize = "medium",
+                        hidden = function() return Module.db.enabled end,
                     },
                     separator1 = {
                         type = "header",
                         name = "",
-                        order = 10
+                        order = 10,
+                        hidden = function() return not Module.db.enabled end,
+                    },
+                    featureSection = {
+                        type = "description",
+                        name = L["MYTHIC_PLUS_FEATURES"] or "Individual Features",
+                        order = 11,
+                        fontSize = "medium",
+                        hidden = function() return not Module.db.enabled end,
+                    },
+                    showTimer = {
+                        type = "toggle",
+                        name = L["TIMER"] or "Timer",
+                        desc = L["TIMER_DESC"] or "Enhanced timer display",
+                        order = 12,
+                        width = "half",
+                        hidden = function() return not Module.db.enabled end,
+                        get = function() return Module.db.showTimer end,
+                        set = function(info, value)
+                            Module.db.showTimer = value
+                            Module:UpdateSettings()
+                        end
+                    },
+                    showObjectives = {
+                        type = "toggle",
+                        name = L["ENEMY_FORCES"] or "Enemy Forces",
+                        desc = L["ENEMY_FORCES_DESC"] or "Track progress towards enemy forces requirement",
+                        order = 13,
+                        width = "half",
+                        hidden = function() return not Module.db.enabled end,
+                        get = function() return Module.db.showObjectives end,
+                        set = function(info, value)
+                            Module.db.showObjectives = value
+                            Module:UpdateSettings()
+                        end
+                    },
+                    deathPenalty = {
+                        type = "toggle",
+                        name = L["DEATH_TRACKER"] or "Death Tracker",
+                        desc = L["DEATH_TRACKER_DESC"] or "Track deaths during Mythic+ runs",
+                        order = 14,
+                        width = "half",
+                        hidden = function() return not Module.db.enabled end,
+                        get = function() return Module.db.deathPenalty end,
+                        set = function(info, value)
+                            Module.db.deathPenalty = value
+                            Module:UpdateSettings()
+                        end
+                    },
+                    enhanceKeystones = {
+                        type = "toggle",
+                        name = L["KEYSTONE_LINK"] or "Keystone Link",
+                        desc = L["KEYSTONE_LINK_DESC"] or "Enhanced keystone links in chat",
+                        order = 15,
+                        width = "half",
+                        hidden = function() return not Module.db.enabled end,
+                        get = function() return Module.db.enhanceKeystones end,
+                        set = function(info, value)
+                            Module.db.enhanceKeystones = value
+                            Module:UpdateSettings()
+                        end
+                    },
+                    separator2 = {
+                        type = "header",
+                        name = "",
+                        order = 20,
+                        hidden = function() return not Module.db.enabled end,
+                    },
+                    integrationSection = {
+                        type = "description",
+                        name = L["MYTHIC_PLUS_INTEGRATION"] or "Integration Settings",
+                        order = 21,
+                        fontSize = "medium",
+                        hidden = function() return not Module.db.enabled end,
+                    },
+                    integrateWithPhoenix = {
+                        type = "toggle",
+                        name = L["MYTHIC_PLUS_INTEGRATE_PHOENIX"] or "Add to Phoenix UI Tab",
+                        desc = L["MYTHIC_PLUS_INTEGRATE_PHOENIX_DESC"] or "Add Mythic+ settings to the main Phoenix UI configuration panel",
+                        order = 22,
+                        width = "full",
+                        hidden = function() return not Module.db.enabled end,
+                        get = function() return Module.db.integrateWithPhoenix end,
+                        set = function(info, value)
+                            Module.db.integrateWithPhoenix = value
+                            -- Refresh configuration panel integration
+                            if Phoenix.RefreshConfig then
+                                Phoenix:RefreshConfig()
+                            end
+                            
+                            if value then
+                                Module:Print(L["MYTHIC_PLUS_INTEGRATED"])
+                            else
+                                Module:Print(L["MYTHIC_PLUS_STANDALONE"])
+                            end
+                        end
+                    },
+                    integrationInfo = {
+                        type = "description",
+                        name = "|cffAAAAAA" .. L["MYTHIC_PLUS_INTEGRATION_INFO"] or "Changes to this option will take effect after reloading your UI." .. "|r",
+                        order = 23,
+                        fontSize = "small",
+                        hidden = function() return not Module.db.enabled end,
                     },
                 }
             },
@@ -56,6 +179,7 @@ function Config:SetupConfig()
                 type = "group",
                 name = L["ENEMY_FORCES"] or "Enemy Forces",
                 order = 2,
+                disabled = function() return not Module.db.enabled or not Module.db.showObjectives end,
                 args = {
                     header = {
                         type = "header",
@@ -103,6 +227,7 @@ function Config:SetupConfig()
                 type = "group",
                 name = L["TIMER"] or "Timer",
                 order = 3,
+                disabled = function() return not Module.db.enabled or not Module.db.showTimer end,
                 args = {
                     header = {
                         type = "header",
@@ -164,6 +289,7 @@ function Config:SetupConfig()
                 type = "group",
                 name = L["DEATH_TRACKER"] or "Death Tracker",
                 order = 4,
+                disabled = function() return not Module.db.enabled or not Module.db.deathPenalty end,
                 args = {
                     header = {
                         type = "header",
@@ -271,6 +397,175 @@ function Config:SetupConfig()
                         get = function() return Module.db.showClues end,
                         set = function(info, value)
                             Module.db.showClues = value
+                            Module:UpdateSettings()
+                        end
+                    }
+                }
+            },
+            season2 = {
+                type = "group",
+                name = L["TWW_SEASON2"] or "The War Within S2",
+                order = 7,
+                args = {
+                    header = {
+                        type = "header",
+                        name = L["TWW_SEASON2"] or "The War Within Season 2",
+                        order = 1
+                    },
+                    desc = {
+                        type = "description",
+                        name = L["TWW_SEASON2_DESC"] or "Configuration for The War Within Season 2 enemy forces",
+                        order = 2,
+                        fontSize = "medium"
+                    },
+                    showSeasonNotification = {
+                        type = "toggle",
+                        name = L["TWW_SHOW_SEASON_NOTIFICATION"] or "Show Season Notification",
+                        desc = L["TWW_SHOW_SEASON_NOTIFICATION_DESC"] or "Show a notification about Season 2 support when loading",
+                        order = 3,
+                        width = "full",
+                        get = function() return Module.db.showSeasonNotification end,
+                        set = function(info, value)
+                            Module.db.showSeasonNotification = value
+                            Module:UpdateSettings()
+                        end
+                    },
+                    exportEnemyForces = {
+                        type = "execute",
+                        name = L["TWW_EXPORT_ENEMY_FORCES"] or "Export Enemy Forces",
+                        desc = L["TWW_EXPORT_ENEMY_FORCES_DESC"] or "Export your enemy forces database",
+                        order = 4,
+                        width = "full",
+                        func = function()
+                            Module:ExportEnemyForces()
+                        end
+                    },
+                    importEnemyForces = {
+                        type = "execute",
+                        name = L["TWW_IMPORT_ENEMY_FORCES"] or "Import Enemy Forces",
+                        desc = L["TWW_IMPORT_ENEMY_FORCES_DESC"] or "Import enemy forces values from a string",
+                        order = 5,
+                        width = "full",
+                        func = function()
+                            Module:ImportEnemyForces()
+                        end
+                    },
+                    resetEnemyForces = {
+                        type = "execute",
+                        name = L["TWW_RESET_ENEMY_FORCES"] or "Reset Enemy Forces",
+                        desc = L["TWW_RESET_ENEMY_FORCES_DESC"] or "Reset enemy forces to default values",
+                        order = 6,
+                        width = "full",
+                        func = function()
+                            Module:ResetEnemyForces()
+                        end
+                    },
+                    dungeonHeader = {
+                        type = "header",
+                        name = L["TWW_DUNGEONS"] or "Season 2 Dungeons",
+                        order = 10
+                    },
+                    darkreach = {
+                        type = "toggle",
+                        name = L["TWW_DARKREACH"] or "Darkreach Depths",
+                        desc = L["TWW_DARKREACH_DESC"] or "Show enemy forces values in Darkreach Depths",
+                        order = 11,
+                        width = "full",
+                        get = function() return Module.db.dungeons and Module.db.dungeons[2579] or true end,
+                        set = function(info, value)
+                            if not Module.db.dungeons then Module.db.dungeons = {} end
+                            Module.db.dungeons[2579] = value
+                            Module:UpdateSettings()
+                        end
+                    },
+                    dawnbreaker = {
+                        type = "toggle",
+                        name = L["TWW_DAWNBREAKER"] or "The Dawnbreaker",
+                        desc = L["TWW_DAWNBREAKER_DESC"] or "Show enemy forces values in The Dawnbreaker",
+                        order = 12,
+                        width = "full",
+                        get = function() return Module.db.dungeons and Module.db.dungeons[2580] or true end,
+                        set = function(info, value)
+                            if not Module.db.dungeons then Module.db.dungeons = {} end
+                            Module.db.dungeons[2580] = value
+                            Module:UpdateSettings()
+                        end
+                    },
+                    ataldazar = {
+                        type = "toggle",
+                        name = L["TWW_ATALDAZAR"] or "Atal'Dazar",
+                        desc = L["TWW_ATALDAZAR_DESC"] or "Show enemy forces values in Atal'Dazar",
+                        order = 13,
+                        width = "full",
+                        get = function() return Module.db.dungeons and Module.db.dungeons[968] or true end,
+                        set = function(info, value)
+                            if not Module.db.dungeons then Module.db.dungeons = {} end
+                            Module.db.dungeons[968] = value
+                            Module:UpdateSettings()
+                        end
+                    },
+                    blackrookhold = {
+                        type = "toggle",
+                        name = L["TWW_BLACKROOKHOLD"] or "Black Rook Hold",
+                        desc = L["TWW_BLACKROOKHOLD_DESC"] or "Show enemy forces values in Black Rook Hold",
+                        order = 14,
+                        width = "full",
+                        get = function() return Module.db.dungeons and Module.db.dungeons[1501] or true end,
+                        set = function(info, value)
+                            if not Module.db.dungeons then Module.db.dungeons = {} end
+                            Module.db.dungeons[1501] = value
+                            Module:UpdateSettings()
+                        end
+                    },
+                    waycrestmanor = {
+                        type = "toggle",
+                        name = L["TWW_WAYCRESTMANOR"] or "Waycrest Manor",
+                        desc = L["TWW_WAYCRESTMANOR_DESC"] or "Show enemy forces values in Waycrest Manor",
+                        order = 15,
+                        width = "full",
+                        get = function() return Module.db.dungeons and Module.db.dungeons[1862] or true end,
+                        set = function(info, value)
+                            if not Module.db.dungeons then Module.db.dungeons = {} end
+                            Module.db.dungeons[1862] = value
+                            Module:UpdateSettings()
+                        end
+                    },
+                    everbloom = {
+                        type = "toggle",
+                        name = L["TWW_EVERBLOOM"] or "Everbloom",
+                        desc = L["TWW_EVERBLOOM_DESC"] or "Show enemy forces values in Everbloom",
+                        order = 16,
+                        width = "full",
+                        get = function() return Module.db.dungeons and Module.db.dungeons[1279] or true end,
+                        set = function(info, value)
+                            if not Module.db.dungeons then Module.db.dungeons = {} end
+                            Module.db.dungeons[1279] = value
+                            Module:UpdateSettings()
+                        end
+                    },
+                    theaterofpain = {
+                        type = "toggle",
+                        name = L["TWW_THEATEROFPAIN"] or "Theater of Pain",
+                        desc = L["TWW_THEATEROFPAIN_DESC"] or "Show enemy forces values in Theater of Pain",
+                        order = 19,
+                        width = "full",
+                        get = function() return Module.db.dungeons and Module.db.dungeons[1683] or true end,
+                        set = function(info, value)
+                            if not Module.db.dungeons then Module.db.dungeons = {} end
+                            Module.db.dungeons[1683] = value
+                            Module:UpdateSettings()
+                        end
+                    },
+                    mechagonworkshop = {
+                        type = "toggle",
+                        name = L["TWW_MECHAGONWORKSHOP"] or "Operation: Mechagon - Workshop",
+                        desc = L["TWW_MECHAGONWORKSHOP_DESC"] or "Show enemy forces values in Operation: Mechagon - Workshop",
+                        order = 20,
+                        width = "full",
+                        get = function() return Module.db.dungeons and Module.db.dungeons[2097] or true end,
+                        set = function(info, value)
+                            if not Module.db.dungeons then Module.db.dungeons = {} end
+                            Module.db.dungeons[2097] = value
                             Module:UpdateSettings()
                         end
                     }
@@ -566,6 +861,197 @@ function Config:CreateConfigLayout()
                         Module:UpdateSettings()
                     end,
                     column = 6
+                }
+            },
+            {
+                divider6 = {
+                    type = 'divider',
+                    column = 12
+                }
+            },
+            
+            -- Season 2 section
+            {
+                header7 = {
+                    type = 'header',
+                    label = L["TWW_SEASON2"] or "The War Within Season 2"
+                }
+            },
+            {
+                description7 = {
+                    type = 'description',
+                    text = L["TWW_SEASON2_DESC"] or "Configuration for The War Within Season 2 enemy forces",
+                    column = 12
+                }
+            },
+            {
+                showSeasonNotification = {
+                    key = 'showSeasonNotification',
+                    type = 'checkbox',
+                    label = L["TWW_SHOW_SEASON_NOTIFICATION"] or "Show Season Notification",
+                    tooltip = L["TWW_SHOW_SEASON_NOTIFICATION_DESC"] or "Show a notification about Season 2 support when loading",
+                    onChange = function(widget, value)
+                        Module.db.showSeasonNotification = value
+                        Module:UpdateSettings()
+                    end,
+                    column = 6
+                },
+                exportEnemyForces = {
+                    key = 'exportEnemyForces',
+                    type = 'execute',
+                    label = L["TWW_EXPORT_ENEMY_FORCES"] or "Export Enemy Forces",
+                    tooltip = L["TWW_EXPORT_ENEMY_FORCES_DESC"] or "Export your enemy forces database",
+                    func = function()
+                        Module:ExportEnemyForces()
+                    end,
+                    column = 6
+                }
+            },
+            {
+                importEnemyForces = {
+                    key = 'importEnemyForces',
+                    type = 'execute',
+                    label = L["TWW_IMPORT_ENEMY_FORCES"] or "Import Enemy Forces",
+                    tooltip = L["TWW_IMPORT_ENEMY_FORCES_DESC"] or "Import enemy forces values from a string",
+                    func = function()
+                        Module:ImportEnemyForces()
+                    end,
+                    column = 6
+                },
+                resetEnemyForces = {
+                    key = 'resetEnemyForces',
+                    type = 'execute',
+                    label = L["TWW_RESET_ENEMY_FORCES"] or "Reset Enemy Forces",
+                    tooltip = L["TWW_RESET_ENEMY_FORCES_DESC"] or "Reset enemy forces to default values",
+                    func = function()
+                        Module:ResetEnemyForces()
+                    end,
+                    column = 6
+                }
+            },
+            {
+                divider7 = {
+                    type = 'divider',
+                    column = 12
+                }
+            },
+            
+            -- Season 2 dungeons section
+            {
+                header8 = {
+                    type = 'header',
+                    label = L["TWW_DUNGEONS"] or "Season 2 Dungeons"
+                }
+            },
+            {
+                description8 = {
+                    type = 'description',
+                    text = L["TWW_DUNGEONS_DESC"] or "Show enemy forces values in Season 2 dungeons",
+                    column = 12
+                }
+            },
+            {
+                darkreach = {
+                    key = 'darkreach',
+                    type = 'checkbox',
+                    label = L["TWW_DARKREACH"] or "Darkreach Depths",
+                    tooltip = L["TWW_DARKREACH_DESC"] or "Show enemy forces values in Darkreach Depths",
+                    onChange = function(widget, value)
+                        if not Module.db.dungeons then Module.db.dungeons = {} end
+                        Module.db.dungeons[2579] = value
+                        Module:UpdateSettings()
+                    end,
+                    column = 4
+                },
+                dawnbreaker = {
+                    key = 'dawnbreaker',
+                    type = 'checkbox',
+                    label = L["TWW_DAWNBREAKER"] or "The Dawnbreaker",
+                    tooltip = L["TWW_DAWNBREAKER_DESC"] or "Show enemy forces values in The Dawnbreaker",
+                    onChange = function(widget, value)
+                        if not Module.db.dungeons then Module.db.dungeons = {} end
+                        Module.db.dungeons[2580] = value
+                        Module:UpdateSettings()
+                    end,
+                    column = 4
+                }
+            },
+            {
+                ataldazar = {
+                    key = 'ataldazar',
+                    type = 'checkbox',
+                    label = L["TWW_ATALDAZAR"] or "Atal'Dazar",
+                    tooltip = L["TWW_ATALDAZAR_DESC"] or "Show enemy forces values in Atal'Dazar",
+                    onChange = function(widget, value)
+                        if not Module.db.dungeons then Module.db.dungeons = {} end
+                        Module.db.dungeons[968] = value
+                        Module:UpdateSettings()
+                    end,
+                    column = 4
+                },
+                blackrookhold = {
+                    key = 'blackrookhold',
+                    type = 'checkbox',
+                    label = L["TWW_BLACKROOKHOLD"] or "Black Rook Hold",
+                    tooltip = L["TWW_BLACKROOKHOLD_DESC"] or "Show enemy forces values in Black Rook Hold",
+                    onChange = function(widget, value)
+                        if not Module.db.dungeons then Module.db.dungeons = {} end
+                        Module.db.dungeons[1501] = value
+                        Module:UpdateSettings()
+                    end,
+                    column = 4
+                }
+            },
+            {
+                waycrestmanor = {
+                    key = 'waycrestmanor',
+                    type = 'checkbox',
+                    label = L["TWW_WAYCRESTMANOR"] or "Waycrest Manor",
+                    tooltip = L["TWW_WAYCRESTMANOR_DESC"] or "Show enemy forces values in Waycrest Manor",
+                    onChange = function(widget, value)
+                        if not Module.db.dungeons then Module.db.dungeons = {} end
+                        Module.db.dungeons[1862] = value
+                        Module:UpdateSettings()
+                    end,
+                    column = 4
+                },
+                everbloom = {
+                    key = 'everbloom',
+                    type = 'checkbox',
+                    label = L["TWW_EVERBLOOM"] or "Everbloom",
+                    tooltip = L["TWW_EVERBLOOM_DESC"] or "Show enemy forces values in Everbloom",
+                    onChange = function(widget, value)
+                        if not Module.db.dungeons then Module.db.dungeons = {} end
+                        Module.db.dungeons[1279] = value
+                        Module:UpdateSettings()
+                    end,
+                    column = 4
+                }
+            },
+            {
+                theaterofpain = {
+                    key = 'theaterofpain',
+                    type = 'checkbox',
+                    label = L["TWW_THEATEROFPAIN"] or "Theater of Pain",
+                    tooltip = L["TWW_THEATEROFPAIN_DESC"] or "Show enemy forces values in Theater of Pain",
+                    onChange = function(widget, value)
+                        if not Module.db.dungeons then Module.db.dungeons = {} end
+                        Module.db.dungeons[1683] = value
+                        Module:UpdateSettings()
+                    end,
+                    column = 4
+                },
+                mechagonworkshop = {
+                    key = 'mechagonworkshop',
+                    type = 'checkbox',
+                    label = L["TWW_MECHAGONWORKSHOP"] or "Operation: Mechagon - Workshop",
+                    tooltip = L["TWW_MECHAGONWORKSHOP_DESC"] or "Show enemy forces values in Operation: Mechagon - Workshop",
+                    onChange = function(widget, value)
+                        if not Module.db.dungeons then Module.db.dungeons = {} end
+                        Module.db.dungeons[2097] = value
+                        Module:UpdateSettings()
+                    end,
+                    column = 4
                 }
             }
         }

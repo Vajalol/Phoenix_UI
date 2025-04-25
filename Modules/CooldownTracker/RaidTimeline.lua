@@ -19,10 +19,13 @@ local timeline = {
 }
 
 local function CreateTimelineFrame()
+    local db = CT:GetDB()
+    if not db or not db.timeline then return end
+    
     local frame = CreateFrame("Frame", "PhoenixUIRaidTimeline", UIParent, "BackdropTemplate")
-    frame:SetSize(CT.db.profile.timeline.width, CT.db.profile.timeline.height)
+    frame:SetSize(db.timeline.width or 300, db.timeline.height or 150)
     frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-    frame:SetScale(CT.db.profile.timeline.scale)
+    frame:SetScale(db.timeline.scale or 1)
     frame:SetMovable(true)
     frame:EnableMouse(true)
     frame:SetClampedToScreen(true)
@@ -48,7 +51,7 @@ local function CreateTimelineFrame()
     frame.timeAxis = timeAxis
     
     -- Create legend if enabled
-    if CT.db.profile.timeline.showLegend then
+    if db.timeline.showLegend then
         local legend = CreateFrame("Frame", nil, frame)
         legend:SetHeight(LEGEND_HEIGHT)
         legend:SetPoint("TOPLEFT", frame, "TOPLEFT", 5, -5)
@@ -89,19 +92,20 @@ local function CreateTimelineFrame()
     
     -- Content frame for cooldowns
     local content = CreateFrame("Frame", nil, frame)
-    content:SetPoint("TOPLEFT", frame, "TOPLEFT", 5, CT.db.profile.timeline.showLegend and -25 or -5)
+    content:SetPoint("TOPLEFT", frame, "TOPLEFT", 5, db.timeline.showLegend and -25 or -5)
     content:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -5, 15)
     frame.content = content
     
     -- Time markers
-    for i = 0, CT.db.profile.timeline.timelineLength, 30 do
+    local timelineLength = db.timeline.timelineLength or 120
+    for i = 0, timelineLength, 30 do
         local marker = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-        marker:SetPoint("BOTTOM", timeAxis, "BOTTOM", (i / CT.db.profile.timeline.timelineLength) * (frame:GetWidth() - 10) - 5, -15)
+        marker:SetPoint("BOTTOM", timeAxis, "BOTTOM", (i / timelineLength) * (frame:GetWidth() - 10) - 5, -15)
         marker:SetText(i)
         
         local tick = frame:CreateTexture(nil, "ARTWORK")
         tick:SetSize(1, 5)
-        tick:SetPoint("BOTTOM", timeAxis, "BOTTOM", (i / CT.db.profile.timeline.timelineLength) * (frame:GetWidth() - 10) - 5, 0)
+        tick:SetPoint("BOTTOM", timeAxis, "BOTTOM", (i / timelineLength) * (frame:GetWidth() - 10) - 5, 0)
         tick:SetColorTexture(0.7, 0.7, 0.7, 0.7)
     end
     
@@ -115,7 +119,8 @@ local function CreateTimelineFrame()
 end
 
 function CT:InitializeRaidTimeline()
-    if not CT.db.profile.timeline.enabled then
+    local db = self:GetDB()
+    if not db or not db.timeline or not db.timeline.enabled then
         return
     end
     

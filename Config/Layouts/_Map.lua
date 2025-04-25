@@ -127,6 +127,99 @@ function Layout:OnEnable()
                     column = 4,
                     order = 3
                 }
+            },
+            {
+                header = {
+                    type = 'header',
+                    label = 'Enhanced Features'
+                }
+            },
+            {
+                moveableminimap = {
+                    key = 'moveableminimap',
+                    type = 'checkbox',
+                    label = 'Movable Minimap',
+                    tooltip = 'Enable minimap position saving and easy movement',
+                    column = 4,
+                    order = 1,
+                    initialValue = true,
+                    onChange = function(widget)
+                        -- Request reload if changing this setting
+                        if Phoenix_UI and Phoenix_UI.RequestReload then
+                            Phoenix_UI:RequestReload("Minimap position feature requires a UI reload to apply changes")
+                        end
+                    end
+                },
+                minimapLocked = {
+                    key = 'minimapLocked',
+                    type = 'checkbox',
+                    label = 'Lock Minimap Position',
+                    tooltip = 'Lock the minimap in its current position',
+                    column = 4,
+                    order = 2,
+                    initialValue = true,
+                    disabled = function()
+                        return not db.profile.maps.moveableminimap
+                    end
+                },
+                resetPosition = {
+                    type = 'button',
+                    label = 'Reset Position',
+                    tooltip = 'Reset minimap to default position',
+                    column = 4,
+                    order = 3,
+                    click = function()
+                        -- Clear saved position data
+                        if db.profile.maps.position then
+                            db.profile.maps.position = nil
+                            -- Request reload
+                            if Phoenix_UI and Phoenix_UI.RequestReload then
+                                Phoenix_UI:RequestReload("Minimap position has been reset. Reload UI to apply changes.")
+                            end
+                        end
+                    end,
+                    disabled = function()
+                        return not db.profile.maps.moveableminimap or not db.profile.maps.position
+                    end
+                }
+            },
+            {
+                minimapCoords = {
+                    key = 'minimapCoords',
+                    type = 'checkbox',
+                    label = 'Show Minimap Coordinates',
+                    tooltip = 'Display player coordinates on the minimap',
+                    column = 4,
+                    order = 1,
+                    initialValue = true
+                },
+                minimapCoordsOnHover = {
+                    key = 'minimapCoordsOnHover',
+                    type = 'checkbox',
+                    label = 'Fade Coordinates',
+                    tooltip = 'Only show coordinates when mouse is over the minimap',
+                    column = 4,
+                    order = 2,
+                    initialValue = false,
+                    disabled = function()
+                        return not db.profile.maps.minimapCoords
+                    end
+                },
+                coordPrecision = {
+                    key = 'coordPrecision',
+                    type = 'slider',
+                    label = 'Coordinate Precision',
+                    tooltip = 'Number of decimal places to show in coordinates',
+                    min = 0,
+                    max = 2,
+                    step = 1,
+                    initialValue = 1,
+                    column = 4,
+                    order = 3,
+                    disabled = function()
+                        return not (db.profile.maps.minimapCoords or db.profile.maps.coords)
+                    end
+                }
             }
         },
     }

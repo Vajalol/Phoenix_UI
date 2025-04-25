@@ -34,6 +34,13 @@ A modern, feature-rich World of Warcraft UI addon designed for PvP players, offe
 
 ## 🔆 RECENT UPDATES
 
+### ⚡ Version 11.0.53
+- **🗺️ New Mythic+ Module**: Comprehensive toolkit for Mythic+ dungeons with timer, progress tracking, and keystones
+- **📊 Details! Skin Integration**: Added custom Phoenix-themed skin for Details! damage meter
+- **⏱️ Enhanced Dungeon Tools**: Auto-detect keystones, track deaths, and monitor time remaining
+- **🔥 Seamless Integration**: Both modules integrate with Phoenix UI's existing themes and settings
+- **⚙️ Customizable Appearance**: Fully configurable layouts for optimal gameplay
+
 ### ⚡ Version 11.0.52
 - **🔥 Enhanced UI Experience**: Redesigned title panel with dynamic fire effects and styled "Phoenix UI By VortexQ8" text
 - **✨ Authentic Fire Animation**: Added game-native fire textures and ember particles for a true Warcraft feel
@@ -332,6 +339,33 @@ A modern, feature-rich World of Warcraft UI addon designed for PvP players, offe
   - Synchronization with BuffOverlay
   - Prevention of duplicate aura displays
   - Coordination with other Phoenix UI modules
+
+- **📊 Details! Damage Meter Skin**:
+  - Custom phoenix/fire-themed skin for Details! windows
+  - Orange and dark color scheme matching Phoenix UI
+  - Custom texture and font settings
+  - Default profile that can be imported directly
+  - Easy apply button in Phoenix UI settings
+  - Slash commands support: `/phoenixskin` and `/phoeniximport`
+
+### 🗺️ Mythic+ Tools
+- **⏱️ Dungeon Timer**:
+  - Live timer showing time elapsed and time remaining
+  - Color-coded progress tracking
+  - Indicates 2-chest and 3-chest timings
+  - Customizable position and appearance
+
+- **📈 Objective Tracking**:
+  - Real-time progress tracking with percentage and count
+  - Enhanced objective display with completion status
+  - Death counter with time penalty calculation
+  - Automatic tracking of prideful/shrouded spawns
+
+- **🔑 Keystone Enhancement**:
+  - In-depth keystone information display
+  - Weekly affix explanations
+  - Auto-gossip for dungeon NPCs
+  - Streamlined dungeon navigation
 
 ### 🔥 Miscellaneous
 - **⚔️ PvP Features**:

@@ -21,6 +21,21 @@ local defaults = {
         lockObjectiveFrame = false,
         timerPosition = nil,
         objectivePosition = nil,
+        showEnemyTooltip = true,
+        progressFormat = "PERCENTAGE_AND_VALUE",
+        showSeasonNotification = true,
+        integrateWithPhoenix = true, -- Add Mythic+ tab to Phoenix UI main panel
+        dungeons = {
+            -- The War Within Season 2 dungeons
+            [2516] = true, -- Operation: Floodgate
+            [2451] = true, -- Cinderbrew Meadery
+            [2579] = true, -- Darkflame Cleft
+            [2520] = true, -- The Rookery
+            [2337] = true, -- Priory of the Sacred Flame
+            [1683] = true, -- Theater of Pain
+            [2097] = true, -- Operation: Mechagon - Workshop
+            [1594] = true, -- The MOTHERLODE!!
+        }
     }
 }
 
@@ -180,6 +195,136 @@ function MythicPlus:ResetMythicPlus()
     -- Send reset message
     self:SendMessage("PHOENIX_MYTHICPLUS_RESET")
     self:Print(L["Mythic+ data reset"])
+end
+
+-- Update settings for all submodules
+function MythicPlus:UpdateSettings()
+    -- Notify all submodules about settings changes
+    self:SendMessage("PHOENIX_MYTHICPLUS_SETTINGS_UPDATED")
+    
+    -- Update enemy forces database and settings
+    if self:GetModule("Objectives") then
+        self:GetModule("Objectives"):ReloadEnemyForcesDB()
+    end
+end
+
+-- Export enemy forces database to clipboard
+function MythicPlus:ExportEnemyForces()
+    local Objectives = self:GetModule("Objectives")
+    if not Objectives then return end
+
+    local forcesData = Objectives:GetEnemyForcesData()
+    local exportString = LibStub("LibSerialize"):Serialize(forcesData)
+    local compressed = LibStub("LibCompress"):CompressHuffman(exportString)
+    local encoded = LibStub("LibBase64-1.0"):Encode(compressed)
+    
+    -- Create a frame for copying
+    local f = CreateFrame("Frame", "PhoenixUIExportFrame", UIParent, "BackdropTemplate")
+    f:SetSize(500, 300)
+    f:SetPoint("CENTER")
+    f:SetBackdrop({
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+        tile = true, tileSize = 32, edgeSize = 32,
+        insets = { left = 11, right = 12, top = 12, bottom = 11 }
+    })
+    f:SetBackdropColor(0, 0, 0, 1)
+    
+    local header = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    header:SetPoint("TOP", 0, -20)
+    header:SetText(L["TWW_EXPORT_ENEMY_FORCES"] or "Export Enemy Forces")
+    
+    local instructions = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    instructions:SetPoint("TOP", header, "BOTTOM", 0, -10)
+    instructions:SetText(L["TWW_EXPORT_INSTRUCTIONS"] or "Copy the text below to share your enemy forces data:")
+    
+    local editBox = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
+    editBox:SetSize(450, 200)
+    editBox:SetPoint("TOP", instructions, "BOTTOM", 0, -10)
+    editBox:SetAutoFocus(true)
+    editBox:SetMultiLine(true)
+    editBox:SetText(encoded)
+    editBox:HighlightText()
+    
+    local closeButton = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    closeButton:SetSize(80, 22)
+    closeButton:SetPoint("BOTTOM", 0, 15)
+    closeButton:SetText(CLOSE)
+    closeButton:SetScript("OnClick", function() f:Hide() end)
+    
+    f:Show()
+    
+    self:Print(L["TWW_EXPORT_SUCCESS"])
+end
+
+-- Import enemy forces database from clipboard
+function MythicPlus:ImportEnemyForces()
+    local Objectives = self:GetModule("Objectives")
+    if not Objectives then return end
+
+    -- Create a frame for pasting
+    local f = CreateFrame("Frame", "PhoenixUIImportFrame", UIParent, "BackdropTemplate")
+    f:SetSize(500, 300)
+    f:SetPoint("CENTER")
+    f:SetBackdrop({
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+        tile = true, tileSize = 32, edgeSize = 32,
+        insets = { left = 11, right = 12, top = 12, bottom = 11 }
+    })
+    f:SetBackdropColor(0, 0, 0, 1)
+    
+    local header = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    header:SetPoint("TOP", 0, -20)
+    header:SetText(L["TWW_IMPORT_ENEMY_FORCES"] or "Import Enemy Forces")
+    
+    local instructions = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    instructions:SetPoint("TOP", header, "BOTTOM", 0, -10)
+    instructions:SetText(L["TWW_IMPORT_INSTRUCTIONS"] or "Paste exported enemy forces data below:")
+    
+    local editBox = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
+    editBox:SetSize(450, 200)
+    editBox:SetPoint("TOP", instructions, "BOTTOM", 0, -10)
+    editBox:SetAutoFocus(true)
+    editBox:SetMultiLine(true)
+    
+    local importButton = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    importButton:SetSize(80, 22)
+    importButton:SetPoint("BOTTOMLEFT", 100, 15)
+    importButton:SetText(L["TWW_IMPORT"])
+    importButton:SetScript("OnClick", function()
+        local encoded = editBox:GetText()
+        if encoded and encoded ~= "" then
+            local decoded = LibStub("LibBase64-1.0"):Decode(encoded)
+            local decompressed = LibStub("LibCompress"):DecompressHuffman(decoded)
+            local success, forcesData = LibStub("LibSerialize"):Deserialize(decompressed)
+            
+            if success and forcesData then
+                Objectives:SetEnemyForcesData(forcesData)
+                self:Print(L["TWW_IMPORT_SUCCESS"])
+                f:Hide()
+            else
+                self:Print(L["TWW_IMPORT_FAILED"])
+            end
+        end
+    end)
+    
+    local cancelButton = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    cancelButton:SetSize(80, 22)
+    cancelButton:SetPoint("BOTTOMRIGHT", -100, 15)
+    cancelButton:SetText(CANCEL)
+    cancelButton:SetScript("OnClick", function() f:Hide() end)
+    
+    f:Show()
+end
+
+-- Reset enemy forces database to default values
+function MythicPlus:ResetEnemyForces()
+    local Objectives = self:GetModule("Objectives")
+    if not Objectives then return end
+    
+    Objectives:ResetEnemyForcesData()
+    self:Print(L["TWW_RESET_SUCCESS"])
 end
 
 -- Display current keystone info

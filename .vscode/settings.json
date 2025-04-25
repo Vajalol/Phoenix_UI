@@ -822,6 +822,7 @@
         "CollectionWardrobeUtil",
         "PetJournalPetCardPetInfo",
         "GameTooltip_Hide",
-        "PetBattlePrimaryAbilityTooltip"
+        "PetBattlePrimaryAbilityTooltip",
+        "UIFrameFlash"
     ]
 }

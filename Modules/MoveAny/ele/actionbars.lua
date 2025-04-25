@@ -68,12 +68,39 @@ function MoveAny:UpdateActionBar(frame)
 			opts["OFFSET"] = opts["OFFSET"] or nil
 			opts["SPACING"] = opts["SPACING"] or dSpacing
 			opts["FLIPPED"] = opts["FLIPPED"] or dFlipped
+			
+			-- Get values from Phoenix_UI configuration if available
+			local phoenixDBProfile = Phoenix_UI and Phoenix_UI.db and Phoenix_UI.db.profile
+			local phoenixActionBar = phoenixDBProfile and phoenixDBProfile.actionbar or {}
+			
+			-- Get bar-specific padding if available
+			local barNumber = tonumber(string.match(name, "(%d+)$")) or 0
+			local barPadding = nil
+			
+			if phoenixActionBar.barPadding then
+				if barNumber > 0 and barNumber <= 5 then
+					-- Use specific bar padding if available
+					barPadding = phoenixActionBar.barPadding["bar" .. barNumber]
+				elseif string.find(name:lower(), "petbar") then
+					barPadding = phoenixActionBar.barPadding.petbar
+				end
+			end
+			
+			-- Use global padding as fallback
+			local globalPadding = phoenixActionBar.padding and phoenixActionBar.padding.global or 2
+			local offset = barPadding or globalPadding or opts["OFFSET"] or 0
+			
+			-- Get button spacing from Phoenix_UI if available
+			local buttonSpacing = phoenixActionBar.padding and phoenixActionBar.padding.buttonSpacing or dSpacing
+			if buttonSpacing then
+				opts["SPACING"] = buttonSpacing
+			end
+			
 			local flipped = opts["FLIPPED"]
 			if opts["ROWS"] == nil and abpoints[name] and abpoints[name]["ROWS"] then
 				opts["ROWS"] = abpoints[name]["ROWS"]
 			end
 
-			local offset = opts["OFFSET"] or 0
 			local rows = opts["ROWS"] or 1
 			rows = tonumber(rows)
 			local parent = MicroMenu or MAMenuBar
@@ -283,6 +310,11 @@ function MoveAny:UpdateActionBar(frame)
 							end
 						end
 
+						-- Apply button styling if Phoenix_UI settings are available
+						if phoenixActionBar and phoenixActionBar.style then
+							MoveAny:ApplyButtonStyle(abtn, phoenixActionBar.style)
+						end
+
 						if MoveAny:GetParent(abtn) ~= MAHIDDEN then
 							id = id + 1
 						end
@@ -308,6 +340,163 @@ function MoveAny:UpdateActionBar(frame)
 		end
 	)
 end
+
+-- Function to apply button styling based on Phoenix_UI settings
+function MoveAny:ApplyButtonStyle(button, styleOptions)
+	if not button or InCombatLockdown() then return end
+	
+	local borderStyle = styleOptions.buttonBorder or "default"
+	local glowStyle = styleOptions.glowEffect or "default"
+	local borderColor = styleOptions.borderColor or "default"
+	
+	-- Get button elements
+	local normalTexture = button:GetNormalTexture()
+	local pushedTexture = button:GetPushedTexture()
+	local highlightTexture = button:GetHighlightTexture()
+	local cooldown = button.cooldown
+	
+	-- Apply border style
+	if normalTexture then
+		if borderStyle == "none" then
+			normalTexture:SetAlpha(0)
+		elseif borderStyle == "thin" then
+			normalTexture:SetAlpha(1)
+			normalTexture:SetScale(0.8)
+		elseif borderStyle == "thick" then
+			normalTexture:SetAlpha(1)
+			normalTexture:SetScale(1.1)
+		else -- default
+			normalTexture:SetAlpha(1)
+			normalTexture:SetScale(1)
+		end
+	end
+	
+	-- Apply border color
+	if normalTexture then
+		if borderColor == "class" then
+			local _, class = UnitClass("player")
+			local color = RAID_CLASS_COLORS[class]
+			if color then
+				normalTexture:SetVertexColor(color.r, color.g, color.b, 1)
+			end
+		elseif borderColor == "custom" and Phoenix_UI and Phoenix_UI:Color() then
+			local color = Phoenix_UI:Color()
+			normalTexture:SetVertexColor(color[1], color[2], color[3], 1)
+		else -- default
+			normalTexture:SetVertexColor(1, 1, 1, 1)
+		end
+	end
+	
+	-- Set up glow effect - we'll use the existing Blizzard API and textures
+	if button.UpdateUsable then
+		hooksecurefunc(button, "UpdateUsable", function(self)
+			local isUsable, notEnoughMana = IsUsableAction(self.action)
+			
+			if glowStyle == "none" then
+				-- Disable all glows
+				if self.SpellActivationAlert then
+					self.SpellActivationAlert:Hide()
+				end
+			elseif glowStyle == "pixel" then
+				-- Use pixel glow for proc effects
+				if ActionButton_IsHighlighted(self) and not notEnoughMana then
+					if self.SpellActivationAlert then
+						if not self.SpellActivationAlert:IsShown() then
+							self.SpellActivationAlert:Show()
+							self.SpellActivationAlert:SetAlpha(0.5)
+						end
+					end
+				else
+					if self.SpellActivationAlert and self.SpellActivationAlert:IsShown() then
+						self.SpellActivationAlert:Hide()
+					end
+				end
+			end
+			-- For "default" and "auto", we let the default WoW behavior handle it
+		end)
+	end
+end
+
+-- Hook into the flash animation system to apply our custom settings
+local function ApplyCustomFlashSettings(self)
+	if InCombatLockdown() then return end
+	
+	local phoenixDBProfile = Phoenix_UI and Phoenix_UI.db and Phoenix_UI.db.profile
+	local phoenixActionBar = phoenixDBProfile and phoenixDBProfile.actionbar or {}
+	local flashSettings = phoenixActionBar.animation or {}
+	
+	-- Apply custom duration if available
+	if flashSettings.flashDuration and self.Flash then
+		local animationGroup = self.Flash:GetAnimationGroup()
+		if animationGroup then
+			for i = 1, animationGroup:GetNumAnimations() do
+				local animation = animationGroup:GetAnimationAtIndex(i)
+				if animation and animation.SetDuration then
+					animation:SetDuration(flashSettings.flashDuration)
+				end
+			end
+		end
+	end
+	
+	-- Apply custom intensity if available
+	if flashSettings.flashIntensity and self.Flash then
+		local desiredAlpha = flashSettings.flashIntensity
+		if self.Flash.SetAlpha then
+			self.Flash:SetAlpha(desiredAlpha)
+		end
+	end
+	
+	-- Apply custom color if available
+	if flashSettings.flashColor and self.Flash then
+		local color
+		if flashSettings.flashColor == "class" then
+			local _, class = UnitClass("player")
+			color = RAID_CLASS_COLORS[class]
+		elseif flashSettings.flashColor == "spell" and self.action then
+			local actionType, id = GetActionInfo(self.action)
+			if actionType == "spell" then
+				local spellSchool = GetSchoolString(GetSpellSchool(id))
+				-- Set color based on spell school (simplified for example)
+				if spellSchool == "frost" then
+					color = {r = 0.5, g = 0.5, b = 1}
+				elseif spellSchool == "fire" then
+					color = {r = 1, g = 0.5, b = 0}
+				elseif spellSchool == "nature" then
+					color = {r = 0.3, g = 1, b = 0.3}
+				elseif spellSchool == "arcane" then
+					color = {r = 1, g = 0.5, b = 1}
+				elseif spellSchool == "shadow" then
+					color = {r = 0.5, g = 0.5, b = 0.5}
+				elseif spellSchool == "holy" then
+					color = {r = 1, g = 1, b = 0.5}
+				end
+			end
+		end
+		
+		-- Set the flash color if we determined one
+		if color and self.Flash.SetVertexColor then
+			self.Flash:SetVertexColor(color.r, color.g, color.b, 1)
+		elseif flashSettings.flashColor == "white" and self.Flash.SetVertexColor then
+			self.Flash:SetVertexColor(1, 1, 1, 1)
+		end
+	end
+end
+
+-- Hook into action button creation to apply our settings
+hooksecurefunc("ActionButton_OnLoad", function(self)
+	self:HookScript("OnShow", function(button)
+		if button.action then
+			MoveAny:ApplyButtonStyle(button, (Phoenix_UI and Phoenix_UI.db and Phoenix_UI.db.profile.actionbar and Phoenix_UI.db.profile.actionbar.style) or {})
+		end
+	end)
+	
+	-- Hook into the flash functionality
+	if self.UpdateFlash then
+		hooksecurefunc(self, "UpdateFlash", function(button)
+			ApplyCustomFlashSettings(button)
+		end)
+	end
+end)
 
 function MoveAny:InitActionBarLayouts()
 	if MoveAny:GetWoWBuild() == "RETAIL" then
@@ -747,6 +936,3 @@ f:SetScript(
 		end
 	end
 )
-
-
-

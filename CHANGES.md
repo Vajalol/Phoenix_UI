@@ -1,5 +1,48 @@
 # Phoenix_UI Changelog
 
+## Version 11.0.53 Updates
+
+### New Mythic+ Module
+- **Core Mythic+ Features**
+  - Implemented comprehensive Mythic+ dungeon toolkit
+  - Created intuitive timer display with remaining and elapsed time
+  - Added progress tracking with percentage and count display
+  - Integrated death tracking with time penalty calculations
+  - Implemented keystone detection and information display
+  
+- **Dungeon Enhancements**
+  - Added auto-gossip feature for dungeon NPCs
+  - Created detailed objective tracking with completion status
+  - Implemented thorough affix explanation system
+  - Added season notification and achievement tracking
+  - Created configurable UI with movable and lockable frames
+
+- **Integration and Configuration**
+  - Added dedicated configuration panel in Phoenix UI settings
+  - Implemented phoenix-themed visuals for all Mythic+ elements
+  - Created slash commands for easier access to features
+  - Added support for all current dungeons in The War Within Season 2
+  - Implemented event system for seamless interaction with other modules
+
+### Details! Damage Meter Skin
+- **Phoenix-Themed Skin**
+  - Created custom skin to match Phoenix UI's fire/orange theme
+  - Implemented comprehensive texture replacement for all Details! elements
+  - Added custom fonts to maintain consistent typography
+  - Created default profile with optimized settings
+  
+- **Usability Features**
+  - Added one-click skin application from Phoenix UI settings
+  - Implemented slash commands: `/phoenixskin` and `/phoeniximport`
+  - Created automatic texture downloader script for easy updates
+  - Added texture fallbacks for better compatibility
+  
+- **Integration with Phoenix UI**
+  - Ensured visual consistency with Phoenix UI color scheme
+  - Implemented proper theme coordination with Phoenix UI modules
+  - Added comprehensive configuration options in Phoenix UI panel
+  - Created seamless background and border integration
+
 ## Version 11.0.52 Updates
 
 ### UI Enhancements

@@ -4,6 +4,7 @@
   <Include file='_Buffoverlay.lua'/>
   <Include file='_Castbars.lua'/>
   <Include file='_Chat.lua'/>
+  <Include file='_DetailsSkin.lua'/>
   <Include file='_FAQ.lua'/>
   <Include file='_General.lua'/>
   <Include file='_IdTip.lua'/>

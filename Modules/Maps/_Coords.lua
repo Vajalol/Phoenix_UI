@@ -112,26 +112,96 @@ function Module:OnEnable()
 		
 		-- Add minimap coordinates if enabled
 		if db.minimapCoords then
-			-- Create minimap coordinates frame
+			-- Create minimap coordinates frame with improved styling
 			local minimapCoords = CreateFrame("Frame", "Phoenix_UI_MinimapCoords", Minimap)
 			minimapCoords:SetFrameLevel(Minimap:GetFrameLevel() + 10)
 			minimapCoords:SetSize(80, 20)
 			minimapCoords:SetPoint("BOTTOM", Minimap, "BOTTOM", 0, 2)
 			
-			-- Create background
-			minimapCoords.bg = minimapCoords:CreateTexture(nil, "BACKGROUND")
+			-- Create nicer background with rounded corners
+			minimapCoords.bg = CreateFrame("Frame", nil, minimapCoords, BackdropTemplateMixin and "BackdropTemplate")
 			minimapCoords.bg:SetAllPoints()
-			minimapCoords.bg:SetColorTexture(0, 0, 0, 0.5)
+			minimapCoords.bg:SetBackdrop({
+				bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+				edgeFile = "Interface\\ChatFrame\\ChatFrameBackground",
+				edgeSize = 1,
+				insets = { left = 1, right = 1, top = 1, bottom = 1 }
+			})
+			minimapCoords.bg:SetBackdropColor(0, 0, 0, 0.6)
+			minimapCoords.bg:SetBackdropBorderColor(0.3, 0.3, 0.3, 0.8)
 			
-			-- Create text
+			-- Create text with theme-based coloring
 			minimapCoords.text = minimapCoords:CreateFontString(nil, "OVERLAY")
-			minimapCoords.text:SetFontObject(GameFontNormalSmall)
+			if Phoenix_UI.Media and Phoenix_UI.Media.Fonts and Phoenix_UI.Media.Fonts.Normal then
+				minimapCoords.text:SetFont(Phoenix_UI.Media.Fonts.Normal, 10, "OUTLINE")
+			else
+				minimapCoords.text:SetFontObject(GameFontNormalSmall)
+			end
 			minimapCoords.text:SetPoint("CENTER")
 			minimapCoords.text:SetText("00.0, 00.0")
 			
-			-- Optimized update
+			-- Apply theme colors if available
+			if Phoenix_UI.themeColors and Phoenix_UI.themeColors.highlight then
+				minimapCoords.text:SetTextColor(
+					Phoenix_UI.themeColors.highlight.r or 1,
+					Phoenix_UI.themeColors.highlight.g or 0.82,
+					Phoenix_UI.themeColors.highlight.b or 0,
+					1
+				)
+			end
+			
+			-- Make coordinates clickable to copy
+			minimapCoords:EnableMouse(true)
+			minimapCoords:SetScript("OnEnter", function(self)
+				-- Highlight effect on hover
+				minimapCoords.bg:SetBackdropColor(0.1, 0.1, 0.1, 0.7)
+				minimapCoords.bg:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
+				
+				-- Show tooltip
+				GameTooltip:SetOwner(self, "ANCHOR_TOP")
+				GameTooltip:AddLine("Click to copy coordinates")
+				GameTooltip:Show()
+			end)
+			
+			minimapCoords:SetScript("OnLeave", function(self)
+				-- Reset highlight
+				minimapCoords.bg:SetBackdropColor(0, 0, 0, 0.6)
+				minimapCoords.bg:SetBackdropBorderColor(0.3, 0.3, 0.3, 0.8)
+				
+				-- Hide tooltip
+				GameTooltip:Hide()
+			end)
+			
+			minimapCoords:SetScript("OnMouseDown", function(self)
+				-- Visual feedback
+				self:SetScale(0.98)
+				minimapCoords.bg:SetBackdropColor(0.05, 0.05, 0.05, 0.8)
+			end)
+			
+			minimapCoords:SetScript("OnMouseUp", function(self)
+				-- Reset scale
+				self:SetScale(1.0)
+				minimapCoords.bg:SetBackdropColor(0.1, 0.1, 0.1, 0.7)
+				
+				-- Copy coordinates to clipboard
+				local coordText = minimapCoords.text:GetText()
+				if coordText and coordText ~= "n/a" then
+					-- Copy to clipboard if available
+					if ChatEdit_GetActiveWindow() then
+						ChatEdit_InsertLink(coordText)
+					else
+						-- Open chat and insert
+						ChatFrame_OpenChat(coordText)
+					end
+					-- Visual feedback for successful copy
+					UIFrameFlash(minimapCoords, 0.1, 0.1, 0.2, false, 0.1)
+				end
+			end)
+			
+			-- Optimized update with debouncing
 			local minimapUpdateFreq = 0.2 -- 5 updates per second
 			local minimapElapsed = 0
+			local lastCoordText = ""
 			
 			minimapCoords:SetScript("OnUpdate", function(self, elapsed)
 				minimapElapsed = minimapElapsed + elapsed
@@ -146,28 +216,96 @@ function Module:OnEnable()
 							local formatString = "%." .. precision .. "f, %." .. precision .. "f"
 							x = math.floor(x * 100 * 10^precision) / 10^precision
 							y = math.floor(y * 100 * 10^precision) / 10^precision
-							self.text:SetFormattedText(formatString, x, y)
+							
+							-- Only update text if coordinates have changed (reduces CPU usage)
+							local newCoordText = string.format(formatString, x, y)
+							if newCoordText ~= lastCoordText then
+								self.text:SetFormattedText(formatString, x, y)
+								lastCoordText = newCoordText
+							end
 						else
-							self.text:SetText("n/a")
+							if lastCoordText ~= "n/a" then
+								self.text:SetText("n/a")
+								lastCoordText = "n/a"
+							end
 						end
 					else
-						self.text:SetText("n/a")
+						if lastCoordText ~= "n/a" then
+							self.text:SetText("n/a")
+							lastCoordText = "n/a"
+						end
 					end
 					minimapElapsed = 0
 				end
 			end)
 			
-			-- Show/hide based on mouseover if configured
+			-- Smooth fade animation for mouseover
 			if db.minimapCoordsOnHover then
-				minimapCoords:SetAlpha(0)
-				Minimap:HookScript("OnEnter", function()
-					minimapCoords:SetAlpha(1)
+				-- Create fade animation
+				minimapCoords.fadeIn = minimapCoords:CreateAnimationGroup()
+				local fadeIn = minimapCoords.fadeIn:CreateAnimation("Alpha")
+				fadeIn:SetFromAlpha(0)
+				fadeIn:SetToAlpha(1)
+				fadeIn:SetDuration(0.3)
+				fadeIn:SetSmoothing("OUT")
+				
+				minimapCoords.fadeOut = minimapCoords:CreateAnimationGroup()
+				local fadeOut = minimapCoords.fadeOut:CreateAnimation("Alpha")
+				fadeOut:SetFromAlpha(1)
+				fadeOut:SetToAlpha(0)
+				fadeOut:SetDuration(0.5)
+				fadeOut:SetSmoothing("OUT")
+				
+				minimapCoords.fadeOut:SetScript("OnFinished", function()
+					minimapCoords:SetAlpha(0)
 				end)
+				
+				-- Initial state
+				minimapCoords:SetAlpha(0)
+				
+				-- Improved handling of mouseOver
+				Minimap:HookScript("OnEnter", function()
+					-- Cancel any in-progress animations
+					if minimapCoords.fadeOut:IsPlaying() then
+						minimapCoords.fadeOut:Stop()
+					end
+					
+					minimapCoords:SetAlpha(0)
+					minimapCoords.fadeIn:Play()
+				end)
+				
 				Minimap:HookScript("OnLeave", function()
 					-- Use delayed fade out to prevent flickering
 					C_Timer.After(0.5, function()
-						if not MouseIsOver(Minimap) then
-							minimapCoords:SetAlpha(0)
+						if not MouseIsOver(Minimap) and not MouseIsOver(minimapCoords) then
+							-- Cancel any in-progress animations
+							if minimapCoords.fadeIn:IsPlaying() then
+								minimapCoords.fadeIn:Stop()
+							end
+							
+							minimapCoords.fadeOut:Play()
+						end
+					end)
+				end)
+				
+				-- Also handle mouse over the coordinates itself
+				minimapCoords:HookScript("OnEnter", function()
+					if minimapCoords.fadeOut:IsPlaying() then
+						minimapCoords.fadeOut:Stop()
+					end
+					
+					minimapCoords:SetAlpha(1)
+				end)
+				
+				minimapCoords:HookScript("OnLeave", function()
+					C_Timer.After(0.5, function()
+						if not MouseIsOver(Minimap) and not MouseIsOver(minimapCoords) then
+							-- Cancel any in-progress animations
+							if minimapCoords.fadeIn:IsPlaying() then
+								minimapCoords.fadeIn:Stop()
+							end
+							
+							minimapCoords.fadeOut:Play()
 						end
 					end)
 				end)

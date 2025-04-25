@@ -223,6 +223,28 @@ local defaults = {
                 bar8 = false,
                 petbar = false,
                 stancebar = false
+            },
+            animation = {
+                flashDuration = 0.5,
+                flashIntensity = 0.7,
+                flashColor = "white"
+            },
+            style = {
+                buttonBorder = "default",
+                glowEffect = "default",
+                borderColor = "default"
+            },
+            padding = {
+                global = 2,
+                buttonSpacing = 2
+            },
+            barPadding = {
+                bar1 = 2,
+                bar2 = 2,
+                bar3 = 2,
+                bar4 = 2,
+                bar5 = 2,
+                petbar = 2
             }
         },
         castbars = {
@@ -2322,7 +2344,3 @@ function Phoenix_UI:SaveAllSettings()
     
     return success
 end
-
-
-
-
