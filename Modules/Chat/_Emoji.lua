@@ -386,6 +386,27 @@ function Module:OnEnable()
     
     InitializeEmojis()
     
+    -- Define the emoji filter function that will be used by chat frames
+    function _G.EmojiFilter(_, _, message, ...)
+        -- Skip if emoji feature is disabled in settings
+        if Phoenix_UI.db and Phoenix_UI.db.profile and 
+           Phoenix_UI.db.profile.chat and Phoenix_UI.db.profile.chat.emoji and 
+           Phoenix_UI.db.profile.chat.emoji.enabled == false then
+            return false
+        end
+        
+        -- Process the message and replace emojis with textures
+        local processedMessage = ReplaceEmojis(message, false)
+        
+        -- Only modify the message if emojis were actually replaced
+        if processedMessage ~= message then
+            return false, processedMessage, ...
+        end
+        
+        -- Return false to allow other filters to process the message
+        return false
+    end
+    
     -- Set up filters for chat messages to handle emoji codes and display them as textures
     local function SetupChatFilters()
         -- Only register once
@@ -629,6 +650,3 @@ local function ReplaceEmojisInMessage(message, emojiSize)
     
     return replacedMessage
 end
-
--- Register the module with Phoenix_UI
-Phoenix_UI:RegisterModule("Emoji", Module)
