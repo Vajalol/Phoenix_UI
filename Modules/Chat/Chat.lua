@@ -169,8 +169,5 @@ function Module:OnEnable()
         Phoenix_UI.ChatEmojiHandlers = {}
     end
     
-    -- Announce loaded status
-    if Phoenix_UI.debug then
-        print("|cffFF7D0APhoenix UI:|r Chat utils enabled. Type /phoenixchatdebug for diagnostics.")
-    end
+    -- Note: Debug messages removed to prevent login spam
 end

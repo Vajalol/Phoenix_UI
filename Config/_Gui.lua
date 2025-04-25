@@ -669,12 +669,12 @@ function Gui:OnEnable()
             Phoenix_UI:SaveDB()
         end
         
-        -- Force an immediate write to disk
+        -- Force an immediate flush to disk
         pcall(function()
-            if FlushSavedVariables then
-                FlushSavedVariables()
-            elseif FlushSettingsDB then
+            if FlushSettingsDB then
                 FlushSettingsDB()
+            elseif FlushSavedVariables then
+                FlushSavedVariables()
             end
         end)
         
@@ -866,6 +866,7 @@ function Gui:OnEnable()
                                             local key = element.dataKey:match("^[^%.]+%.(.+)$")
                                             
                                             if moduleName and key then
+                                                -- Use InstantSave for immediate saving
                                                 Phoenix_UI:InstantSave(moduleName, key, value)
                                             end
                                         end
@@ -3132,3 +3133,73 @@ else
         end
     end)
 end
+
+-- Create a function to fix scroll frame extents after all elements are added
+Phoenix_UI.RecalculateScrollFrames = function()
+    -- Loop through all tab panels
+    if not Phoenix_UI.panels then return end
+    
+    for _, panel in pairs(Phoenix_UI.panels) do
+        -- Check if this panel has a valid scroll child
+        if panel and panel.scrollChild then
+            local scrollFrame = panel:GetParent()
+            if scrollFrame and scrollFrame.ScrollBar then
+                -- Get content height by finding the lowest element
+                local contentHeight = 0
+                
+                -- Find all child elements
+                if panel.scrollChild.elements then
+                    for _, element in pairs(panel.scrollChild.elements) do
+                        if element and element:IsShown() then
+                            local _, elementBottom = element:GetBounds()
+                            if elementBottom and elementBottom > contentHeight then
+                                contentHeight = elementBottom
+                            end
+                        end
+                    end
+                end
+                
+                -- Add padding to ensure we can scroll all the way
+                contentHeight = contentHeight + 50
+                
+                -- Set the scroll child's height
+                panel.scrollChild:SetHeight(contentHeight)
+                
+                -- Force update scrollbar range
+                scrollFrame:UpdateScrollChildRect()
+                scrollFrame:GetScrollChild():SetHeight(contentHeight)
+                scrollFrame.ScrollBar:SetMinMaxValues(0, math.max(0, contentHeight - scrollFrame:GetHeight()))
+                
+                -- Ensure scroll bar is shown if needed
+                if contentHeight > scrollFrame:GetHeight() then
+                    scrollFrame.ScrollBar:Show()
+                else
+                    scrollFrame.ScrollBar:Hide()
+                end
+            end
+        end
+    end
+end
+
+-- Hook panel display to recalculate scroll extents
+Phoenix_UIConfig.DisplayPanel = Phoenix_UIConfig.DisplayPanel or function() end
+local originalDisplayPanel = Phoenix_UIConfig.DisplayPanel
+Phoenix_UIConfig.DisplayPanel = function(self, id, ...)
+    local result = originalDisplayPanel(self, id, ...)
+    
+    -- Schedule recalculation to ensure all elements are properly rendered
+    C_Timer.After(0.1, function()
+        if Phoenix_UI.RecalculateScrollFrames then
+            Phoenix_UI.RecalculateScrollFrames()
+        end
+    end)
+    
+    return result
+end
+
+-- Recalculate scroll frames when the config panel is first opened
+C_Timer.After(0.5, function()
+    if Phoenix_UI.RecalculateScrollFrames then
+        Phoenix_UI.RecalculateScrollFrames()
+    end
+end)

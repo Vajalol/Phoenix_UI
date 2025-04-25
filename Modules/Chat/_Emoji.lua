@@ -280,19 +280,7 @@ function Module:OnEnable()
         ChatFrame_AddMessageEventFilter(event, _G.EmojiFilter)
     end
     
-    -- Test a few emojis to ensure they're working
-    if Phoenix_UI.debug then
-        print("|cffFF7D0APhoenix UI:|r Testing ElvUI emojis:")
-        print(":) = " .. GetEmojiTexture("Smile"))
-        print(":D = " .. GetEmojiTexture("Grin"))
-        print("<3 = " .. GetEmojiTexture("Heart"))
-        print(":elvb: = " .. GetEmojiTexture({path = LOGOS_PATH, file = "ElvBlue"}))
-    end
-    
-    -- Let user know the module is enabled
-    if Phoenix_UI.debug then
-        print("|cffFF7D0APhoenix UI:|r Chat Emoji system enabled with ElvUI emojis. Type emoji codes like :) or :D in chat.")
-    end
+    -- Debug code removed to prevent login messages
 end
 
 function Module:OnDisable()
