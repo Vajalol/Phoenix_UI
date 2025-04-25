@@ -103,6 +103,22 @@ local function CreateTimerFrame()
     timerText:SetFont(timerText:GetFont(), 20, "OUTLINE")
     timerFrame.timerText = timerText
     
+    -- Elapsed time text (for dual display)
+    local elapsedText = timerFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    elapsedText:SetPoint("TOPLEFT", timerFrame, "TOPLEFT", 10, -30)
+    elapsedText:SetFont(elapsedText:GetFont(), 14, "OUTLINE")
+    elapsedText:SetText(L["Elapsed"] .. ": 00:00")
+    elapsedText:Hide()
+    timerFrame.elapsedText = elapsedText
+    
+    -- Remaining time text (for dual display)
+    local remainingText = timerFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    remainingText:SetPoint("TOPRIGHT", timerFrame, "TOPRIGHT", -10, -30)
+    remainingText:SetFont(remainingText:GetFont(), 14, "OUTLINE")
+    remainingText:SetText(L["Remaining"] .. ": 00:00")
+    remainingText:Hide()
+    timerFrame.remainingText = remainingText
+    
     -- Progress bar
     local progressBar = CreateFrame("StatusBar", nil, timerFrame)
     progressBar:SetPoint("BOTTOM", timerFrame, "BOTTOM", 0, 15)
@@ -265,30 +281,82 @@ end
 
 -- Format the timer display
 local function FormatTimerDisplay(timeRemaining, timeLimit)
-    if not timerFrame or not timerFrame.timerText then return end
+    if not timerFrame or not timerData.inProgress then return end
     
-    local timerText = timerFrame.timerText
-    local timeString
+    local currentTime = GetTime()
+    local elapsedTime = currentTime - timerData.startTime
+    local timerFormat = MythicPlus.db.timerFormat or "REMAINING"
     
-    if timeRemaining >= 0 then
-        timeString = "+" .. FormatTimeSeconds(timeRemaining)
-        -- Set color based on time remaining
-        local percent = timeRemaining / timeLimit
-        if percent > 0.6 then
-            timerText:SetTextColor(0, 1, 0)  -- Green
-        elseif percent > 0.3 then
-            timerText:SetTextColor(1, 1, 0)  -- Yellow
-        elseif percent > 0.1 then
-            timerText:SetTextColor(1, 0.5, 0)  -- Orange
+    -- Handle different display formats
+    if timerFormat == "DUAL" then
+        -- Dual display mode - show both elapsed and remaining time
+        if not timerFrame.elapsedText:IsShown() then
+            timerFrame.elapsedText:Show()
+            timerFrame.remainingText:Show()
+            timerFrame.timerText:Hide()
+        end
+        
+        -- Update elapsed time
+        timerFrame.elapsedText:SetText(L["Elapsed"] .. ": " .. FormatTimeSeconds(elapsedTime))
+        
+        -- Update remaining time with coloring
+        local remainingText = L["Remaining"] .. ": "
+        
+        if timeRemaining >= 0 then
+            -- Set color based on time remaining
+            local percent = timeRemaining / timeLimit
+            if percent > 0.6 then
+                timerFrame.remainingText:SetTextColor(0, 1, 0)  -- Green
+            elseif percent > 0.3 then
+                timerFrame.remainingText:SetTextColor(1, 1, 0)  -- Yellow
+            elseif percent > 0.1 then
+                timerFrame.remainingText:SetTextColor(1, 0.5, 0)  -- Orange
+            else
+                timerFrame.remainingText:SetTextColor(1, 0, 0)  -- Red
+            end
+            
+            timerFrame.remainingText:SetText(remainingText .. FormatTimeSeconds(timeRemaining))
         else
-            timerText:SetTextColor(1, 0, 0)  -- Red
+            timerFrame.remainingText:SetTextColor(1, 0, 0)  -- Red for overtime
+            timerFrame.remainingText:SetText(remainingText .. "-" .. FormatTimeSeconds(-timeRemaining))
         end
     else
-        timeString = "-" .. FormatTimeSeconds(-timeRemaining)
-        timerText:SetTextColor(1, 0, 0)  -- Red for overtime
+        -- Single display mode - show either remaining or elapsed time
+        if timerFrame.elapsedText:IsShown() then
+            timerFrame.elapsedText:Hide()
+            timerFrame.remainingText:Hide()
+            timerFrame.timerText:Show()
+        end
+        
+        local timeString
+        
+        if timerFormat == "ELAPSED" then
+            -- Elapsed time display
+            timeString = FormatTimeSeconds(elapsedTime)
+            timerFrame.timerText:SetTextColor(1, 1, 1)  -- White
+        else
+            -- Remaining time display (default)
+            if timeRemaining >= 0 then
+                timeString = "+" .. FormatTimeSeconds(timeRemaining)
+                -- Set color based on time remaining
+                local percent = timeRemaining / timeLimit
+                if percent > 0.6 then
+                    timerFrame.timerText:SetTextColor(0, 1, 0)  -- Green
+                elseif percent > 0.3 then
+                    timerFrame.timerText:SetTextColor(1, 1, 0)  -- Yellow
+                elseif percent > 0.1 then
+                    timerFrame.timerText:SetTextColor(1, 0.5, 0)  -- Orange
+                else
+                    timerFrame.timerText:SetTextColor(1, 0, 0)  -- Red
+                end
+            else
+                timeString = "-" .. FormatTimeSeconds(-timeRemaining)
+                timerFrame.timerText:SetTextColor(1, 0, 0)  -- Red for overtime
+            end
+        end
+        
+        timerFrame.timerText:SetText(timeString)
     end
-    
-    timerText:SetText(timeString)
 end
 
 -- Update the objective tracking
@@ -639,6 +707,25 @@ function Timer:UpdateSettings()
         if MythicPlus.db.showTimer then
             if timerData.inProgress then
                 timerFrame:Show()
+                
+                -- Update the timer display format if needed
+                if timerData.inProgress then
+                    local currentTime = GetTime()
+                    local elapsedTime = currentTime - timerData.startTime
+                    local timeRemaining = timerData.timeLimit - elapsedTime - timerData.timeLost
+                    FormatTimerDisplay(timeRemaining, timerData.timeLimit)
+                end
+                
+                -- Update chest markers
+                if MythicPlus.db.showChestTimers then
+                    UpdateChestMarkers()
+                else
+                    -- Hide the markers
+                    for _, marker in ipairs(timerFrame.chestMarkers or {}) do
+                        marker.marker:Hide()
+                        marker.text:Hide()
+                    end
+                end
             end
         else
             timerFrame:Hide()

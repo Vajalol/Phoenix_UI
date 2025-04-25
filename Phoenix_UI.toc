@@ -1,6 +1,6 @@
 ## Interface: 100205, 30401, 11501
 ## Author: VortexQ8
-## Version: 11.0.53
+## Version: 11.0.54
 ## Title: |cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r
 ## SavedVariables: Phoenix_UIDB
 ## SavedVariablesPerCharacter: Phoenix_UIPerCharDB
@@ -22,4 +22,3 @@ Config\Load.xml
 Data\Load.xml
 ## MODULES
 Modules\Load.xml
-

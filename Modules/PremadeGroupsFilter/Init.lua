@@ -309,6 +309,9 @@ function PGF.OnAddonLoaded(name)
             -- Use namespace from Phoenix_UI global DB
             PGF.Settings = Phoenix_UI.moduleDB.PremadeGroupsFilter.profile
             
+            -- Ensure default settings exist
+            PGF.Table_UpdateWithDefaults(PGF.Settings, PGF.C.SETTINGS_DEFAULT)
+            
             -- Make the global variable reference our namespace for other addons
             PremadeGroupsFilterSettings = PGF.Settings
             
@@ -338,6 +341,62 @@ function PGF.OnAddonLoaded(name)
                     }
                     PremadeGroupsFilterState = PGF.State
                 end
+            end
+            
+            -- Setup Phoenix_UI profile change handler
+            if not PGF.PhoenixUIInitialized then
+                PGF.PhoenixUIInitialized = true
+                
+                -- Save settings to Phoenix_UI when the addon is being disabled or profiles change
+                PGF.SaveSettingsToPhoenixUI = function()
+                    if Phoenix_UI and Phoenix_UI.moduleDB and Phoenix_UI.moduleDB.PremadeGroupsFilter then
+                        -- Update the Phoenix_UI profile with our current settings
+                        Phoenix_UI.moduleDB.PremadeGroupsFilter.profile = CopyTable(PGF.Settings)
+                        
+                        -- Save character-specific state
+                        if Phoenix_UI.moduleCharDB and Phoenix_UI.moduleCharDB.PremadeGroupsFilter then
+                            Phoenix_UI.moduleCharDB.PremadeGroupsFilter.profile = CopyTable(PGF.State)
+                        end
+                        
+                        -- Request Phoenix_UI to save databases
+                        if Phoenix_UI.SaveDB then
+                            Phoenix_UI:SaveDB()
+                        end
+                    end
+                end
+                
+                -- Setup a listener for Phoenix_UI profile changes
+                if Phoenix_UI.RegisterCallback then
+                    Phoenix_UI:RegisterCallback("OnProfileChanged", function()
+                        -- Short delay to ensure Phoenix_UI has finished changing profiles
+                        C_Timer.After(0.5, function()
+                            if Phoenix_UI.moduleDB and Phoenix_UI.moduleDB.PremadeGroupsFilter and Phoenix_UI.moduleDB.PremadeGroupsFilter.profile then
+                                -- Update our reference with the new profile
+                                PGF.Settings = Phoenix_UI.moduleDB.PremadeGroupsFilter.profile
+                                PGF.Table_UpdateWithDefaults(PGF.Settings, PGF.C.SETTINGS_DEFAULT)
+                                PremadeGroupsFilterSettings = PGF.Settings
+                                
+                                -- Refresh UI if dialog exists
+                                if PGF.Dialog and PGF.Dialog.Refresh then
+                                    PGF.Dialog:Refresh()
+                                end
+                                
+                                -- Also update character-specific state if available
+                                if Phoenix_UI.moduleCharDB and Phoenix_UI.moduleCharDB.PremadeGroupsFilter and Phoenix_UI.moduleCharDB.PremadeGroupsFilter.profile then
+                                    PGF.State = Phoenix_UI.moduleCharDB.PremadeGroupsFilter.profile
+                                    PremadeGroupsFilterState = PGF.State
+                                end
+                            end
+                        end)
+                    end)
+                end
+                
+                -- Setup logout/reload handler
+                local frame = CreateFrame("Frame")
+                frame:RegisterEvent("PLAYER_LOGOUT")
+                frame:SetScript("OnEvent", function()
+                    PGF.SaveSettingsToPhoenixUI()
+                end)
             end
         else
             -- Use the old method if Phoenix_UI is not available
@@ -376,6 +435,9 @@ function PGF.OnAddonLoaded(name)
                         PGF.State = Phoenix_UI.moduleCharDB.PremadeGroupsFilter.profile
                         PremadeGroupsFilterState = PGF.State
                     end
+                    
+                    -- Run the initialization code again now that Phoenix_UI is available
+                    PGF.OnAddonLoaded(PGFAddonName)
                 end
             end)
         end

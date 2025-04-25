@@ -224,12 +224,12 @@ function PGF.DoFilterSearchResults(results)
         env.voicechat = searchResultInfo.voiceChat
         env.ilvl = searchResultInfo.requiredItemLevel or 0
         env.hlvl = searchResultInfo.requiredHonorLevel or 0
-        env.friends = searchResultInfo.numBNetFriends + searchResultInfo.numCharFriends + searchResultInfo.numGuildMates
+        env.friends = searchResultInfo.numBNetFriends + (searchResultInfo.numCharFriends or 0) + (searchResultInfo.numGuildMates or 0)
         env.members = searchResultInfo.numMembers
-        env.tanks = memberCounts.TANK
-        env.heals = memberCounts.HEALER
-        env.healers = memberCounts.HEALER
-        env.dps = memberCounts.DAMAGER + memberCounts.NOROLE
+        env.tanks = memberCounts and memberCounts.TANK or 0
+        env.heals = memberCounts and memberCounts.HEALER or 0
+        env.healers = memberCounts and memberCounts.HEALER or 0
+        env.dps = (memberCounts and (memberCounts.DAMAGER or 0) or 0) + (memberCounts and (memberCounts.NOROLE or 0) or 0)
         env.defeated = numGroupDefeated
         env.normal     = difficulty == C.NORMAL
         env.heroic     = difficulty == C.HEROIC
@@ -355,49 +355,164 @@ end
 
 function PGF.ColorGroupTexts(self, searchResultInfo)
     if not PremadeGroupsFilterSettings.coloredGroupTexts then return end
+    
+    -- Cache key helps avoid redundant updates
+    local resultID = self.resultID
+    local cacheKey = resultID
+    
+    -- Try to get group key for tracking
     local groupKey = PGF.GetGroupKey(searchResultInfo)
-    -- try once again to update the group key if we had to fall back to the leaderName
+    -- Try once again to update the group key if we had to fall back to the leaderName
     if groupKey then PGF.currentSearchGroupKeys[groupKey] = true end
-    if not searchResultInfo.isDelisted then
-        -- color name if new
-        if PGF.currentSearchExpression ~= "true"                          -- not trivial search
-        and PGF.currentSearchExpression == PGF.previousSearchExpression   -- and the same search
-        and (groupKey and not PGF.previousSearchGroupKeys[groupKey]) then -- and group is new
-            local color = C.COLOR_ENTRY_NEW
-            self.Name:SetTextColor(color.R, color.G, color.B)
+    
+    -- Initialize color caching tables if they don't exist
+    PGF.groupColorCache = PGF.groupColorCache or {}
+    
+    -- Skip coloring if group is delisted or we've already processed this exact state
+    if searchResultInfo.isDelisted then 
+        if PGF.groupColorCache[cacheKey] and PGF.groupColorCache[cacheKey].delisted then
+            return -- Already properly marked as delisted
         end
-        -- color name if declined
-        if PGF.IsSoftDeclinedGroup(searchResultInfo) then
-            local color = C.COLOR_ENTRY_DECLINED_SOFT
-            self.Name:SetTextColor(color.R, color.G, color.B)
-            if not PremadeGroupsFilterSettings.signUpDeclined then
-                self.PendingLabel:SetTextColor(color.R, color.G, color.B)
-            end
+        
+        -- Mark as delisted in cache and exit
+        PGF.groupColorCache[cacheKey] = { delisted = true }
+        return
+    end
+    
+    -- Get current cache state
+    local cachedState = PGF.groupColorCache[cacheKey]
+    
+    -- Get all the color states for this group
+    local isNew = PGF.currentSearchExpression ~= "true" and                         -- Not trivial search
+              PGF.currentSearchExpression == PGF.previousSearchExpression and       -- Same search
+              (groupKey and not PGF.previousSearchGroupKeys[groupKey])              -- Group is new
+    
+    local isSoftDeclined = PGF.IsSoftDeclinedGroup(searchResultInfo)
+    local isHardDeclined = PGF.IsHardDeclinedGroup(searchResultInfo)
+    local isCanceled = PGF.IsCanceledGroup(searchResultInfo)
+    
+    -- Get lockout info
+    local numGroupDefeated, numPlayerDefeated, maxBosses,
+          matching, groupAhead, groupBehind = PGF.GetLockoutInfo(searchResultInfo.activityID, resultID)
+          
+    local isFullLockout = numPlayerDefeated > 0 and numPlayerDefeated == maxBosses
+    local isMatchingLockout = numPlayerDefeated > 0 and groupAhead == 0 and groupBehind == 0
+    
+    -- Check if state has changed
+    local stateChanged = not cachedState or
+                        cachedState.isNew ~= isNew or
+                        cachedState.isSoftDeclined ~= isSoftDeclined or
+                        cachedState.isHardDeclined ~= isHardDeclined or
+                        cachedState.isCanceled ~= isCanceled or
+                        cachedState.isFullLockout ~= isFullLockout or
+                        cachedState.isMatchingLockout ~= isMatchingLockout
+    
+    -- If state hasn't changed, no need to modify colors
+    if not stateChanged then
+        return
+    end
+    
+    -- Update cache with new state
+    PGF.groupColorCache[cacheKey] = {
+        delisted = false,
+        isNew = isNew,
+        isSoftDeclined = isSoftDeclined,
+        isHardDeclined = isHardDeclined,
+        isCanceled = isCanceled,
+        isFullLockout = isFullLockout,
+        isMatchingLockout = isMatchingLockout
+    }
+    
+    -- Apply name coloring based on group status (highest priority first)
+    if isHardDeclined then
+        local color = C.COLOR_ENTRY_DECLINED_HARD
+        self.Name:SetTextColor(color.R, color.G, color.B)
+        if not PremadeGroupsFilterSettings.signUpDeclined then
+            self.PendingLabel:SetTextColor(color.R, color.G, color.B)
         end
-        if PGF.IsHardDeclinedGroup(searchResultInfo) then
-            local color = C.COLOR_ENTRY_DECLINED_HARD
-            self.Name:SetTextColor(color.R, color.G, color.B)
-            if not PremadeGroupsFilterSettings.signUpDeclined then
-                self.PendingLabel:SetTextColor(color.R, color.G, color.B)
-            end
+    elseif isSoftDeclined then
+        local color = C.COLOR_ENTRY_DECLINED_SOFT
+        self.Name:SetTextColor(color.R, color.G, color.B)
+        if not PremadeGroupsFilterSettings.signUpDeclined then
+            self.PendingLabel:SetTextColor(color.R, color.G, color.B)
         end
-        if PGF.IsCanceledGroup(searchResultInfo) then
-            local color = C.COLOR_ENTRY_CANCELED
-            self.Name:SetTextColor(color.R, color.G, color.B)
-        end
-        -- color activity if lockout
-        local numGroupDefeated, numPlayerDefeated, maxBosses,
-              matching, groupAhead, groupBehind = PGF.GetLockoutInfo(searchResultInfo.activityID, self.resultID)
-        local color
-        if numPlayerDefeated > 0 and numPlayerDefeated == maxBosses then
-            color = C.COLOR_LOCKOUT_FULL
-        elseif numPlayerDefeated > 0 and groupAhead == 0 and groupBehind == 0 then
-            color = C.COLOR_LOCKOUT_MATCH
-        end
-        if color then
-            self.ActivityName:SetTextColor(color.R, color.G, color.B)
+    elseif isCanceled then
+        local color = C.COLOR_ENTRY_CANCELED
+        self.Name:SetTextColor(color.R, color.G, color.B)
+    elseif isNew then
+        local color = C.COLOR_ENTRY_NEW
+        self.Name:SetTextColor(color.R, color.G, color.B)
+    end
+    
+    -- Color activity based on lockout status
+    if isFullLockout then
+        local color = C.COLOR_LOCKOUT_FULL
+        self.ActivityName:SetTextColor(color.R, color.G, color.B)
+    elseif isMatchingLockout then
+        local color = C.COLOR_LOCKOUT_MATCH
+        self.ActivityName:SetTextColor(color.R, color.G, color.B)
+    end
+end
+
+-- Clean up color cache periodically to prevent memory bloat
+function PGF.CleanupGroupColorCache()
+    if not PGF.groupColorCache then return end
+    
+    -- Only run cleanup if we have more than 100 cached entries
+    if PGF.Table_Count(PGF.groupColorCache) <= 100 then return end
+    
+    -- Keep track of current search results to preserve their cache entries
+    local currentResults = {}
+    if PGF.currentSearchResults then
+        for _, resultID in ipairs(PGF.currentSearchResults) do
+            currentResults[resultID] = true
         end
     end
+    
+    -- Create a new cache with only current entries
+    local newCache = {}
+    for resultID, state in pairs(PGF.groupColorCache) do
+        if currentResults[resultID] then
+            newCache[resultID] = state
+        end
+    end
+    
+    -- Replace the old cache
+    PGF.groupColorCache = newCache
+end
+
+-- Helper function to count table entries safely
+function PGF.Table_Count(tbl)
+    if not tbl then return 0 end
+    local count = 0
+    for _ in pairs(tbl) do count = count + 1 end
+    return count
+end
+
+-- Hook into the existing result list update function to add cache cleanup
+local originalOnResultList = nil
+-- Store reference to the original function before we replace it
+if PGF.OnLFGListSearchPanelUpdateResultList then
+    originalOnResultList = PGF.OnLFGListSearchPanelUpdateResultList
+end
+
+-- Redefine the function with our enhancements
+function PGF.OnLFGListSearchPanelUpdateResultList(self)
+    -- Call the original function if available
+    if originalOnResultList then
+        originalOnResultList(self)
+    else
+        -- Fallback to default behavior if original function wasn't captured
+        PGF.Logger:Debug("PGF.OnLFGListSearchPanelUpdateResultList")
+        if self then
+            PGF.currentSearchResults = self.results
+            PGF.ResetSearchEntries()
+            PGF.FilterSearchResults()
+        end
+    end
+    
+    -- Clean up the color cache
+    PGF.CleanupGroupColorCache()
 end
 
 function PGF.OnLFGListSearchEntryUpdate(self)
@@ -408,12 +523,9 @@ function PGF.OnLFGListSearchEntryUpdate(self)
     PGF.AddRatingInfo(self, searchResultInfo)
 end
 
-function PGF.OnLFGListSearchPanelUpdateResultList(self)
-    PGF.Logger:Debug("PGF.OnLFGListSearchPanelUpdateResultList")
-    PGF.currentSearchResults = self.results
-    PGF.ResetSearchEntries()
-    PGF.FilterSearchResults()
-end
+-- Register hooks for the search panel functions
+hooksecurefunc("LFGListSearchEntry_Update", PGF.OnLFGListSearchEntryUpdate)
+hooksecurefunc("LFGListSearchPanel_UpdateResultList", PGF.OnLFGListSearchPanelUpdateResultList)
 
 function PGF.FilterSearchResults()
     PGF.Logger:Debug("PGF.FilterSearchResults")
@@ -424,9 +536,6 @@ function PGF.FilterSearchResults()
     LFGListFrame.SearchPanel.totalResults = #results
     LFGListSearchPanel_UpdateResults(LFGListFrame.SearchPanel)
 end
-
-hooksecurefunc("LFGListSearchEntry_Update", PGF.OnLFGListSearchEntryUpdate)
-hooksecurefunc("LFGListSearchPanel_UpdateResultList", PGF.OnLFGListSearchPanelUpdateResultList)
 
 -- Allow other addons to overwrite the sorting function
 local originalSortSearchResults = PGF.SortSearchResults

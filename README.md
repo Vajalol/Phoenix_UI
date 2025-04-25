@@ -34,6 +34,13 @@ A modern, feature-rich World of Warcraft UI addon designed for PvP players, offe
 
 ## 🔆 RECENT UPDATES
 
+### ⚡ Version 11.0.54
+- **⏱️ Enhanced Mythic+ Timer**: Added dual-format display showing both elapsed time and time remaining simultaneously
+- **🎯 Timer Display Options**: New configuration option to choose between remaining time, elapsed time, or both
+- **🌟 Season 2 Optimized**: Timer display enhanced for The War Within Season 2 dungeons and difficulty scaling
+- **🚀 Better Run Planning**: Improved timing visualization helps with route planning in dungeons like The MOTHERLODE!!
+- **🔥 Phoenix UI Integration**: Seamlessly integrated with existing Mythic+ module and theme
+
 ### ⚡ Version 11.0.53
 - **🗺️ New Mythic+ Module**: Comprehensive toolkit for Mythic+ dungeons with timer, progress tracking, and keystones
 - **📊 Details! Skin Integration**: Added custom Phoenix-themed skin for Details! damage meter

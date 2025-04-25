@@ -55,6 +55,13 @@ L["TIMER_PLUS_ONE"] = "+1 Chest"
 L["TIMER_PLUS_TWO"] = "+2 Chest"
 L["TIMER_PLUS_THREE"] = "+3 Chest"
 L["TIMER_EXPIRED"] = "Timer Expired"
+L["TIMER_FORMAT"] = "Timer Format"
+L["TIMER_FORMAT_DESC"] = "Format for displaying timer information"
+L["TIMER_FORMAT_REMAINING"] = "Time Remaining Only"
+L["TIMER_FORMAT_ELAPSED"] = "Time Elapsed Only"
+L["TIMER_FORMAT_DUAL"] = "Both Elapsed and Remaining"
+L["Elapsed"] = "Elapsed"
+L["Remaining"] = "Remaining"
 
 -- Death Tracker
 L["DEATH_TRACKER"] = "Death Tracker"

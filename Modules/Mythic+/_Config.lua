@@ -282,6 +282,24 @@ function Config:SetupConfig()
                             Module.db.showChestTimers = value
                             Module:UpdateSettings()
                         end
+                    },
+                    timerFormat = {
+                        type = "select",
+                        name = L["TIMER_FORMAT"] or "Timer Format",
+                        desc = L["TIMER_FORMAT_DESC"] or "Format for displaying timer information",
+                        order = 6,
+                        width = "double",
+                        disabled = function() return not Module.db.enhancedTimer end,
+                        values = {
+                            ["REMAINING"] = L["TIMER_FORMAT_REMAINING"] or "Time Remaining Only",
+                            ["ELAPSED"] = L["TIMER_FORMAT_ELAPSED"] or "Time Elapsed Only",
+                            ["DUAL"] = L["TIMER_FORMAT_DUAL"] or "Both Elapsed and Remaining"
+                        },
+                        get = function() return Module.db.timerFormat or "REMAINING" end,
+                        set = function(info, value)
+                            Module.db.timerFormat = value
+                            Module:UpdateSettings()
+                        end
                     }
                 }
             },
@@ -732,6 +750,23 @@ function Config:CreateConfigLayout()
                     disabled = function() return not Module.db.enhancedTimer end,
                     onChange = function(widget, value)
                         Module.db.showChestTimers = value
+                        Module:UpdateSettings()
+                    end,
+                    column = 4
+                },
+                timerFormat = {
+                    key = 'timerFormat',
+                    type = 'dropdown',
+                    label = L["TIMER_FORMAT"] or "Timer Format",
+                    tooltip = L["TIMER_FORMAT_DESC"] or "Format for displaying timer information",
+                    options = {
+                        { value = "REMAINING", text = L["TIMER_FORMAT_REMAINING"] or "Time Remaining Only" },
+                        { value = "ELAPSED", text = L["TIMER_FORMAT_ELAPSED"] or "Time Elapsed Only" },
+                        { value = "DUAL", text = L["TIMER_FORMAT_DUAL"] or "Both Elapsed and Remaining" }
+                    },
+                    disabled = function() return not Module.db.enhancedTimer end,
+                    onChange = function(widget, value)
+                        Module.db.timerFormat = value
                         Module:UpdateSettings()
                     end,
                     column = 4

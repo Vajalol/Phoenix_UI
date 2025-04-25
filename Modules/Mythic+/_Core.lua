@@ -25,6 +25,10 @@ local defaults = {
         progressFormat = "PERCENTAGE_AND_VALUE",
         showSeasonNotification = true,
         integrateWithPhoenix = true, -- Add Mythic+ tab to Phoenix UI main panel
+        timerFormat = "REMAINING", -- Format for the timer display (REMAINING, ELAPSED, or DUAL)
+        enhancedTimer = true,
+        timerStyle = "PHOENIX",
+        showChestTimers = true,
         dungeons = {
             -- The War Within Season 2 dungeons
             [2516] = true, -- Operation: Floodgate
