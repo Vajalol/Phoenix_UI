@@ -1,5 +1,29 @@
 # Phoenix_UI Changelog
 
+## Version 11.0.54 Updates
+
+### Enhanced PremadeGroupsFilter Module
+- **Improved Phoenix UI Integration**
+  - Enhanced profile data synchronization with the core Phoenix UI database
+  - Added profile change detection to update filter settings automatically
+  - Implemented automatic settings migration when switching between profiles
+  - Created logout handler to ensure settings are saved when exiting the game
+  - Added default setting validation to prevent missing configuration errors
+
+- **Optimized Group Coloring System**
+  - Implemented state caching to avoid redundant color changes for the same groups
+  - Added memory-efficient caching system that cleans up after itself
+  - Created automatic cache cleanup to prevent memory bloat during long sessions
+  - Improved color application with priority system for different group states
+  - Enhanced visual clarity for declined, new, and matched groups
+
+- **Performance Improvements**
+  - Added nil value protection throughout the module to prevent errors
+  - Optimized member count handling to reduce unnecessary API calls
+  - Enhanced error logging with friendlier user messages
+  - Improved error resilience when evaluating user filter expressions
+  - Fixed potential syntax issues with function definitions
+
 ## Version 11.0.53 Updates
 
 ### New Mythic+ Module
@@ -372,21 +396,3 @@
   - Implemented default texture fallbacks to ensure UI consistency
   - Fixed border visibility handling for CompactPartyFrame
   - Improved overall addon stability during combat and high-stress situations
-
-## Bug Fixes and Improvements
-
-### Config System Enhancements
-- **Fixed EditBox Validation Issues** 
-  - Enhanced the EditBox and TextField validation in `Phoenix_UIConfigBuilder.lua` to ensure values are properly saved
-  - Added proper validation callback to ensure values are committed to the database
-  - Implemented timer-based saving to prevent excessive save operations
-  - Fixed issue where edit box values weren't being properly saved
-
-- **Improved Database Saving Mechanism**
-  - Enhanced `SaveDB` function in `Core/Init.lua` to better handle saving data from edit boxes
-  - Added support for safe global variable access using `_G`
-  - Implemented `CommitPendingChanges` function to ensure any pending edit box changes are saved
-  - Added proper prioritization for critical settings (fonts, UI scaling, etc.)
-
-- **Fixed Critical Addon Loading Errors**
-  - Resolved "attempt to index global 'self' (a nil value)" errors in `
