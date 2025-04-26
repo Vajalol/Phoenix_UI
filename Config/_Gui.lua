@@ -24,6 +24,7 @@ local WeakAurasIntegration = Phoenix_UI:GetModule("Config.Layout.WeakAurasIntegr
 local CooldownTracker = Phoenix_UI:GetModule("Config.Layout.CooldownTracker")
 local MythicPlus = Phoenix_UI:GetModule("Config.Layout.MythicPlus", true)
 local DetailSkin = Phoenix_UI:GetModule("Config.Layout.DetailSkin")
+local PlayerStats = Phoenix_UI:GetModule("Config.Layout.PlayerStats")
 
 local Ace = LibStub("AceAddon-3.0")
 local PhoenixConfig = Ace:NewAddon('Phoenix_UI_Config')
