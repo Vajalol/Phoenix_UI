@@ -150,41 +150,149 @@ Phoenix_UIConfig.ScrollFrameMethods = {
 		-- First get a reliable minimum height based on window size
 		local minimumHeight = scrollFrameHeight * 3  -- Triple the frame height for baseline
 		
-		-- Get total height of all child elements
+		-- Find the actual height required by measuring all elements
 		local totalHeight = 0
-		local children = {self.scrollChild:GetChildren()}
 		
-		if #children == 0 then
-			-- If no children, use minimum height
-			totalHeight = minimumHeight
-		else
-			-- Find the bottom-most point of any child element
-			for _, child in ipairs(children) do
-				if child:IsShown() then
-					-- Get the position and size info
-					local childHeight = child:GetHeight() or 0
-					local point, _, _, _, y = child:GetPoint(1)
-					if point and y and type(y) == "number" then
-						-- Calculate the bottom position of this element
-						local bottomPos = math.abs(y) + childHeight
-						totalHeight = math.max(totalHeight, bottomPos)
+		-- Get all the elements in the scroll frame (direct children of scrollChild)
+		local elements = {self.scrollChild:GetChildren()}
+		
+		-- For each element, compute the bottom-most point
+		for _, element in pairs(elements) do
+			if element:IsShown() and element:IsVisible() then
+				-- First try using GetBoundsRect which works well for most elements
+				local _, _, _, elementBottom = element:GetBoundsRect()
+				
+				-- If that fails, use more reliable but more expensive methods
+				if not elementBottom or elementBottom <= 0 then
+					local _, y = element:GetPoint(1) -- Get Y position
+					if type(y) == "number" then
+						local height = element:GetHeight() or 0
+						elementBottom = math.abs(y) + height
+					end
+				end
+				
+				-- Only proceed with measurement if we got valid bounds
+				if elementBottom and elementBottom > 0 then
+					-- Add padding between elements for better spacing
+					elementBottom = elementBottom + 20
+					
+					-- Update total height if this element extends lower
+					if elementBottom > totalHeight then
+						totalHeight = elementBottom
+					end
+				end
+				
+				-- If this element is a specialized frame with content, check its height too
+				if element.content and element.content:GetHeight() then
+					local contentHeight = element.content:GetHeight() + 30 -- Add extra padding
+					if contentHeight > totalHeight then
+						totalHeight = contentHeight
 					end
 				end
 			end
+		end
+		
+		-- Recursive function to process nested frames
+		local function processNestedFrames(frame, currentDepth)
+			-- Limit recursion depth for safety
+			if currentDepth > 10 then return end
 			
-			-- Add standard padding to ensure scrolling works properly
-			totalHeight = totalHeight + (scrollFrameHeight * 1.5)  -- 150% of window height as base padding
+			-- Process immediate children
+			local children = {frame:GetChildren()}
+			for _, child in pairs(children) do
+				if child:IsShown() and child:IsVisible() then
+					-- Get the bottom position of this child
+					local _, _, _, childBottom = child:GetBoundsRect()
+					
+					-- Fallback measurement if GetBoundsRect fails
+					if not childBottom or childBottom <= 0 then
+						local _, y = child:GetPoint(1)
+						if type(y) == "number" then
+							local height = child:GetHeight() or 0
+							childBottom = math.abs(y) + height + 20 -- Add padding
+						end
+					end
+					
+					-- Only use valid measurements
+					if childBottom and childBottom > 0 then
+						-- Update total height if this extends lower
+						if childBottom > totalHeight then
+							totalHeight = childBottom
+						end
+					end
+					
+					-- Special handling for dropdowns and expandable UI elements
+					-- These often have content that expands beyond their frame
+					if child:GetObjectType() == "Button" and child.dropdown then
+						totalHeight = totalHeight + 100 -- Extra room for dropdown lists
+					end
+					
+					-- Process this child's children
+					processNestedFrames(child, currentDepth + 1)
+				end
+			end
+		end
+		
+		-- Process nested frames to find any elements deeper in the hierarchy
+		processNestedFrames(self.scrollChild, 1)
+		
+		-- Handle specialized UI elements that might need extra attention
+		-- Look for tables and other complex elements
+		for _, element in pairs(elements) do
+			-- Special handling for ScrollTable which can have variable height rows
+			if element.rowHeight and element.numberOfRows then
+				local tableHeight = (element.rowHeight * element.numberOfRows) + 50
+				if tableHeight > totalHeight then
+					totalHeight = tableHeight
+				end
+			end
 		end
 		
 		-- Ensure a minimum scroll area even when there's little content
 		-- This ensures all tabs have adequate scroll space regardless of content
 		totalHeight = math.max(totalHeight, minimumHeight)
 		
+		-- Add dynamic padding based on content height and scroll frame size
+		-- This scales better than fixed padding and ensures large panels have adequate scroll space
+		local dynamicPadding = scrollFrameHeight * 0.5
+		
 		-- Always add fixed extra padding for all tabs
-		totalHeight = totalHeight + 300  -- Extra padding for all tabs
+		totalHeight = totalHeight + dynamicPadding
+		
+		-- Additional padding to ensure we can always reach the bottom
+		-- For larger content, use more padding as a percentage
+		if totalHeight > scrollFrameHeight * 2 then
+			totalHeight = totalHeight * 1.2 -- Add 20% to ensure we can scroll
+		else
+			totalHeight = totalHeight + 200 -- Standard padding for smaller content
+		end
 		
 		-- Set the scroll child height 
 		self.scrollChild:SetHeight(totalHeight)
+		
+		-- Force the scrollframe to update its scroll range
+		self.scrollFrame:UpdateScrollChildRect()
+		
+		-- Make sure scrollbar is properly set up
+		if self.scrollBar then
+			-- Ensure the maximum scroll value includes all content
+			local maxScroll = math.max(0, totalHeight - scrollFrameHeight)
+			self.scrollBar:SetMinMaxValues(0, maxScroll)
+			
+			-- Ensure scrollbar is shown if needed
+			if totalHeight > scrollFrameHeight then
+				self.scrollBar:Show()
+			else
+				self.scrollBar:Hide()
+			end
+			
+			-- Update the thumb size for better proportional representation
+			if self.scrollBar.ThumbTexture then
+				local ratio = scrollFrameHeight / totalHeight
+				local thumbHeight = math.max(40, scrollFrameHeight * ratio)
+				self.scrollBar.ThumbTexture:SetHeight(thumbHeight)
+			end
+		end
 	end,
 
 	DoVerticalScroll = function(self, value, buttonHeight, updateFunction)
@@ -687,3 +795,20 @@ function Phoenix_UIConfig:HybridScrollFrame(parent, width, height, scrollChild)
 end
 
 Phoenix_UIConfig:RegisterModule(module, version);
+
+-- Some scroll frames might fail to properly calculate height, hook this specifically
+local originalFrameSetScrollChild = ScrollFrame_SetScrollChild
+ScrollFrame_SetScrollChild = function(self, scrollChild)
+    -- Call original function
+    originalFrameSetScrollChild(self, scrollChild)
+    
+    -- Extra handling for Phoenix UI scroll frames
+    if self and self.GetParent and self:GetParent() and self:GetParent().UpdateScrollChildHeight then
+        -- Schedule a delayed height calculation
+        C_Timer.After(0.2, function()
+            pcall(function() 
+                self:GetParent():UpdateScrollChildHeight() 
+            end)
+        end)
+    end
+end

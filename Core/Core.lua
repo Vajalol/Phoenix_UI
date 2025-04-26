@@ -1,6 +1,6 @@
 function Phoenix_UI:SaveDB(force)
-    -- If forced or no database, just return
-    if force or not self.db then return end
+    -- If no database, just return
+    if not self.db then return end
     
     -- Debug info
     local debug = self.debug or false
@@ -16,30 +16,10 @@ function Phoenix_UI:SaveDB(force)
     
     -- Ensure any pending changes are written to the database
     if self.db.profile then
-        -- IMPORTANT: We're removing the defaults registration here as it can override custom settings
-        -- self.db:RegisterDefaults(self.defaults)
+        -- Get current profile
+        local currentProfile = self.db.keys and self.db.keys.profile or "Default"
         
-        -- Get all module names from the tabs layout
-        local allModules = {}
-        
-        -- First add the critical modules specifically (for backward compatibility)
-        local criticalModules = {
-            "general", "unitframes", "actionbars", "nameplates", "castbars", "buffs", "msbt", "idtip",
-            "tooltip", "map", "chat", "misc", "uiscaling", "profiles", "cooldownTracker"
-        }
-        
-        for _, moduleName in ipairs(criticalModules) do
-            allModules[moduleName] = true
-        end
-        
-        -- Get all other module names from the db.profile
-        for moduleName, _ in pairs(self.db.profile) do
-            if type(self.db.profile[moduleName]) == "table" then
-                allModules[moduleName] = true
-            end
-        end
-        
-        -- Initialize __modifiedModules if it doesn't exist
+        -- ENHANCED: Ensure profile structure in both local and global db
         if not _G["Phoenix_UIDB"] then
             _G["Phoenix_UIDB"] = {}
         end
@@ -48,32 +28,44 @@ function Phoenix_UI:SaveDB(force)
             _G["Phoenix_UIDB"].__modifiedModules = {}
         end
         
-        -- Get current profile
-        local currentProfile = self.db.keys and self.db.keys.profile or "Default"
+        if not _G["Phoenix_UIDB"].profiles then
+            _G["Phoenix_UIDB"].profiles = {}
+        end
+        
+        if not _G["Phoenix_UIDB"].profiles[currentProfile] then
+            _G["Phoenix_UIDB"].profiles[currentProfile] = {}
+        end
+        
+        -- ENHANCED: Also ensure Default profile exists as fallback
+        if not _G["Phoenix_UIDB"].profiles.Default then
+            _G["Phoenix_UIDB"].profiles.Default = {}
+        end
         
         -- Add debug info marker to help track save issues
         if debug then
             print("Phoenix_UI: SaveDB saving to profile " .. currentProfile)
         end
-        _G["Phoenix_UIDB"].__lastSaveMethod = "SaveDB"
+        _G["Phoenix_UIDB"].__lastSaveMethod = "SaveDB_Enhanced"
         _G["Phoenix_UIDB"].__lastSaveTime = GetTime()
-        
-        -- Ensure profiles exists in global DB
-        if not _G["Phoenix_UIDB"].profiles then
-            _G["Phoenix_UIDB"].profiles = {}
-        end
-        
-        -- Ensure current profile exists
-        if not _G["Phoenix_UIDB"].profiles[currentProfile] then
-            _G["Phoenix_UIDB"].profiles[currentProfile] = {}
-        end
         
         -- Add metadata
         _G["Phoenix_UIDB"].__lastAccess = GetTime()
         _G["Phoenix_UIDB"].__addon_version = self.version or "unknown"
         
-        -- Process all modules that need to be saved
-        for moduleName, _ in pairs(allModules) do
+        -- ENHANCED: Comprehensive module list to ensure ALL modules are saved
+        local allModules = {
+            -- Critical UI modules
+            "general", "unitframes", "nameplates", "actionbars", "castbars", 
+            "buffs", "tooltip", "map", "chat", "misc", "uiscaling", "fonts",
+            -- Additional feature modules
+            "msbt", "idtip", "buffoverlay", "cooldowntracker", "weakauras", 
+            "mythicplus", "raidframes", "profiles",
+            -- Legacy module names for compatibility
+            "actionbar", "castbar", "buff"
+        }
+        
+        -- ENHANCED: Process all modules in an optimized way
+        for _, moduleName in ipairs(allModules) do
             if self.db.profile[moduleName] and type(self.db.profile[moduleName]) == "table" then
                 if debug then
                     print("Phoenix_UI: Saving module " .. moduleName)
@@ -87,42 +79,37 @@ function Phoenix_UI:SaveDB(force)
                 
                 -- Add timestamp to track when these settings were last modified
                 currentSettings.__updated = GetTime()
-                currentSettings.__saved_from = "SaveDB"
+                currentSettings.__saved_from = "SaveDB_Enhanced"
                 
                 -- Update in DB
                 self.db.profile[moduleName] = currentSettings
                 
-                -- Directly update the AceDB saved variables to ensure persistence
-                if type(_G["Phoenix_UIDB"]) == "table" then
-                    -- Ensure profile exists
-                    if not _G["Phoenix_UIDB"].profiles[currentProfile][moduleName] then
-                        _G["Phoenix_UIDB"].profiles[currentProfile][moduleName] = {}
-                    end
-                    
-                    -- Update the module settings in the global variable using deep copy
-                    _G["Phoenix_UIDB"].profiles[currentProfile][moduleName] = CopyTable(currentSettings)
-                    
-                    if debug then
-                        print("Phoenix_UI: Updated global variable for " .. moduleName)
-                    end
+                -- ENHANCED: Always use deep copy to ensure proper persistence
+                -- Ensure profile exists
+                if not _G["Phoenix_UIDB"].profiles[currentProfile][moduleName] then
+                    _G["Phoenix_UIDB"].profiles[currentProfile][moduleName] = {}
                 end
                 
-                -- Special handling for chat module to ensure emoji settings are preserved
-                if moduleName == "chat" and currentSettings.emoji then
-                    -- Double-check emoji settings are saved properly
-                    if not _G["Phoenix_UIDB"].profiles[currentProfile].chat then
-                        _G["Phoenix_UIDB"].profiles[currentProfile].chat = {}
-                    end
-                    
-                    if not _G["Phoenix_UIDB"].profiles[currentProfile].chat.emoji then
-                        _G["Phoenix_UIDB"].profiles[currentProfile].chat.emoji = {}
-                    end
-                    
-                    -- Ensure emoji settings are properly copied
-                    _G["Phoenix_UIDB"].profiles[currentProfile].chat.emoji = CopyTable(currentSettings.emoji)
+                -- Update the module settings in the global variable using deep copy
+                _G["Phoenix_UIDB"].profiles[currentProfile][moduleName] = CopyTable(currentSettings)
+                
+                -- ENHANCED: Also save to Default profile as a fallback
+                if moduleName ~= "profiles" then -- Skip profiles to avoid cross-contamination
+                    _G["Phoenix_UIDB"].profiles.Default[moduleName] = CopyTable(currentSettings)
+                end
+                
+                if debug then
+                    print("Phoenix_UI: Updated global variable for " .. moduleName)
                 end
             end
         end
+        
+        -- ENHANCED: Ensure character-to-profile mapping is correct
+        local playerKey = UnitName("player") .. " - " .. GetRealmName()
+        if not _G["Phoenix_UIDB"].profileKeys then
+            _G["Phoenix_UIDB"].profileKeys = {}
+        end
+        _G["Phoenix_UIDB"].profileKeys[playerKey] = currentProfile
         
         -- Also check for specialized module namespaces
         local specializedModules = {
@@ -167,14 +154,29 @@ function Phoenix_UI:SaveDB(force)
         _G["Phoenix_UIDB"].__lastSaved = GetTime()
         _G["Phoenix_UIDB"].__currentProfile = currentProfile
         
-        -- Attempt to flush the saved variables to disk
-        pcall(function()
-            if FlushSettingsDB then
-                FlushSettingsDB() 
-            elseif FlushSavedVariables then
-                FlushSavedVariables()
+        -- ENHANCED: Multiple flush attempts with error handling
+        for i = 1, 3 do
+            pcall(function()
+                if FlushSettingsDB then
+                    FlushSettingsDB() 
+                elseif FlushSavedVariables then
+                    FlushSavedVariables()
+                end
+            end)
+            
+            -- Attempt additional flushes with delays
+            if i < 3 then
+                C_Timer.After(0.2 * i, function()
+                    pcall(function()
+                        if FlushSettingsDB then
+                            FlushSettingsDB() 
+                        elseif FlushSavedVariables then
+                            FlushSavedVariables()
+                        end
+                    end)
+                end)
             end
-        end)
+        end
     end
     
     if debug then
@@ -183,58 +185,11 @@ function Phoenix_UI:SaveDB(force)
         self:Print("Saving Phoenix UI settings...")
     end
     
-    -- Directly update the global savedvariables to ensure persistence
+    -- ENHANCED: Final verification to ensure critical modules are saved
     if _G["Phoenix_UIDB"] and self.db and self.db.profile then
-        -- Make sure we have a profiles table
-        _G["Phoenix_UIDB"].profiles = _G["Phoenix_UIDB"].profiles or {}
-        _G["Phoenix_UIDB"].profiles[currentProfile] = _G["Phoenix_UIDB"].profiles[currentProfile] or {}
-        
-        -- Safety copy all critical settings
-        pcall(function()
-            -- Copy the general settings first (priority)
-            if self.db.profile.general then
-                _G["Phoenix_UIDB"].profiles[currentProfile].general = CopyTable(self.db.profile.general)
-                
-                -- Also save in Default profile for safety
-                _G["Phoenix_UIDB"].profiles.Default = _G["Phoenix_UIDB"].profiles.Default or {}
-                _G["Phoenix_UIDB"].profiles.Default.general = CopyTable(self.db.profile.general)
-            end
-            
-            -- DEBUG: Print some information about what's being saved
-            if self.debug then
-                print("Phoenix_UI: Saving all modules to global DB")
-                -- Check critical tabs that we know have issues
-                local tabsToCheck = {"actionbars", "tooltip", "map", "chat", "misc", "buffs", "castbars"}
-                for _, tabName in ipairs(tabsToCheck) do
-                    if self.db.profile[tabName] then
-                        print("Phoenix_UI: " .. tabName .. " exists in profile, enabled = " .. tostring(self.db.profile[tabName].enabled))
-                    else
-                        print("Phoenix_UI: " .. tabName .. " does NOT exist in profile!")
-                    end
-                end
-            end
-            
-            -- Copy all other settings
-            for moduleName, moduleData in pairs(self.db.profile) do
-                if type(moduleData) == "table" and moduleName ~= "general" then
-                    _G["Phoenix_UIDB"].profiles[currentProfile][moduleName] = CopyTable(moduleData)
-                end
-            end
-        end)
+        -- Mark this as a complete save cycle
+        _G["Phoenix_UIDB"].__saveComplete = GetTime()
     end
-    
-    -- Attempt one more flush to disk with metadata to verify save
-    pcall(function()
-        if _G["Phoenix_UIDB"] then
-            _G["Phoenix_UIDB"].__saveComplete = GetTime()
-            
-            if FlushSettingsDB then
-                FlushSettingsDB() 
-            elseif FlushSavedVariables then
-                FlushSavedVariables()
-            end
-        end
-    end)
     
     return true
 end
@@ -247,6 +202,9 @@ function Phoenix_UI:CommitPendingChanges()
     if debug then
         print("Phoenix_UI: CommitPendingChanges called")
     end
+    
+    -- Track which modules were modified for optimized saving
+    local modifiedModules = {}
     
     -- First, check if Phoenix_UIConfig is loaded
     local config = _G.Phoenix_UIConfig
@@ -264,14 +222,41 @@ function Phoenix_UI:CommitPendingChanges()
             pcall(function() self.UI:CommitPendingChanges() end)
         end
         
+        -- ENHANCED: Track which tab is currently active
+        local activeTab = nil
+        if self.UI.tabs and self.UI.tabs.selectedTab and self.UI.tabs.selectedTab.name then
+            activeTab = self.UI.tabs.selectedTab.name:lower()
+            modifiedModules[activeTab] = true
+            
+            if debug then
+                print("Phoenix_UI: Active tab is " .. activeTab)
+            end
+        end
+        
         -- Ensure all dropdowns and other widgets have their values saved
         if self.UI.elements then
-            for _, element in pairs(self.UI.elements) do
+            for elementID, element in pairs(self.UI.elements) do
                 if element and element.Commit and type(element.Commit) == "function" then
                     pcall(function() element:Commit() end)
                 end
+                
+                -- ENHANCED: Track which module this element belongs to
+                if element and element.dataKey then
+                    local moduleName = element.dataKey:match("^([^%.]+)")
+                    if moduleName then
+                        modifiedModules[moduleName] = true
+                        
+                        if debug then
+                            print("Phoenix_UI: Tracked element change in module " .. moduleName)
+                        end
+                    end
+                end
             end
         end
+        
+        -- Mark modules as needing a save in the UI
+        self.UI.settingsChanged = true
+        self.UI.lastModifiedModules = modifiedModules
     end
     
     -- Ensure profile database is properly synced
@@ -283,98 +268,47 @@ function Phoenix_UI:CommitPendingChanges()
             "msbt", "idtip", "buffoverlay", "misc"
         }
         
+        -- Current time for tracking
         local timestamp = GetTime()
         
+        -- Check if any critical modules were modified
+        local criticalModified = false
         for _, moduleName in ipairs(criticalModules) do
-            if not self.db.profile[moduleName] then
-                self.db.profile[moduleName] = {}
-                
-                -- Try to recover from global savedvariables if available
-                if _G["Phoenix_UIDB"] and _G["Phoenix_UIDB"].profiles then
-                    local currentProfile = self.db.keys and self.db.keys.profile or "Default"
-                    
-                    if _G["Phoenix_UIDB"].profiles[currentProfile] and 
-                       _G["Phoenix_UIDB"].profiles[currentProfile][moduleName] then
-                        -- Copy settings from global savedvariables
-                        pcall(function()
-                            self.db.profile[moduleName] = CopyTable(_G["Phoenix_UIDB"].profiles[currentProfile][moduleName])
-                        end)
-                        
-                        if debug then
-                            print("Phoenix_UI: Recovered settings for " .. moduleName .. " from global savedvariables")
-                        end
-                    end
-                end
-            end
-            
-            -- Mark the module as updated
-            if self.db.profile[moduleName] then
-                self.db.profile[moduleName].__updated = timestamp
-                self.db.profile[moduleName].__committed = timestamp
+            if modifiedModules[moduleName] then
+                criticalModified = true
+                break
             end
         end
         
-        -- Ensure theme settings
-        if self.db.profile.general and self.db.profile.general.theme then
-            -- Validate the theme exists
-            local Themes = self:GetModule("Data.Themes", true)
-            if Themes and Themes.data then
-                local currentTheme = self.db.profile.general.theme
-                
-                -- Ensure the current theme exists in the themes data
-                local themeExists = false
-                for _, themeData in ipairs(Themes.data) do
-                    if themeData.value == currentTheme then
-                        themeExists = true
-                        break
-                    end
-                end
-                
-                -- If theme doesn't exist, use "PhoenixFlame" or "Default" as fallback
-                if not themeExists then
-                    -- Try PhoenixFlame first, then fall back to Default if needed
-                    local fallbackTheme = "PhoenixFlame"
-                    local fallbackExists = false
+        -- Mark that settings have changed
+        self.settingsChanged = true
+        
+        -- ENHANCED: Force immediate save for critical module changes
+        if criticalModified then
+            -- Use a short delay to batch rapid changes
+            if not self._criticalSaveTimer then
+                self._criticalSaveTimer = C_Timer.After(0.3, function()
+                    self._criticalSaveTimer = nil
                     
-                    for _, themeData in ipairs(Themes.data) do
-                        if themeData.value == fallbackTheme then
-                            fallbackExists = true
-                            break
+                    -- Force save
+                    if self.SaveDB then
+                        self:SaveDB()
+                    end
+                    
+                    -- Ensure we flush to disk
+                    pcall(function()
+                        if FlushSettingsDB then
+                            FlushSettingsDB()
+                        elseif FlushSavedVariables then
+                            FlushSavedVariables()
                         end
-                    end
-                    
-                    if fallbackExists then
-                        self.db.profile.general.theme = fallbackTheme
-                    else
-                        self.db.profile.general.theme = "Default"
-                    end
-                    
-                    if debug then
-                        print("Phoenix_UI: Theme fixed to: " .. self.db.profile.general.theme)
-                    end
-                end
+                    end)
+                end)
             end
         end
-        
-        -- Ensure font settings
-        if self.db.profile.general and self.db.profile.general.font then
-            -- Ensure it's also stored in fonts table
-            self.db.profile.fonts = self.db.profile.fonts or {}
-            self.db.profile.fonts.gameFont = self.db.profile.fonts.gameFont or {}
-            self.db.profile.fonts.gameFont.family = self.db.profile.general.font
-        elseif self.db.profile.fonts and self.db.profile.fonts.gameFont and self.db.profile.fonts.gameFont.family then
-            -- Sync from fonts table to general
-            self.db.profile.general = self.db.profile.general or {}
-            self.db.profile.general.font = self.db.profile.fonts.gameFont.family
-        end
     end
     
-    -- Also apply font settings if available
-    if self.ApplyFontSettings then
-        pcall(function() self:ApplyFontSettings() end)
-    end
-    
-    -- Return success
+    -- Return success flag
     return true
 end
 
@@ -558,86 +492,166 @@ end
 function Phoenix_UI:ValidateSettings()
     if not self.db or not self.db.profile then return end
     
-    -- Critical modules to validate
+    -- ENHANCED: More comprehensive module list
     local criticalModules = {
-        "nameplates", "actionbars", "castbars", "buffs", "msbt", "idtip",
-        "tooltip", "map", "chat", "misc", "uiscaling"
+        "general", "nameplates", "actionbars", "castbars", "buffs", "msbt", "idtip",
+        "tooltip", "map", "chat", "misc", "uiscaling", "fonts", "unitframes",
+        "cooldowntracker", "weakauras", "mythicplus", "raidframes"
     }
+    
+    -- Get current profile for recovery
+    local currentProfile = self.db.keys and self.db.keys.profile or "Default"
     
     -- Loop through critical modules
     for _, moduleName in ipairs(criticalModules) do
         -- Ensure the module settings exist
         if not self.db.profile[moduleName] then
             self.db.profile[moduleName] = {}
+            
+            -- Try to recover from global savedvariables if available
+            if _G["Phoenix_UIDB"] and _G["Phoenix_UIDB"].profiles then
+                -- First try current profile
+                if _G["Phoenix_UIDB"].profiles[currentProfile] and 
+                   _G["Phoenix_UIDB"].profiles[currentProfile][moduleName] then
+                    -- Copy settings from current profile
+                    self.db.profile[moduleName] = CopyTable(_G["Phoenix_UIDB"].profiles[currentProfile][moduleName])
+                
+                -- Then try Default profile if current profile doesn't have settings
+                elseif _G["Phoenix_UIDB"].profiles.Default and 
+                       _G["Phoenix_UIDB"].profiles.Default[moduleName] then
+                    -- Copy settings from Default profile
+                    self.db.profile[moduleName] = CopyTable(_G["Phoenix_UIDB"].profiles.Default[moduleName])
+                end
+            end
         end
         
-        -- For each module, ensure key settings exist
+        -- Module-specific validation
         if moduleName == "nameplates" then
             -- Ensure nameplates settings have required fields
             local np = self.db.profile.nameplates
             np.decimals = np.decimals or "1"
             np.style = np.style or "Default"
             np.npccolors = np.npccolors or {}
+            np.enabled = np.enabled ~= false -- default to true
+            np.stackingmode = np.stackingmode ~= nil and np.stackingmode or false
+            np.height = np.height or 1.0
+            np.width = np.width or 1.0
+            np.texture = np.texture or "Blizzard"
+            
         elseif moduleName == "actionbars" then
             -- Ensure actionbars settings have required fields
             local ab = self.db.profile.actionbars
             ab.mouseover = ab.mouseover or false
             ab.enable = ab.enable or false
+            ab.enabled = ab.enabled ~= false -- default to true
+            ab.numrows = ab.numrows or 1
+            ab.buttonsize = ab.buttonsize or 32
+            ab.buttonspacing = ab.buttonspacing or 4
+            
         elseif moduleName == "castbars" then
             -- Ensure castbars settings have required fields
             local cb = self.db.profile.castbars
-            cb.enabled = cb.enabled or false
+            cb.enabled = cb.enabled ~= false -- default to true
+            cb.texture = cb.texture or "Blizzard"
+            cb.enableplayer = cb.enableplayer ~= false -- default to true
+            cb.enabletarget = cb.enabletarget ~= false -- default to true
+            cb.enablefocus = cb.enablefocus ~= false -- default to true
+            
         elseif moduleName == "buffs" then
             -- Ensure buffs settings have required fields
             local buff = self.db.profile.buffs
-            buff.enabled = buff.enabled or false
+            buff.enabled = buff.enabled ~= false -- default to true
+            buff.size = buff.size or 30
+            buff.spacing = buff.spacing or 2
+            buff.growthx = buff.growthx or "RIGHT"
+            buff.growthy = buff.growthy or "UP"
+            
+        elseif moduleName == "tooltip" then
+            -- Ensure tooltip settings have required fields
+            local tooltip = self.db.profile.tooltip
+            tooltip.enabled = tooltip.enabled ~= false -- default to true
+            tooltip.scale = tooltip.scale or 1.0
+            tooltip.combathide = tooltip.combathide ~= nil and tooltip.combathide or false
+            tooltip.cursor = tooltip.cursor ~= nil and tooltip.cursor or false
+            
+        elseif moduleName == "map" then
+            -- Ensure map settings have required fields
+            local map = self.db.profile.map
+            map.enabled = map.enabled ~= false -- default to true
+            map.scale = map.scale or 1.0
+            map.position = map.position or "BOTTOMRIGHT"
+            map.miniblips = map.miniblips ~= nil and map.miniblips or true
+            
+        elseif moduleName == "chat" then
+            -- Ensure chat settings have required fields
+            local chat = self.db.profile.chat
+            chat.enabled = chat.enabled ~= false -- default to true
+            chat.fontsize = chat.fontsize or 12
+            chat.sticky = chat.sticky ~= nil and chat.sticky or true
+            chat.emojis = chat.emojis ~= nil and chat.emojis or true
+            chat.timestamps = chat.timestamps ~= nil and chat.timestamps or true
+            
         elseif moduleName == "msbt" then
             -- Ensure msbt settings have required fields
             local msbt = self.db.profile.msbt
             msbt.enabled = msbt.enabled or false
+            
         elseif moduleName == "idtip" then
             -- Ensure idtip settings have required fields
             local idtip = self.db.profile.idtip
-            idtip.enabled = idtip.enabled or true
-        elseif moduleName == "tooltip" then
-            -- Ensure tooltip settings have required fields
-            local tooltip = self.db.profile.tooltip
-            tooltip.enabled = tooltip.enabled or true
-        elseif moduleName == "map" then
-            -- Ensure map settings have required fields
-            local map = self.db.profile.map
-            map.enabled = map.enabled or true
-        elseif moduleName == "chat" then
-            -- Ensure chat settings have required fields
-            local chat = self.db.profile.chat
-            chat.enabled = chat.enabled or true
+            idtip.enabled = idtip.enabled ~= false -- default to true
             
-            -- Ensure emoji settings exist and are properly initialized
-            if not chat.emoji then
-                chat.emoji = {
-                    enabled = true,
-                    size = 16
-                }
+        elseif moduleName == "fonts" then
+            -- Ensure font settings have required fields
+            local fonts = self.db.profile.fonts
+            fonts.gameFont = fonts.gameFont or {}
+            fonts.gameFont.family = fonts.gameFont.family or "Friz Quadrata TT"
+            
+        elseif moduleName == "uiscaling" then
+            -- Ensure UI scaling settings have required fields
+            local ui = self.db.profile.uiscaling
+            ui.scale = ui.scale or 1.0
+            ui.enabled = ui.enabled ~= false -- default to true
+            
+        elseif moduleName == "general" then
+            -- Ensure general settings have required fields
+            local general = self.db.profile.general
+            general.font = general.font or "Friz Quadrata TT"
+            general.theme = general.theme or "Dark"
+            general.color = general.color or {r = 1, g = 0.5, b = 0, a = 1} -- Phoenix Orange
+            
+            -- Sync font settings for consistency
+            if general.font then
+                self.db.profile.fonts = self.db.profile.fonts or {}
+                self.db.profile.fonts.gameFont = self.db.profile.fonts.gameFont or {}
+                self.db.profile.fonts.gameFont.family = general.font
             end
-        elseif moduleName == "misc" then
-            -- Ensure misc settings have required fields
-            local misc = self.db.profile.misc
-            misc.enabled = misc.enabled or true
         end
     end
     
-    -- Also check module DB 
-    if self.moduleDB then
-        if self.moduleDB.MSBT and not self.moduleDB.MSBT.profile then
-            self.moduleDB.MSBT.profile = { enabled = self.db.profile.msbt.enabled }
-        end
-        
-        if self.moduleDB.idTip and not self.moduleDB.idTip.profile then
-            self.moduleDB.idTip.profile = { enabled = self.db.profile.idtip.enabled }
-        end
+    -- Ensure fonts are synced between general and fonts table
+    if self.db.profile.general and self.db.profile.general.font then
+        -- Ensure it's also stored in fonts table
+        self.db.profile.fonts = self.db.profile.fonts or {}
+        self.db.profile.fonts.gameFont = self.db.profile.fonts.gameFont or {}
+        self.db.profile.fonts.gameFont.family = self.db.profile.general.font
+    elseif self.db.profile.fonts and self.db.profile.fonts.gameFont and self.db.profile.fonts.gameFont.family then
+        -- Sync from fonts table to general
+        self.db.profile.general = self.db.profile.general or {}
+        self.db.profile.general.font = self.db.profile.fonts.gameFont.family
     end
     
-    return true
+    -- Ensure character-to-profile mapping is correct
+    if _G["Phoenix_UIDB"] then
+        local playerKey = UnitName("player") .. " - " .. GetRealmName()
+        _G["Phoenix_UIDB"].profileKeys = _G["Phoenix_UIDB"].profileKeys or {}
+        _G["Phoenix_UIDB"].profileKeys[playerKey] = currentProfile
+    end
+    
+    -- Also apply font settings if available
+    if self.ApplyFontSettings then
+        pcall(function() self:ApplyFontSettings() end)
+    end
 end
 
 -- Add a function to verify saved variables integrity
@@ -1892,8 +1906,8 @@ function Phoenix_UI:OnPlayerEnteringWorld()
     local realmName = GetRealmName()
     local playerKey = playerName .. " - " .. realmName
     
-    -- PROFILE CONSISTENCY CHECK - This is critical for fixing Default profile issues
-    if _G["Phoenix_UIDB"] and self.db and self.db.keys then
+    -- ENHANCED: PROFILE CONSISTENCY CHECK - This is critical for fixing Default profile issues
+    if _G["Phoenix_UIDB"] then
         -- Ensure profileKeys exists
         if not _G["Phoenix_UIDB"].profileKeys then
             _G["Phoenix_UIDB"].profileKeys = {}
@@ -1905,84 +1919,158 @@ function Phoenix_UI:OnPlayerEnteringWorld()
         
         -- Check if there's a mismatch between AceDB and global profileKeys
         local globalProfile = _G["Phoenix_UIDB"].profileKeys[playerKey]
-        if globalProfile ~= currentProfile then
-            -- Fix the mismatch by setting global profileKeys to match AceDB
-            _G["Phoenix_UIDB"].profileKeys[playerKey] = currentProfile
-            
+        
+        -- ENHANCED: Handle profile synchronization
+        if globalProfile and globalProfile ~= currentProfile then
+            -- There's a mismatch - decide what to do
             if debug then
-                print("Phoenix_UI: Fixed profile mismatch. Global: " .. tostring(globalProfile) .. ", AceDB: " .. currentProfile)
+                print("Phoenix_UI: Profile mismatch detected. AceDB=" .. currentProfile .. ", Global=" .. globalProfile)
             end
             
-            -- Also ensure the profile exists in the global table
-            if not _G["Phoenix_UIDB"].profiles then
-                _G["Phoenix_UIDB"].profiles = {}
+            -- Try to determine which is more recent
+            local aceProfileUpdated = false
+            local globalProfileUpdated = false
+            
+            -- Check if we have the profiles in AceDB
+            if self.db and self.db.profiles and self.db.profiles[globalProfile] then
+                -- AceDB has the global profile - might be safe to switch
+                aceProfileUpdated = true
             end
             
-            if not _G["Phoenix_UIDB"].profiles[currentProfile] then
-                -- Create the profile by copying from memory
-                _G["Phoenix_UIDB"].profiles[currentProfile] = CopyTable(self.db.profile)
+            -- Check if global DB has the current profile
+            if _G["Phoenix_UIDB"].profiles and _G["Phoenix_UIDB"].profiles[currentProfile] then
+                globalProfileUpdated = true
+            end
+            
+            -- ENHANCED: Decide which profile to use based on most recent changes
+            local useAceProfile = true -- Default to keeping current AceDB profile
+            
+            -- If both profiles exist, check which one was updated more recently
+            if aceProfileUpdated and globalProfileUpdated then
+                -- Get last update timestamps if available
+                local aceTimestamp = 0
+                local globalTimestamp = 0
+                
+                if _G["Phoenix_UIDB"].profiles[currentProfile] and _G["Phoenix_UIDB"].profiles[currentProfile].__updated then
+                    aceTimestamp = _G["Phoenix_UIDB"].profiles[currentProfile].__updated
+                end
+                
+                if _G["Phoenix_UIDB"].profiles[globalProfile] and _G["Phoenix_UIDB"].profiles[globalProfile].__updated then
+                    globalTimestamp = _G["Phoenix_UIDB"].profiles[globalProfile].__updated
+                end
+                
+                -- Use the more recently updated profile
+                if globalTimestamp > aceTimestamp then
+                    useAceProfile = false
+                end
+            elseif globalProfileUpdated and not aceProfileUpdated then
+                -- Only global profile exists
+                useAceProfile = false
+            end
+            
+            -- Apply the decision
+            if useAceProfile then
+                -- Update global profileKeys to match AceDB
+                _G["Phoenix_UIDB"].profileKeys[playerKey] = currentProfile
                 
                 if debug then
-                    print("Phoenix_UI: Created missing profile in global table: " .. currentProfile)
+                    print("Phoenix_UI: Updated global profileKeys to " .. currentProfile)
+                end
+            else
+                -- Switch AceDB to match global profileKeys
+                if self.db and self.db.SetProfile then
+                    -- Use AceDB method to switch profiles
+                    pcall(function() self.db:SetProfile(globalProfile) end)
+                    
+                    -- Update current profile reference
+                    currentProfile = globalProfile
+                    
+                    if debug then
+                        print("Phoenix_UI: Switched AceDB profile to " .. globalProfile)
+                    end
+                else
+                    -- Fallback - update global to match AceDB
+                    _G["Phoenix_UIDB"].profileKeys[playerKey] = currentProfile
+                    
+                    if debug then
+                        print("Phoenix_UI: Updated global profileKeys to match AceDB (fallback)")
+                    end
+                end
+            end
+        else
+            -- Profiles match or global profile doesn't exist - update global to be sure
+            _G["Phoenix_UIDB"].profileKeys[playerKey] = currentProfile
+        end
+        
+        -- ENHANCED: Ensure we have profiles table in global DB
+        if not _G["Phoenix_UIDB"].profiles then
+            _G["Phoenix_UIDB"].profiles = {}
+        end
+        
+        -- ENHANCED: Ensure current profile exists in global DB
+        if not _G["Phoenix_UIDB"].profiles[currentProfile] then
+            _G["Phoenix_UIDB"].profiles[currentProfile] = {}
+            
+            if debug then
+                print("Phoenix_UI: Created missing profile in global DB: " .. currentProfile)
+            end
+        end
+        
+        -- ENHANCED: Sync settings from AceDB to global DB if we have any
+        if self.db and self.db.profile and next(self.db.profile) ~= nil then
+            -- Critical modules to synchronize
+            local criticalModules = {
+                "general", "nameplates", "actionbars", "castbars", "buffs", "msbt", "idtip",
+                "tooltip", "map", "chat", "misc", "uiscaling", "fonts", "unitframes"
+            }
+            
+            for _, moduleName in ipairs(criticalModules) do
+                if self.db.profile[moduleName] and type(self.db.profile[moduleName]) == "table" then
+                    -- Update global DB with current settings
+                    _G["Phoenix_UIDB"].profiles[currentProfile][moduleName] = CopyTable(self.db.profile[moduleName])
+                    
+                    if debug then
+                        print("Phoenix_UI: Synced " .. moduleName .. " to global DB")
+                    end
                 end
             end
             
-            -- Set metadata
-            _G["Phoenix_UIDB"].__currentProfile = currentProfile
-            _G["Phoenix_UIDB"].__profileFixed = GetTime()
-            
-            -- Force a save to ensure the fix persists
-            self:ForceSettingsSave()
+            -- Update timestamp
+            _G["Phoenix_UIDB"].profiles[currentProfile].__updated = GetTime()
+            _G["Phoenix_UIDB"].profiles[currentProfile].__synced = true
         end
     end
     
-    -- Apply theme settings if needed
-    if self.ApplyTheme and self.db and self.db.profile and self.db.profile.general and self.db.profile.general.theme then
-        local themeName = self.db.profile.general.theme
-        self:ApplyTheme(themeName)
-        
-        if debug then
-            print("Phoenix_UI: Applied theme: " .. tostring(themeName))
+    -- ENHANCED: Apply theme settings if needed
+    if self.db and self.db.profile and self.db.profile.general and self.db.profile.general.theme then
+        -- Call ApplyTheme function if it exists
+        if self.ApplyTheme then
+            pcall(function() self:ApplyTheme(self.db.profile.general.theme) end)
         end
     end
     
-    -- Synchronize settings between memory and saved variables
-    if self.SyncModuleSettings then
-        self:SyncModuleSettings()
-    end
-    
-    -- Verify data integrity with error handling
-    if self.VerifySavedVariables then
-        local success, error = pcall(function()
-            self:VerifySavedVariables()
-        end)
-        
-        if not success and debug then
-            print("Phoenix_UI: Error in VerifySavedVariables: " .. tostring(error))
+    -- ENHANCED: Apply font settings if needed
+    if self.db and self.db.profile and self.db.profile.fonts then
+        -- Call ApplyFontSettings function if it exists
+        if self.ApplyFontSettings then
+            pcall(function() self:ApplyFontSettings() end)
         end
     end
     
-    -- Apply UI scaling from profile
-    if self.db and self.db.profile and self.db.profile.uiscaling and self.db.profile.uiscaling.scale then
-        local scale = self.db.profile.uiscaling.scale
-        
-        -- Check for global scale apply function
-        if _G["Phoenix_UI_ApplyScale"] then
-            _G["Phoenix_UI_ApplyScale"](scale)
-            
-            if debug then
-                print("Phoenix_UI: Applied UI scale: " .. tostring(scale))
+    -- ENHANCED: Validate all settings to ensure they exist
+    self:ValidateSettings()
+    
+    -- Set up periodic autosave if not already running
+    if not self.autoSaveTimer then
+        self.autoSaveTimer = C_Timer.NewTicker(120, function() -- Save every 2 minutes
+            -- Only save if settings have changed
+            if self.settingsChanged then
+                self:SaveAllSettings()
+                self.settingsChanged = false
             end
-        end
-    end
-    
-    -- Show welcome message if this is first login
-    if not self.hasShownWelcome then
-        C_Timer.After(1, function()
-            print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Welcome to Phoenix_UI by VortexQ8, Type /pui to open panel")
         end)
-        self.hasShownWelcome = true
     end
     
-    return true
+    -- Mark initialization as complete
+    self.dataInitialized = true
 end

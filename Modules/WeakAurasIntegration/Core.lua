@@ -341,8 +341,120 @@ end
 
 -- Update WeakAuras templates
 function Module:UpdateTemplates()
-    -- This is where you would implement code to update WeakAuras templates
-    if Phoenix_UI.debug then
-        print("Phoenix UI: Updating WeakAuras templates")
+    local WA = _G.WeakAuras
+    if not WA then return end
+    
+    local db = Phoenix_UI.db.profile.weakauras
+    if not db.showTemplates then return end
+    
+    -- Create Phoenix UI template category if needed
+    if not WA.templates then
+        WA.templates = {}
     end
-end 
+    
+    -- Initialize our template category if it doesn't exist
+    if not WA.templates["Phoenix UI"] then
+        WA.templates["Phoenix UI"] = {
+            title = "|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r Templates",
+            description = "Custom WeakAuras templates optimized for Phoenix UI",
+            templates = {}
+        }
+    end
+    
+    -- Create our template collection
+    local phoenixTemplates = {
+        -- Class-specific templates
+        ClassResources = {
+            title = "Class Resources",
+            description = "Enhanced display of class-specific resources with Phoenix UI theme",
+            data = {
+                -- Base template properties
+                width = 64,
+                height = 64,
+                frameStrata = "HIGH",
+                xOffset = 0,
+                yOffset = 0,
+                -- Phoenix UI specific styling will be applied via ApplyThemeToRegion
+            }
+        },
+        
+        -- Cooldown tracking templates
+        CooldownTracker = {
+            title = "Cooldown Tracker",
+            description = "Track important spell cooldowns with Phoenix UI styling",
+            data = {
+                -- Base template properties
+                width = 48,
+                height = 48,
+                frameStrata = "MEDIUM",
+                cooldownTextEnabled = true,
+                -- Phoenix UI specific styling will be applied via ApplyThemeToRegion
+            }
+        },
+        
+        -- Buff/Debuff tracking templates
+        BuffTracker = {
+            title = "Buff Tracker",
+            description = "Track important buffs with Phoenix UI styling",
+            data = {
+                -- Base template properties
+                width = 40,
+                height = 40,
+                frameStrata = "MEDIUM",
+                -- Phoenix UI specific styling will be applied via ApplyThemeToRegion
+            }
+        },
+        
+        -- Combat notifications
+        CombatAlerts = {
+            title = "Combat Alerts",
+            description = "Important combat notifications with Phoenix UI styling",
+            data = {
+                -- Base template properties
+                width = 200,
+                height = 80,
+                frameStrata = "HIGH",
+                -- Phoenix UI specific styling will be applied via ApplyThemeToRegion
+            }
+        }
+    }
+    
+    -- Add templates to WeakAuras
+    for id, template in pairs(phoenixTemplates) do
+        -- Add Phoenix UI theme data to the template
+        template.data.phoenixUIThemed = true
+        
+        -- Apply Phoenix UI color scheme
+        local themeColor = Phoenix_UI.GetThemeColor and Phoenix_UI:GetThemeColor() or {r=1, g=0.5, b=0, a=1}
+        template.data.color = {
+            r = themeColor.r,
+            g = themeColor.g,
+            b = themeColor.b,
+            a = themeColor.a
+        }
+        
+        -- Set font to Phoenix UI font
+        local fontFamily = Phoenix_UI.GetFontFamily and Phoenix_UI:GetFontFamily() or "Interface\\AddOns\\Phoenix_UI\\Media\\Fonts\\Expressway.ttf"
+        template.data.font = fontFamily
+        
+        -- Add template to WeakAuras
+        WA.templates["Phoenix UI"].templates[id] = template
+    end
+    
+    -- Add template creation hook to ensure our theme is applied
+    if not self.templateHooked and WA.CreateTemplateView then
+        local originalCreateTemplateView = WA.CreateTemplateView
+        WA.CreateTemplateView = function(...)
+            local region = originalCreateTemplateView(...)
+            if region and region.data and region.data.phoenixUIThemed then
+                self:ApplyThemeToRegion(region)
+            end
+            return region
+        end
+        self.templateHooked = true
+    end
+    
+    if Phoenix_UI.debug then
+        print("Phoenix UI: WeakAuras templates updated successfully")
+    end
+end

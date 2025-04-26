@@ -8,40 +8,94 @@ function Phoenix_UI:ForceSettingsSave()
         print("Phoenix_UI: ForceSettingsSave called")
     end
     
+    -- Status reporting variables
+    local success = true
+    local steps_completed = 0
+    
     -- First commit any pending changes
     if self.CommitPendingChanges then
-        self:CommitPendingChanges()
+        local status = pcall(function() self:CommitPendingChanges() end)
+        success = success and status
+        if status then steps_completed = steps_completed + 1 end
+        if debug then print("Phoenix_UI: CommitPendingChanges: " .. (status and "Success" or "Failed")) end
     end
     
     -- Then save all settings
     if self.SaveAllSettings then
-        self:SaveAllSettings()
+        local status = pcall(function() self:SaveAllSettings() end)
+        success = success and status
+        if status then steps_completed = steps_completed + 1 end
+        if debug then print("Phoenix_UI: SaveAllSettings: " .. (status and "Success" or "Failed")) end
     end
     
     -- Also save tab settings specifically
     if self.SaveAllTabSettings then
-        self:SaveAllTabSettings()
+        local status = pcall(function() self:SaveAllTabSettings() end)
+        success = success and status
+        if status then steps_completed = steps_completed + 1 end
+        if debug then print("Phoenix_UI: SaveAllTabSettings: " .. (status and "Success" or "Failed")) end
     end
     
     -- Ensure we synchronize between databases
     if self.SyncModuleSettings then
-        self:SyncModuleSettings(true)
+        local status = pcall(function() self:SyncModuleSettings(true) end)
+        success = success and status
+        if status then steps_completed = steps_completed + 1 end
+        if debug then print("Phoenix_UI: SyncModuleSettings: " .. (status and "Success" or "Failed")) end
     end
     
-    -- Force flush to disk
-    pcall(function()
-        if FlushSettingsDB then
-            FlushSettingsDB()
-        elseif FlushSavedVariables then
-            FlushSavedVariables()
+    -- Direct update of global savedvariables
+    local directSaveStatus = pcall(function()
+        if self.db and self.db.profile then
+            local currentProfile = self.db.keys and self.db.keys.profile or "Default"
+            
+            -- Ensure _G["Phoenix_UIDB"] exists
+            if not _G["Phoenix_UIDB"] then
+                _G["Phoenix_UIDB"] = {}
+            end
+            
+            -- Ensure profiles table exists
+            _G["Phoenix_UIDB"].profiles = _G["Phoenix_UIDB"].profiles or {}
+            _G["Phoenix_UIDB"].profiles[currentProfile] = _G["Phoenix_UIDB"].profiles[currentProfile] or {}
+            
+            -- Copy each module's settings
+            for moduleName, moduleData in pairs(self.db.profile) do
+                if type(moduleData) == "table" then
+                    _G["Phoenix_UIDB"].profiles[currentProfile][moduleName] = CopyTable(moduleData)
+                end
+            end
         end
     end)
+    success = success and directSaveStatus
+    if directSaveStatus then steps_completed = steps_completed + 1 end
+    if debug then print("Phoenix_UI: Direct SaveVar Update: " .. (directSaveStatus and "Success" or "Failed")) end
     
+    -- Force flush to disk using multiple methods for redundancy
+    local flushStatus = pcall(function()
+        if FlushSettingsDB then
+            FlushSettingsDB()
+        end
+        if FlushSavedVariables then
+            FlushSavedVariables()
+        end
+        -- Attempt to force the game client to save
+        if SaveVariables then
+            SaveVariables("Phoenix_UIDB")
+        end
+    end)
+    success = success and flushStatus
+    if flushStatus then steps_completed = steps_completed + 1 end
+    if debug then print("Phoenix_UI: Flush to Disk: " .. (flushStatus and "Success" or "Failed")) end
+    
+    -- Final status message
     if debug then
-        print("Phoenix_UI: ForceSettingsSave completed")
+        print("Phoenix_UI: ForceSettingsSave completed with " .. steps_completed .. " steps successful")
     end
     
-    return true
+    -- Fire saved event for any listeners
+    self:SendMessage("PHOENIX_UI_SETTINGS_SAVED")
+    
+    return success
 end 
 
 -- Function to diagnose profile issues

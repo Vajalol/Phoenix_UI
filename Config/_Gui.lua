@@ -3139,42 +3139,155 @@ Phoenix_UI.RecalculateScrollFrames = function()
     -- Loop through all tab panels
     if not Phoenix_UI.panels then return end
     
-    for _, panel in pairs(Phoenix_UI.panels) do
+    for panelID, panel in pairs(Phoenix_UI.panels) do
         -- Check if this panel has a valid scroll child
         if panel and panel.scrollChild then
-            local scrollFrame = panel:GetParent()
-            if scrollFrame and scrollFrame.ScrollBar then
-                -- Get content height by finding the lowest element
-                local contentHeight = 0
-                
-                -- Find all child elements
-                if panel.scrollChild.elements then
-                    for _, element in pairs(panel.scrollChild.elements) do
-                        if element and element:IsShown() then
-                            local _, elementBottom = element:GetBounds()
-                            if elementBottom and elementBottom > contentHeight then
-                                contentHeight = elementBottom
+            -- Direct method for panels with their own UpdateScrollChildHeight
+            if panel.UpdateScrollChildHeight then
+                -- Use the built-in height calculation
+                panel:UpdateScrollChildHeight()
+            else
+                -- Manual calculation for panels without their own method
+                local scrollFrame = panel:GetParent()
+                if scrollFrame and scrollFrame.ScrollBar then
+                    -- Get content height by finding the lowest element
+                    local contentHeight = 0
+                    
+                    -- Look for specialized ScrollTable elements first
+                    local hasScrollTable = false
+                    
+                    if panel.scrollChild.elements then
+                        for _, element in pairs(panel.scrollChild.elements) do
+                            -- Check for ScrollTable (has rows and special properties)
+                            if element.rowHeight and element.numberOfRows then
+                                hasScrollTable = true
+                                -- Calculate a minimum height for the table
+                                local tableHeight = (element.rowHeight * element.numberOfRows) + 150
+                                if tableHeight > contentHeight then
+                                    contentHeight = tableHeight
+                                end
                             end
                         end
                     end
+                    
+                    -- If not a ScrollTable, do regular element height calculation
+                    if not hasScrollTable and panel.scrollChild.elements then
+                        for _, element in pairs(panel.scrollChild.elements) do
+                            if element and element:IsShown() then
+                                -- Try multiple methods to get bottom position
+                                local elementBottom = 0
+                                
+                                -- Method 1: GetBounds if available
+                                if element.GetBounds then
+                                    local _, bottom = element:GetBounds()
+                                    if bottom and bottom > 0 then
+                                        elementBottom = bottom
+                                    end
+                                end
+                                
+                                -- Method 2: Fallback to position + height
+                                if elementBottom == 0 and element:GetPoint(1) then
+                                    local _, _, _, _, y = element:GetPoint(1)
+                                    if y and type(y) == "number" then
+                                        elementBottom = math.abs(y) + (element:GetHeight() or 0)
+                                    end
+                                end
+                                
+                                -- Method 3: Try child elements recursively
+                                if elementBottom == 0 then
+                                    for i = 1, element:GetNumChildren() do
+                                        local child = select(i, element:GetChildren())
+                                        if child and child:IsShown() and child:GetPoint(1) then
+                                            local _, _, _, _, y = child:GetPoint(1)
+                                            if y and type(y) == "number" then
+                                                local childBottom = math.abs(y) + (child:GetHeight() or 0)
+                                                if childBottom > elementBottom then
+                                                    elementBottom = childBottom
+                                                end
+                                            end
+                                        end
+                                    end
+                                end
+                                
+                                -- Update total height
+                                if elementBottom > 0 and elementBottom > contentHeight then
+                                    contentHeight = elementBottom
+                                end
+                            end
+                        end
+                    end
+                    
+                    -- Add generous padding based on panel type
+                    local padding = 300
+                    
+                    -- Adjust padding for tabs with more complex UIs
+                    local complexTabs = {
+                        ["chat"] = true,
+                        ["msbt"] = true,
+                        ["WeakAurasIntegration"] = true,
+                        ["unitframes"] = true,
+                        ["nameplates"] = true
+                    }
+                    
+                    if complexTabs[panelID] then
+                        padding = 600  -- More padding for complex UIs
+                    end
+                    
+                    -- Add the extra padding
+                    contentHeight = contentHeight + padding
+                    
+                    -- Ensure minimum height
+                    contentHeight = math.max(contentHeight, scrollFrame:GetHeight() * 3)
+                    
+                    -- Set the scroll child's height
+                    panel.scrollChild:SetHeight(contentHeight)
+                    
+                    -- Force update scrollbar range
+                    scrollFrame:UpdateScrollChildRect()
+                    
+                    -- Update the scroll child height again to ensure it propagates
+                    if scrollFrame:GetScrollChild() then
+                        scrollFrame:GetScrollChild():SetHeight(contentHeight)
+                    end
+                    
+                    -- Update scrollbar values
+                    if scrollFrame.ScrollBar then
+                        scrollFrame.ScrollBar:SetMinMaxValues(0, math.max(0, contentHeight - scrollFrame:GetHeight()))
+                        
+                        -- Ensure scroll bar is shown if needed
+                        if contentHeight > scrollFrame:GetHeight() then
+                            scrollFrame.ScrollBar:Show()
+                        else
+                            scrollFrame.ScrollBar:Hide()
+                        end
+                    end
                 end
-                
-                -- Add padding to ensure we can scroll all the way
-                contentHeight = contentHeight + 50
-                
-                -- Set the scroll child's height
-                panel.scrollChild:SetHeight(contentHeight)
-                
-                -- Force update scrollbar range
-                scrollFrame:UpdateScrollChildRect()
-                scrollFrame:GetScrollChild():SetHeight(contentHeight)
-                scrollFrame.ScrollBar:SetMinMaxValues(0, math.max(0, contentHeight - scrollFrame:GetHeight()))
-                
-                -- Ensure scroll bar is shown if needed
-                if contentHeight > scrollFrame:GetHeight() then
-                    scrollFrame.ScrollBar:Show()
-                else
-                    scrollFrame.ScrollBar:Hide()
+            end
+        end
+    end
+    
+    -- Also handle the AceConfigDialog-3.0 frames which might be used for some panels
+    if LibStub and LibStub("AceConfigDialog-3.0", true) then
+        local ACD = LibStub("AceConfigDialog-3.0")
+        if ACD and ACD.frame and ACD.frame.obj and ACD.frame.obj.children then
+            for _, child in pairs(ACD.frame.obj.children) do
+                if child and child.scrollframe then
+                    -- Handle Ace scroll frames
+                    local scrollframe = child.scrollframe
+                    local content = scrollframe.content
+                    
+                    if content and scrollframe:GetHeight() then
+                        -- Set a generous height for Ace panels
+                        local scrollHeight = scrollframe:GetHeight() * 5
+                        
+                        -- Apply the height
+                        content:SetHeight(scrollHeight)
+                        
+                        -- Update the scroll child
+                        if scrollframe.Update then
+                            scrollframe:Update()
+                        end
+                    end
                 end
             end
         end
@@ -3182,13 +3295,20 @@ Phoenix_UI.RecalculateScrollFrames = function()
 end
 
 -- Hook panel display to recalculate scroll extents
-Phoenix_UIConfig.DisplayPanel = Phoenix_UIConfig.DisplayPanel or function() end
-local originalDisplayPanel = Phoenix_UIConfig.DisplayPanel
+local originalDisplayPanel = Phoenix_UIConfig.DisplayPanel or function() end
 Phoenix_UIConfig.DisplayPanel = function(self, id, ...)
     local result = originalDisplayPanel(self, id, ...)
     
     -- Schedule recalculation to ensure all elements are properly rendered
+    -- Use multiple timers at different delays for reliability
     C_Timer.After(0.1, function()
+        if Phoenix_UI.RecalculateScrollFrames then
+            Phoenix_UI.RecalculateScrollFrames()
+        end
+    end)
+    
+    -- Additional refresh after a longer delay to catch late-loading elements
+    C_Timer.After(0.5, function()
         if Phoenix_UI.RecalculateScrollFrames then
             Phoenix_UI.RecalculateScrollFrames()
         end
@@ -3203,3 +3323,15 @@ C_Timer.After(0.5, function()
         Phoenix_UI.RecalculateScrollFrames()
     end
 end)
+
+-- Add a slash command to force refresh scrolling if needed
+SLASH_PHOENIXSCROLL1 = "/phoenixscroll"
+SlashCmdList["PHOENIXSCROLL"] = function()
+    print("Phoenix UI: Recalculating all scroll frames...")
+    if Phoenix_UI.RecalculateScrollFrames then
+        Phoenix_UI.RecalculateScrollFrames()
+        print("Phoenix UI: Scroll recalculation complete!")
+    else
+        print("Phoenix UI: RecalculateScrollFrames function not found!")
+    end
+end
