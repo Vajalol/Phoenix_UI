@@ -106,7 +106,8 @@ function Layout:OnEnable()
                     },
                     initialValue = 1,
                     column = 5,
-                    order = 1
+                    order = 1,
+                    onChange = nameplateSettingChanged
                 },
                 texture = {
                     key = 'texture',
@@ -114,7 +115,8 @@ function Layout:OnEnable()
                     label = 'Texture',
                     options = Textures.data,
                     column = 5,
-                    order = 2
+                    order = 2,
+                    onChange = nameplateSettingChanged
                 }
             },
             {
@@ -129,7 +131,8 @@ function Layout:OnEnable()
                     },
                     initialValue = 1,
                     column = 4,
-                    order = 1
+                    order = 1,
+                    onChange = nameplateSettingChanged
                 },
                 height = {
                     key = 'height',
@@ -140,7 +143,8 @@ function Layout:OnEnable()
                     max = 5,
                     initialValue = 2,
                     column = 3,
-                    order = 2
+                    order = 2,
+                    onChange = nameplateSettingChanged
                 },
                 width = {
                     key = 'width',
@@ -151,7 +155,8 @@ function Layout:OnEnable()
                     max = 5,
                     initialValue = 3,
                     column = 3,
-                    order = 3
+                    order = 3,
+                    onChange = nameplateSettingChanged
                 },
             },
             {
@@ -167,7 +172,8 @@ function Layout:OnEnable()
                     label = 'Health Text',
                     tooltip = 'Shows the health percentage in the nameplate',
                     column = 4,
-                    order = 1
+                    order = 1,
+                    onChange = nameplateSettingChanged
                 },
                 color = {
                     key = 'color',
@@ -175,7 +181,8 @@ function Layout:OnEnable()
                     label = 'Classcolor Playernames',
                     tooltip = 'Show Playernames in their class color',
                     column = 4,
-                    order = 2
+                    order = 2,
+                    onChange = nameplateSettingChanged
                 },
                 server = {
                     key = 'server',
@@ -183,7 +190,8 @@ function Layout:OnEnable()
                     label = 'Hide Servername',
                     tooltip = 'Hide servernames entirely on nameplates',
                     column = 4,
-                    order = 3
+                    order = 3,
+                    onChange = nameplateSettingChanged
                 },
             },
             {
@@ -193,7 +201,8 @@ function Layout:OnEnable()
                     label = 'Arena Nameplate',
                     tooltip = 'Shows Arena number over Nameplate',
                     column = 4,
-                    order = 1
+                    order = 1,
+                    onChange = nameplateSettingChanged
                 },
                 totemicons = {
                     key = 'totemicons',
@@ -201,7 +210,8 @@ function Layout:OnEnable()
                     label = 'Totem Icons',
                     tooltip = 'Shows Totem icons on Nameplate',
                     column = 4,
-                    order = 2
+                    order = 2,
+                    onChange = nameplateSettingChanged
                 },
                 casttime = {
                     key = 'casttime',
@@ -209,7 +219,8 @@ function Layout:OnEnable()
                     label = 'Cast Time',
                     tooltip = 'Show cast time below the cast icon',
                     column = 4,
-                    order = 3
+                    order = 3,
+                    onChange = nameplateSettingChanged
                 },
             },
             {
@@ -219,7 +230,8 @@ function Layout:OnEnable()
                     label = 'Focus Highlight',
                     tooltip = 'Highlight Focus Target (different Texture)',
                     column = 4,
-                    order = 1
+                    order = 1,
+                    onChange = nameplateSettingChanged
                 },
                 debuffs = {
                     key = 'debuffs',
@@ -227,7 +239,8 @@ function Layout:OnEnable()
                     label = 'Hide Debuffs',
                     tooltip = 'Hides your own debuffs above of the nameplates',
                     column = 4,
-                    order = 2
+                    order = 2,
+                    onChange = nameplateSettingChanged
                 },
                 stackingmode = {
                     key = 'stackingmode',
@@ -235,7 +248,8 @@ function Layout:OnEnable()
                     label = 'Smart Stacking Mode',
                     tooltip = 'Enabled = Smart Stacking Mode / Disabled = Overlapping Nameplates',
                     column = 4,
-                    order = 3
+                    order = 3,
+                    onChange = nameplateSettingChanged
                 },
             },
             {
@@ -251,7 +265,8 @@ function Layout:OnEnable()
                     label = 'NPC Colors',
                     tooltip = 'Enable/Disable NPC Colors for important NPCs',
                     column = 4,
-                    order = 1
+                    order = 1,
+                    onChange = nameplateSettingChanged
                 },
                 npccolors = {
                     type = 'button',
@@ -266,6 +281,32 @@ function Layout:OnEnable()
             },
         },
     }
+end
+
+-- Add a refresh method to update controls with current values
+function Layout:Refresh()
+    if not self.layout or not self.layout.rows then return end
+    
+    -- Get the config tabs
+    local config = Phoenix_UI.UI
+    if not config or not config.elements then return end
+    
+    -- Force the Nameplates tab to update with current database values
+    local db = Phoenix_UI.db
+    if db and db.profile and db.profile.nameplates then
+        -- Update our local database reference
+        self.layout.database = db.profile.nameplates
+        
+        -- Force a full rebuild if needed
+        if config.RefreshConfig then
+            config:RefreshConfig()
+        end
+    end
+    
+    -- Force all settings to be saved
+    if Phoenix_UI.ForceSaveDB then
+        Phoenix_UI:ForceSaveDB()
+    end
 end
 
 

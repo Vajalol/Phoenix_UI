@@ -825,6 +825,12 @@
         "PetBattlePrimaryAbilityTooltip",
         "UIFrameFlash",
         "STANDARD_TEXT_FONT",
-        "ChatFrame_RemoveMessageEventFilter"
+        "ChatFrame_RemoveMessageEventFilter",
+        "COMBATLOG_OBJECT_AFFILIATION_MINE",
+        "COMBATLOG_OBJECT_REACTION_FRIENDLY",
+        "COMBATLOG_OBJECT_TYPE_PET",
+        "ZoneTextFrame",
+        "ZoneTextString",
+        "PVPInfoTextString"
     ]
 }

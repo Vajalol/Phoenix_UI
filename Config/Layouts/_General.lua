@@ -159,6 +159,32 @@ function Layout:OnEnable()
             {
                 header = {
                     type = 'header',
+                    label = 'Modules'
+                },
+            },
+            {
+                spellNotifications = {
+                    key = 'spellNotifications',
+                    type = 'checkbox',
+                    label = 'Spell Notifications',
+                    tooltip = 'Enable/disable spell notifications (dispels, interrupts, reflects, etc.)',
+                    column = 3,
+                    order = 1,
+                    initialValue = true,
+                    onChange = function(element, value)
+                        generalSettingChanged(element, value)
+                        -- Initialize or disable SpellNotifications based on the setting
+                        if value then
+                            if SpellNotifications and SpellNotifications.Initialize then
+                                SpellNotifications:Initialize()
+                            end
+                        end
+                    end
+                }
+            },
+            {
+                header = {
+                    type = 'header',
                     label = 'Automation'
                 },
             },

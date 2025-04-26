@@ -13,6 +13,7 @@
   <Script file="_Sell.lua"/>
   <Script file="_StackBuy.lua"/>
   <Script file="_Stats.lua"/>
+  <Script file="_StatsVisuals.lua"/>
   <Script file="_AfkCam.lua"/>
   <Script file="_AutoInvite.lua"/>
   <Script file="_Editmode.lua"/>

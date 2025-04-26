@@ -2954,9 +2954,10 @@ function Phoenix_UI:RepairSettings()
         local factoryDefaults = {
             general = {
                 enabled = true,
-                theme = "PhoenixFlame",
+                theme = "Dark",
                 font = "Friz Quadrata TT",
                 scale = 1.0,
+                spellNotifications = true,
                 __factory_default = true
             },
             nameplates = {

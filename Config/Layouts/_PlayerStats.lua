@@ -308,6 +308,97 @@ function Layout:OnEnable()
                     column = 12,
                     order = 1
                 }
+            },
+            {
+                visualEnhancement = {
+                    type = "group",
+                    name = "Visual Effects",
+                    order = 7,
+                    args = {
+                        enableVisuals = {
+                            type = "toggle",
+                            name = "Enable Visual Enhancements",
+                            desc = "Enable visual effects for the player stats panel",
+                            width = "full",
+                            get = function()
+                                return db.profile.general.playerStats and db.profile.general.playerStats.visualEffects ~= false
+                            end,
+                            set = function(info, value)
+                                if not db.profile.general.playerStats then
+                                    db.profile.general.playerStats = {}
+                                end
+                                db.profile.general.playerStats.visualEffects = value
+                                
+                                -- Apply the change immediately
+                                local visualsModule = Phoenix_UI:GetModule("General.StatsVisuals", true)
+                                if visualsModule and value == false then
+                                    -- Turn off effects if disabled
+                                    local statsFrame = _G.Phoenix_PlayerStatsFrame
+                                    if statsFrame and statsFrame.visualElements then
+                                        if statsFrame.visualElements.emberAnim then statsFrame.visualElements.emberAnim:Stop() end
+                                        if statsFrame.visualElements.flameAnim then statsFrame.visualElements.flameAnim:Stop() end
+                                        if statsFrame.animatedBorder and statsFrame.animatedBorder.glowAnim then 
+                                            statsFrame.animatedBorder.glowAnim:Stop() 
+                                        end
+                                        if statsFrame.titleEnhancement and statsFrame.titleEnhancement.anim then 
+                                            statsFrame.titleEnhancement.anim:Stop() 
+                                        end
+                                        if statsFrame.particleSystem then
+                                            visualsModule:SetParticleEffectLevel(0)
+                                        end
+                                    end
+                                elseif visualsModule and value == true then
+                                    -- Re-enable effects
+                                    local statsFrame = _G.Phoenix_PlayerStatsFrame
+                                    if statsFrame and statsFrame.visualElements then
+                                        if statsFrame.visualElements.emberAnim then statsFrame.visualElements.emberAnim:Play() end
+                                        if statsFrame.visualElements.flameAnim then statsFrame.visualElements.flameAnim:Play() end
+                                        if statsFrame.animatedBorder and statsFrame.animatedBorder.glowAnim then 
+                                            statsFrame.animatedBorder.glowAnim:Play() 
+                                        end
+                                        if statsFrame.titleEnhancement and statsFrame.titleEnhancement.anim then 
+                                            statsFrame.titleEnhancement.anim:Play() 
+                                        end
+                                        if statsFrame.particleSystem then
+                                            visualsModule:SetParticleEffectLevel(2)
+                                        end
+                                    end
+                                end
+                            end,
+                            order = 1
+                        },
+                        effectLevel = {
+                            type = "select",
+                            name = "Effect Level",
+                            desc = "Choose the level of visual effects (higher levels may affect performance)",
+                            values = {
+                                [1] = "Low",
+                                [2] = "Medium",
+                                [3] = "High"
+                            },
+                            get = function()
+                                return db.profile.general.playerStats and db.profile.general.playerStats.effectLevel or 2
+                            end,
+                            set = function(info, value)
+                                if not db.profile.general.playerStats then
+                                    db.profile.general.playerStats = {}
+                                end
+                                db.profile.general.playerStats.effectLevel = value
+                                
+                                -- Apply particle effect level immediately
+                                local visualsModule = Phoenix_UI:GetModule("General.StatsVisuals", true)
+                                if visualsModule then
+                                    visualsModule:SetParticleEffectLevel(value)
+                                end
+                            end,
+                            disabled = function()
+                                return not (db.profile.general.playerStats and db.profile.general.playerStats.visualEffects ~= false)
+                            end,
+                            width = "full",
+                            order = 2
+                        }
+                    }
+                }
             }
         }
     }
