@@ -1,5 +1,7 @@
 local Module = Phoenix_UI:NewModule("RaidFrames.Core");
 
+--- @class RaidFramesModule
+--- @field OnEnable function
 function Module:OnEnable()
 	local db = Phoenix_UI.db.profile.raidframes
 	if db then
@@ -9,6 +11,29 @@ function Module:OnEnable()
 		-- Fallback texture if the custom one doesn't exist
 		local defaultTexture = "Interface\\AddOns\\Phoenix_UI\\Media\\Textures\\UI-StatusBar"
 		local raidBarTexture = "Interface\\AddOns\\Phoenix_UI\\Media\\Textures\\RaidFrames\\Raid-Bar-Hp-Fill"
+
+		-- Create a frame to handle changes after combat
+		local CombatQueue = CreateFrame("Frame")
+		CombatQueue.frames = {}
+
+		-- Add function to queue a frame for updates after combat
+		local function QueueFrameForUpdate(frame)
+			if not frame or frame:IsForbidden() then return end
+			if not frame:GetName() then return end
+			
+			-- Store the frame in our queue if not already there
+			local name = frame:GetName()
+			if name then
+				-- Store dimensions as attributes which can be read during combat
+				frame:SetAttribute("phoenix_width", db.width)
+				frame:SetAttribute("phoenix_height", db.height)
+				
+				-- Add to queue if not already included
+				if not CombatQueue.frames[name] then
+					CombatQueue.frames[name] = frame
+				end
+			end
+		end
 
 		local function updateTextures(self)
 			if self:IsForbidden() then return end
@@ -65,7 +90,10 @@ function Module:OnEnable()
 							self.horizDivider:SetVertexColor(.3, .3, .3)
 							for _, region in pairs({ CompactPartyFrameBorderFrame:GetRegions() }) do
 								if region:IsObjectType("Texture") then
-									region:SetVertexColor(unpack(Phoenix_UI:Color(0.15)))
+									local r, g, b, a = Phoenix_UI:Color()
+									if type(r) == "number" then
+										region:SetVertexColor(r * 0.15, g * 0.15, b * 0.15, a)
+									end
 								end
 							end
 						end
@@ -75,52 +103,24 @@ function Module:OnEnable()
 					self.vertRightBorder:Hide()
 					self.horizTopBorder:Hide()
 					self.horizBottomBorder:Hide()
-				end
-			end
-		end
-
-		hooksecurefunc("CompactUnitFrame_UpdateAll", function(self)
-			updateTextures(self)
-		end)
-
-		-- Create a frame to handle changes after combat
-		local CombatQueue = CreateFrame("Frame")
-		CombatQueue.frames = {}
-
-		-- Add function to queue a frame for updates after combat
-		local function QueueFrameForUpdate(frame)
-			if not frame or frame:IsForbidden() then return end
-			if not frame:GetName() then return end
-			
-			-- Store the frame in our queue if not already there
-			local name = frame:GetName()
-			if name then
-				-- Store dimensions as attributes which can be read during combat
-				frame:SetAttribute("phoenix_width", db.width)
-				frame:SetAttribute("phoenix_height", db.height)
-				
-				-- Add to queue if not already included
-				if not CombatQueue.frames[name] then
-					CombatQueue.frames[name] = frame
-				end
-			end
-		end
-
-		-- Register events for combat tracking
-		CombatQueue:RegisterEvent("PLAYER_REGEN_ENABLED")
-		CombatQueue:SetScript("OnEvent", function(self, event)
-			if event == "PLAYER_REGEN_ENABLED" then
-				-- Process all queued frames
-				for name, frame in pairs(self.frames) do
-					if frame and not frame:IsForbidden() then
-						updateSize(frame)
+					
+					-- Apply debuff highlighting if enabled
+					if db.enableDebuffHighlight and self.dispelDebuffFrames then
+						for _, debuffFrame in pairs(self.dispelDebuffFrames) do
+							if debuffFrame then
+								-- Set border texture for debuff highlight
+								local border = debuffFrame:GetParent() and debuffFrame:GetParent().healthBar and debuffFrame:GetParent().healthBar.border
+								if border then
+									border:SetTexture("Interface\\AddOns\\Phoenix_UI\\Media\\Textures\\RaidFrames\\Raid-Border-Highlight")
+								end
+							end
+						end
 					end
 				end
-				-- Clear the queue
-				wipe(self.frames)
 			end
-		end)
+		end
 
+		-- Define updateSize function before it's used
 		local function updateSize(self)
 			-- Check if frame is forbidden or we're in combat - both situations prevent modifications
 			if self:IsForbidden() or InCombatLockdown() then
@@ -198,191 +198,24 @@ function Module:OnEnable()
 			end
 		end
 
-		-- Hide Titles only when not in combat
-		if not InCombatLockdown() and CompactPartyFrameTitle then
-			CompactPartyFrameTitle:Hide()
-		end
+		hooksecurefunc("CompactUnitFrame_UpdateAll", function(self)
+			updateTextures(self)
+		end)
 
-		-- Update PartyFrame Size
-		if (db.size) then
-			local frameResizer = CreateFrame("Frame", "Phoenix_RaidFrameResizer")
-			local pendingUpdates = {}
-			local combatStatus = false
-			
-			-- Create a table to store original frame references before they might get updated
-			local partyFrameCache = {}
-			
-			-- Initialize party frame references when safe
-			local function cacheFrameReferences()
-				if InCombatLockdown() then return end
-				
-				partyFrameCache = {
-					CompactPartyFrameMember1,
-					CompactPartyFrameMember2,
-					CompactPartyFrameMember3,
-					CompactPartyFrameMember4,
-					CompactPartyFrameMember5
-				}
-				
-				-- Pre-emptively set attributes on these frames (will be used when frames are created/refreshed)
-				for i = 1, #partyFrameCache do
-					if partyFrameCache[i] then
-						-- Store desired dimensions as attributes
-						partyFrameCache[i]:SetAttribute("phoenix_width", db.width)
-						partyFrameCache[i]:SetAttribute("phoenix_height", db.height)
-					end
-				end
-			end
-			
-			-- Perform actual updates only when completely safe
-			local function performPendingUpdates()
-				if InCombatLockdown() then return end
-				
-				for frame, _ in pairs(pendingUpdates) do
-					if frame and not frame:IsForbidden() and frame:GetName() then
+		-- Register events for combat tracking
+		CombatQueue:RegisterEvent("PLAYER_REGEN_ENABLED")
+		CombatQueue:SetScript("OnEvent", function(self, event)
+			if event == "PLAYER_REGEN_ENABLED" then
+				-- Process all queued frames
+				for name, frame in pairs(self.frames) do
+					if frame and not frame:IsForbidden() then
 						updateSize(frame)
 					end
 				end
-				
-				wipe(pendingUpdates)
-				
-				-- Refresh the cache after updates
-				cacheFrameReferences()
+				-- Clear the queue
+				wipe(self.frames)
 			end
-			
-			-- Intercept frame creation if possible, before any combat starts
-			-- Use the most defensive approach possible
-			hooksecurefunc("CompactUnitFrame_SetUpFrame", function(frame)
-				if InCombatLockdown() then return end
-				if not frame or frame:IsForbidden() then return end
-				
-				local name = frame:GetName()
-				if name and name:match("^CompactPartyFrameMember") then
-					-- Store desired dimensions as attributes
-					frame:SetAttribute("phoenix_width", db.width)
-					frame:SetAttribute("phoenix_height", db.height)
-					
-					-- Only attempt to set size when completely safe
-					if not InCombatLockdown() then
-						pcall(function()
-							frame:SetWidth(db.width)
-							frame:SetHeight(db.height)
-						end)
-					else
-						pendingUpdates[frame] = true
-					end
-				end
-			end)
-			
-			-- Register essential events
-			frameResizer:RegisterEvent("PLAYER_REGEN_DISABLED")
-			frameResizer:RegisterEvent("PLAYER_REGEN_ENABLED")
-			frameResizer:RegisterEvent("PLAYER_ENTERING_WORLD")
-			frameResizer:RegisterEvent("GROUP_ROSTER_UPDATE")
-			
-			frameResizer:SetScript("OnEvent", function(_, event)
-				if event == "PLAYER_REGEN_DISABLED" then
-					-- Combat started
-					combatStatus = true
-					-- Don't try to make any changes, just exit
-				elseif event == "PLAYER_REGEN_ENABLED" then
-					-- Combat ended
-					combatStatus = false
-					-- Wait a moment before processing updates to ensure combat state is stable
-					C_Timer.After(0.5, function()
-						if not InCombatLockdown() then
-							performPendingUpdates()
-						end
-					end)
-				elseif event == "PLAYER_ENTERING_WORLD" then
-					C_Timer.After(2, function()
-						-- Wait for frames to be fully loaded
-						combatStatus = InCombatLockdown()
-						if not combatStatus then
-							-- Cache frame references and set attributes
-							cacheFrameReferences()
-							
-							-- Queue frames for update
-							for i = 1, #partyFrameCache do
-								if partyFrameCache[i] then
-									pendingUpdates[partyFrameCache[i]] = true
-								end
-							end
-							
-							performPendingUpdates()
-						end
-					end)
-				elseif event == "GROUP_ROSTER_UPDATE" then
-					-- Group composition changed
-					if not combatStatus and not InCombatLockdown() then
-						C_Timer.After(0.5, function()
-							if InCombatLockdown() then return end
-							
-							-- Refresh references and queue updates
-							cacheFrameReferences()
-							
-							-- Queue each frame for update
-							for i = 1, #partyFrameCache do
-								if partyFrameCache[i] then
-									pendingUpdates[partyFrameCache[i]] = true
-								end
-							end
-							
-							performPendingUpdates()
-						end)
-					end
-				end
-			end)
-
-			-- Ultra-safe hook with multiple combat checks
-			local safeUpdateHook = function(frame)
-				if not frame or frame:IsForbidden() then return end
-				
-				local name = frame:GetName()
-				if not name or not name:match("^CompactPartyFrameMember") then return end
-				
-				-- NEVER modify the frame in combat - just queue it
-				if combatStatus or InCombatLockdown() then
-					pendingUpdates[frame] = true
-					return
-				end
-				
-				-- Triple-check combat status before proceeding
-				C_Timer.After(0.1, function()
-					if InCombatLockdown() then
-						pendingUpdates[frame] = true
-						return
-					end
-					
-					-- Store desired dimensions as attributes regardless
-					frame:SetAttribute("phoenix_width", db.width)
-					frame:SetAttribute("phoenix_height", db.height)
-					
-					-- Only attempt sizing if definitely safe
-					if not InCombatLockdown() and not frame:IsForbidden() then
-						updateSize(frame)
-					end
-				end)
-			end
-			
-			-- Use the hook
-			hooksecurefunc("CompactUnitFrame_UpdateAll", safeUpdateHook)
-			
-			-- On combat start, completely disengage from party frames
-			frameResizer:HookScript("OnEvent", function(_, event)
-				if event == "PLAYER_REGEN_DISABLED" then
-					-- Additional safety: neutralize existing hooks by making them no-ops
-					hooksecurefunc("CompactUnitFrame_UpdateAll", function() end)
-					
-					-- Ensure we're not attached to anything that might cause protected updates
-					if CompactPartyFrame then
-						pcall(function()
-							CompactPartyFrame:UnregisterAllEvents()
-						end)
-					end
-				end
-			end)
-		end
+		end)
 
 		local function updateFrame(self)
 			-- Avoid any updates if frame is forbidden or we're in combat
@@ -424,6 +257,3 @@ function Module:OnEnable()
 		end
 	end
 end
-
-
-

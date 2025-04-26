@@ -16,4 +16,5 @@
   <Script file="_AfkCam.lua"/>
   <Script file="_AutoInvite.lua"/>
   <Script file="_Editmode.lua"/>
+  <Script file="ModuleIntegration.lua"/>
 </Ui>
