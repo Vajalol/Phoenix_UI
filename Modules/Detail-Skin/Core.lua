@@ -79,6 +79,27 @@ function DetailsSkin:IsDetailsLoaded()
     return _G._detalhes ~= nil
 end
 
+-- Handler for when Details! is loaded
+function DetailsSkin:OnDetailsLoaded()
+    self:Debug("Details! addon has been loaded")
+    
+    -- Delay to ensure Details! is fully initialized
+    C_Timer.After(1, function()
+        -- Check if we should auto-apply
+        if Phoenix_UI.db and Phoenix_UI.db.profile and 
+           Phoenix_UI.db.profile.detailskin and 
+           Phoenix_UI.db.profile.detailskin.enabled then
+            self:ApplySkin()
+            self:Debug("Auto-applying Phoenix skin to Details!")
+        end
+        
+        -- Notify the config panel if it's open
+        if Phoenix_UIConfig and Phoenix_UIConfig.RefreshPanel then
+            Phoenix_UIConfig:RefreshPanel("DetailSkin")
+        end
+    end)
+end
+
 -- Check if Details! is loaded, but never prevent UI display
 function DetailsSkin:ShouldEnableOptions()
     return self:IsDetailsLoaded()

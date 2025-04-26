@@ -16,4 +16,7 @@
     <!-- Configuration -->
     <Script file="_Config.lua"/>
     <Script file="MythicPlus_Layout.lua"/>
+    
+    <!-- Config Connector (ensures proper integration) -->
+    <Script file="MythicPlus_Connector.lua"/>
 </Ui> 

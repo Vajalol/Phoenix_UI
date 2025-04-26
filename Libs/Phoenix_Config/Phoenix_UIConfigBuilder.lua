@@ -562,6 +562,14 @@ function Phoenix_UIConfig:BuildElement(frame, row, info, dataKey, db)
 		end
 	elseif info.type == 'color' then
 		element = self:ColorInput(frame, info.label, 100, 20, info.color, info.update, info.cancel);
+	elseif info.type == 'colorpicker' then
+		-- Add compatibility for colorpicker type (alias for color type)
+		element = self:ColorInput(frame, info.label, 100, 20, info.initialValue or info.color, info.update, info.cancel);
+		
+		-- Set additional properties
+		if info.hasAlpha ~= nil then
+			element.hasAlpha = info.hasAlpha
+		end
 	elseif info.type == 'button' then
 		element = self:Button(frame, nil, 20, info.text or '');
 
@@ -628,6 +636,57 @@ function Phoenix_UIConfig:BuildElement(frame, row, info, dataKey, db)
 				end
 			end
 		end
+	elseif info.type == 'description' then
+		-- Add support for description type (similar to label but with different styling)
+		element = self:CreateLabel(frame, info.text or info.label or "", frame:GetWidth());
+		element:SetSize(info.width or frame:GetWidth(), info.height or 20);
+		element:SetJustifyH("LEFT");
+		
+		-- Apply styling for description text
+		if element.SetFont then
+			local font, size, flags = element:GetFont()
+			if font then
+				element:SetFont(font, info.fontSize or size, info.fontStyle or flags)
+			end
+		end
+		
+		if Phoenix_UI and Phoenix_UI.ApplyTextShadow then
+			Phoenix_UI:ApplyTextShadow(element)
+		end
+		
+		-- Apply text color if provided
+		if info.color then
+			element:SetTextColor(info.color.r or 0.8, info.color.g or 0.8, info.color.b or 0.8, info.color.a or 1)
+		else
+			element:SetTextColor(0.8, 0.8, 0.8, 1)
+		end
+	elseif info.type == 'divider' then
+		-- Add support for divider type (horizontal line with optional text)
+		element = CreateFrame("Frame", nil, frame)
+		element:SetSize(info.width or (frame:GetWidth() - 20), info.height or 20)
+		
+		-- Create the line texture
+		local line = element:CreateTexture(nil, "ARTWORK")
+		line:SetColorTexture(0.3, 0.3, 0.3, 0.8)
+		line:SetSize(element:GetWidth(), 1)
+		line:SetPoint("CENTER", element, "CENTER")
+		
+		-- Create label if text is provided
+		if info.text then
+			local label = element:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+			label:SetText(info.text)
+			label:SetPoint("CENTER", element, "CENTER")
+			
+			-- Add padding around the text
+			local bgTexture = element:CreateTexture(nil, "ARTWORK")
+			bgTexture:SetColorTexture(0, 0, 0, 0.8)
+			bgTexture:SetPoint("TOPLEFT", label, "TOPLEFT", -5, 5)
+			bgTexture:SetPoint("BOTTOMRIGHT", label, "BOTTOMRIGHT", 5, -5)
+			
+			element.label = label
+		end
+		
+		element.line = line
 	end
 
 	if not element then

@@ -11,4 +11,6 @@
     <!-- Texture definitions -->
     <Script file="Textures.lua"/>
     
+    <!-- Config connector -->
+    <Script file="Connector.lua"/>
 </Ui> 

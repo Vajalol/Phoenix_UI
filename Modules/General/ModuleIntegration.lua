@@ -49,9 +49,31 @@ function Module:OnInitialize()
     -- Store reference to parent
     self.Phoenix_UI = Phoenix_UI
     
-    -- Register database if parent has DB
-    if Phoenix_UI.db then
-        self.db = Phoenix_UI.db:RegisterNamespace("ModuleIntegration", defaults)
+    -- DEBUG: Add logging to help diagnose the issue
+    if Phoenix_UI.debug then
+        print("Phoenix_UI: ModuleIntegration OnInitialize called")
+    end
+    
+    -- AVOID NAMESPACE REGISTRATION ENTIRELY
+    -- Instead of registering a namespace, just use the parent's DB
+    if Phoenix_UI.db and Phoenix_UI.db.profile then
+        -- Create moduleIntegration section if it doesn't exist
+        if not Phoenix_UI.db.profile.moduleIntegration then
+            Phoenix_UI.db.profile.moduleIntegration = defaults.profile
+        end
+        
+        -- Point our .db.profile to the parent's db.profile.moduleIntegration
+        self.db = {
+            profile = Phoenix_UI.db.profile.moduleIntegration
+        }
+        
+        if Phoenix_UI.debug then
+            print("Phoenix_UI: ModuleIntegration using parent DB directly")
+        end
+    else
+        if Phoenix_UI.debug then
+            print("Phoenix_UI: ModuleIntegration - parent DB not available")
+        end
     end
     
     -- Register events
@@ -631,5 +653,12 @@ function Module:ForceModuleConnection(moduleName1, moduleName2)
     return false
 end
 
--- Return the module
-Phoenix_UI.modules.ModuleIntegration = Module
+-- Return the module, but check if it's already assigned first
+if not Phoenix_UI.modules then
+    Phoenix_UI.modules = {}
+end
+
+-- Only assign if not already assigned, to prevent double loading
+if not Phoenix_UI.modules.ModuleIntegration then
+    Phoenix_UI.modules.ModuleIntegration = Module
+end
