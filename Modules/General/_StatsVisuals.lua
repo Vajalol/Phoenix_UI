@@ -1,9 +1,21 @@
 -- Phoenix UI - Player Stats Visual Enhancement Module
-local VisualEnhance = Phoenix_UI:NewModule("General.StatsVisuals", "AceHook-3.0")
+local VisualEnhance = Phoenix_UI:NewModule("General.StatsVisuals", "AceHook-3.0", "AceEvent-3.0")
 
 function VisualEnhance:OnEnable()
     -- Only run once after the main stats module loads
     self:SecureHook(Phoenix_UI:GetModule("General.Stats"), "OnEnable", "EnhancePlayerStats")
+    
+    -- Force apply particles after a short delay to ensure frames are created
+    C_Timer.After(1, function()
+        self:EnhancePlayerStats()
+    end)
+    
+    -- Apply again after combat to ensure they stay visible
+    self:RegisterEvent("PLAYER_REGEN_ENABLED", function()
+        C_Timer.After(0.5, function() 
+            self:EnhancePlayerStats()
+        end)
+    end)
 end
 
 -- WoW built-in spell effects for enhancement visuals
@@ -22,23 +34,14 @@ local WOW_TEXTURES = {
 
 -- Check if visual effects are enabled in settings
 function VisualEnhance:AreVisualsEnabled()
-    -- Default to enabled
-    if not Phoenix_UI.db or not Phoenix_UI.db.profile or not Phoenix_UI.db.profile.general then
-        return true
-    end
-    
-    return Phoenix_UI.db.profile.general.playerStats and 
-           Phoenix_UI.db.profile.general.playerStats.visualEffects ~= false
+    -- Always return true to ensure particles are shown
+    return true
 end
 
 -- Get the configured effect level (1=low, 2=medium, 3=high)
 function VisualEnhance:GetEffectLevel()
-    if not Phoenix_UI.db or not Phoenix_UI.db.profile or 
-       not Phoenix_UI.db.profile.general or not Phoenix_UI.db.profile.general.playerStats then
-        return 2 -- Default to medium
-    end
-    
-    return Phoenix_UI.db.profile.general.playerStats.effectLevel or 2
+    -- Always return 3 (high quality) 
+    return 3
 end
 
 -- Function to create and attach visual enhancements to the player stats panel
