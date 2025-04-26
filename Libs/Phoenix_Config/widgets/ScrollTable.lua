@@ -803,7 +803,20 @@ function Phoenix_UIConfig:ScrollTable(parent, columns, numRows, rowHeight)
 	local scrollFrame = scrollTable.scrollFrame;
 
 	scrollTable.Phoenix_UIConfig = self;
-	scrollTable.numberOfRows = numRows or 12;
+	
+	-- Fix: Handle case when numRows is a table (extract rowHeight or use default)
+	local displayRows = 12; -- Default number of rows
+	if numRows then
+		if type(numRows) == "number" then
+			displayRows = numRows;
+		elseif type(numRows) == "table" and numRows.rowHeight then
+			-- If numRows is a table with rowHeight, use that for rowHeight
+			rowHeight = numRows.rowHeight;
+			-- Keep default displayRows
+		end
+	end
+	
+	scrollTable.numberOfRows = displayRows;
 	scrollTable.rowHeight = rowHeight or 15;
 	scrollTable.columns = columns;
 	scrollTable.data = {};
