@@ -340,8 +340,8 @@ function Module:OnEnable()
         ARMOR = "FF888888"         -- Grey
     }
 
-    local addonFont = Phoenix_UI.db.profile.general.font or [[Interface/AddOns/Phoenix_UI/Media/Fonts/Prototype.ttf]]
-    local statsTextSize = 11
+    local addonFont = Phoenix_UI.db.profile.general.font or [[Interface/AddOns/Phoenix_UI/Media/Fonts/PTSansNarrow.ttf]]
+    local statsTextSize = 12
     
     -- Store references at module level
     self.addonFont = addonFont

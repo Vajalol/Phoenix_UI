@@ -31,17 +31,18 @@ function SpellNotifications:Initialize()
     -- Set up event handling
     frame:SetScript("OnEvent", function(self, event, ...)
         if event == "COMBAT_LOG_EVENT_UNFILTERED" then
-            SpellNotifications:ProcessCombatLog(CombatLogGetCurrentEventInfo())
-        elseif event == "UNIT_DIED" or event == "UNIT_DESTROYED" or event == "UNIT_DISSIPATES" then
-            SpellNotifications:CheckPetDeath(...)
+            local timestamp, subevent, _, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags = CombatLogGetCurrentEventInfo()
+            
+            if subevent == "UNIT_DIED" or subevent == "UNIT_DESTROYED" or subevent == "UNIT_DISSIPATES" then
+                SpellNotifications:CheckPetDeath(destGUID, destName)
+            else
+                SpellNotifications:ProcessCombatLog(CombatLogGetCurrentEventInfo())
+            end
         end
     end)
     
     -- Register events
     frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-    frame:RegisterEvent("UNIT_DIED")
-    frame:RegisterEvent("UNIT_DESTROYED")
-    frame:RegisterEvent("UNIT_DISSIPATES")
     
     -- Register error events
     self:RegisterErrorEvents()
@@ -137,19 +138,15 @@ function SpellNotifications:HandleMissed(sourceGUID, sourceName, destGUID, destN
 end
 
 -- Check if the pet has died
-function SpellNotifications:CheckPetDeath(...)
+function SpellNotifications:CheckPetDeath(unitGUID, unitName)
     -- Skip if disabled
     if not Phoenix_UI or not Phoenix_UI.db or not Phoenix_UI.db.profile or not Phoenix_UI.db.profile.general or not Phoenix_UI.db.profile.general.spellNotifications then
         return
     end
     
-    local unitToken = ...
-    if not unitToken then return end
-    
-    local unitGUID = select(6, strsplit("-", UnitGUID(unitToken)))
-    
-    -- If it's the player's pet that died
-    if unitToken == "pet" then
+    -- Check if it was the player's pet
+    local playerPetGUID = UnitGUID("pet")
+    if playerPetGUID and unitGUID == playerPetGUID then
         local msg = self:GetLocalizedString("PETDIED")
         self:print("|cFFFF2020" .. msg .. "|r")
         SpellNotifications_PlayPetDeathSound()
@@ -165,5 +162,30 @@ function SpellNotifications:OnEnable()
 end
 
 -- Return the module
-local _, addon = ...
-addon.SpellNotifications = SpellNotifications 
+local addonName, addon = ...
+addon.SpellNotifications = SpellNotifications
+
+-- Import service functions
+function SpellNotifications:RegisterErrorEvents()
+    -- This function will be properly defined in ErrorService.lua
+    -- But we need a stub here to prevent nil errors during initialization
+end
+
+local function Initialize(self)
+    -- Create the Event Frame
+    self.frame = CreateFrame("Frame")
+    
+    -- Combat Log Frame
+    self.combatFrame = CreateFrame("Frame")
+    
+    -- Register Events
+    self.frame:RegisterEvent("ADDON_LOADED")
+    self.frame:SetScript("OnEvent", function(_, event, ...)
+        if event == "ADDON_LOADED" and ... == addonName then
+            self.frame:UnregisterEvent("ADDON_LOADED")
+            
+            -- Continue Initialization
+            self:Initialize()
+        end
+    end)
+end 

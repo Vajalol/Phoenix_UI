@@ -2,7 +2,12 @@
 
 > *"Rise from the ashes of ordinary interfaces"*
 
-A modern, feature-rich World of Warcraft UI addon designed for PvP players, offering extensive customization and optimization options.
+### 📞 Contact & Support
+- 🐙 **GitHub**: [Github Repository](https://github.com/Vajalol/Phoenix_UI)
+- 💬 **Discord**: [Community Discord](https://discord.gg/69q6YWmvks)
+- 💰 **Donate**: [Paypal](https://www.paypal.com/donate/?hosted_button_id=67ASZ8FXPXMDY)
+
+### 🤝 Contributing
 
 -------------------🔥🔥🔥🔥🔥🔥🔥-------------------
 
@@ -33,6 +38,13 @@ A modern, feature-rich World of Warcraft UI addon designed for PvP players, offe
 -------------------🔥🔥🔥🔥🔥🔥🔥-------------------
 
 ## 🔆 RECENT UPDATES
+
+### ⚡ Version 11.0.55
+- **🔧 Fixed SpellNotifications Module**: Resolved "Attempt to register unknown event 'UNIT_DIED'" error
+- **⚙️ Enhanced Event Handling**: Improved combat log event handling for better performance
+- **🐾 Fixed Pet Death Detection**: Corrected implementation for pet death notifications
+- **🔄 Optimized Event Registration**: Properly registering events through combat log instead of direct registration
+- **💪 Module Stability**: Enhanced error prevention for all notification-related functionality
 
 ### ⚡ Version 11.0.54
 - **🔍 Enhanced PremadeGroupsFilter Module**: Improved integration with Phoenix UI for better profile management
@@ -393,13 +405,6 @@ A modern, feature-rich World of Warcraft UI addon designed for PvP players, offe
 -------------------🔥🔥🔥🔥🔥🔥🔥-------------------
 
 ## 🤝 SUPPORT & COMMUNITY
-
-### 📞 Contact & Support
-- 🐙 **GitHub**: [Github Repository](https://github.com/Vajalol/Phoenix_UI)
-- 💬 **Discord**: [Community Discord](https://discord.gg/69q6YWmvks)
-- 💰 **Donate**: [Paypal](https://www.paypal.com/donate/?hosted_button_id=67ASZ8FXPXMDY)
-
-### 🤝 Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
 ### ⚖️ License

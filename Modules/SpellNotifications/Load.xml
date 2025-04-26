@@ -1,10 +1,10 @@
 <Interface>
-    <Script file="SpellNotifications.lua"/>
     <Script file="service\ColorService.lua"/>
     <Script file="service\ErrorService.lua"/>
     <Script file="service\LocalizationService.lua"/>
     <Script file="service\StringService.lua"/>
     <Script file="service\UnitService.lua"/>
+    <Script file="SpellNotifications.lua"/>
     
     <Include file="sounds\sounds.xml"/>
 </Interface> 

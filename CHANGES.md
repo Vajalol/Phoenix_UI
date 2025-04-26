@@ -1,5 +1,29 @@
 # Phoenix_UI Changelog
 
+## Version 11.0.55 Updates
+
+### SpellNotifications Module Fixes
+- **Fixed Combat Event Registration**
+  - Resolved "Attempt to register unknown event 'UNIT_DIED'" error that occurred when enabling the module
+  - Improved event handling by using the COMBAT_LOG_EVENT_UNFILTERED event to detect unit deaths
+  - Removed direct registrations of "UNIT_DIED", "UNIT_DESTROYED", and "UNIT_DISSIPATES" events
+  - Implemented proper combat log event filtering to catch relevant death events
+  - Added additional error prevention mechanisms to avoid similar issues
+
+- **Enhanced Unit Death Detection**
+  - Rewrote the pet death detection logic to work with combat log events
+  - Implemented direct GUID comparison between combat log and player's pet
+  - Improved reliability of death detection across all game activities
+  - Fixed issues with the CheckPetDeath function receiving incorrect parameters
+  - Enhanced handling of unitGUID and unitName to work properly with combat log format
+
+- **Performance and Stability Improvements**
+  - Optimized event handling with better parameter processing
+  - Added defensive code to prevent nil value errors in event handling
+  - Improved module initialization to properly register only valid events
+  - Enhanced combat log processing for better performance
+  - Added additional error logging to help diagnose future issues
+
 ## Version 11.0.54 Updates
 
 ### Enhanced PremadeGroupsFilter Module
