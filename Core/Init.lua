@@ -1,8 +1,8 @@
 Phoenix_UI = LibStub("AceAddon-3.0"):NewAddon("Phoenix_UI", "AceEvent-3.0", "AceComm-3.0", "AceSerializer-3.0", "AceConsole-3.0", "AceHook-3.0", "AceTimer-3.0")
 local addonName, addon = ...
 
--- Enable debug mode temporarily to help diagnose settings issues
-Phoenix_UI.debug = true
+-- Debug mode is disabled
+Phoenix_UI.debug = false
 
 -- Define Phoenix_Options at the very top level for AddonCompartmentFunc
 -- This ensures it's always available regardless of load order

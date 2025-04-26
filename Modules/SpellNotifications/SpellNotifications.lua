@@ -46,11 +46,6 @@ function SpellNotifications:Initialize()
     
     -- Register error events
     self:RegisterErrorEvents()
-    
-    -- Print initialization message if debug is enabled
-    if Phoenix_UI.debug then
-        print("|cFFFFD100SpellNotifications:|r Initialized")
-    end
 end
 
 -- Print formatted message to the chat frame

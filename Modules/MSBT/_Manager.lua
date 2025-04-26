@@ -350,101 +350,31 @@ function MSBTManager:DiagnoseSettings()
     if self.diagnosisRun then return end
     self.diagnosisRun = true
     
-    -- Log diagnosis start
-    -- print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Diagnosing MSBT settings...")
-    
     -- Check for Phoenix_UIDB existence
     if not Phoenix_UIDB then
-        print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: ERROR - Main saved variables missing. Please report this issue.")
         return false
     end
     
     -- Check for profiles in Phoenix_UIDB
     if not Phoenix_UIDB.profiles then
-        print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: ERROR - Profile data missing. Please report this issue.")
         return false
     end
     
     -- Find active profile
     local activeProfile = Phoenix_UIDB.profileKeys and Phoenix_UIDB.profileKeys[UnitName("player").." - "..GetRealmName()]
     if not activeProfile then
-        print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Warning - Could not determine active profile.")
-    else
-        print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Active profile: " .. activeProfile)
-        
-        -- Check if profile exists
-        if not Phoenix_UIDB.profiles[activeProfile] then
-            print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: ERROR - Active profile data not found.")
-            return false
-        end
-        
-        -- Check for MSBT settings in active profile
-        if not Phoenix_UIDB.profiles[activeProfile].msbt then
-            print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: ERROR - MSBT settings missing from active profile.")
-            
-            -- Try to restore from backup
-            if Phoenix_UIPerCharDB and Phoenix_UIPerCharDB.MSBTBackup then
-                print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Found backup - attempting to restore...")
-                
-                -- Create MSBT settings
-                Phoenix_UIDB.profiles[activeProfile].msbt = {
-                    enabled = Phoenix_UIPerCharDB.MSBTBackup.enabled,
-                    __initialized = true,
-                    __restoredAt = time(),
-                    __restoredFrom = Phoenix_UIPerCharDB.MSBTBackup.__timestamp or 0
-                }
-                
-                -- Force save
-                if FlushSettingsDB then FlushSettingsDB() end
-                if FlushSavedVariables then FlushSavedVariables() end
-                
-                -- Update our local reference
-                if self.db and self.db.profile then
-                    self.db.profile.msbt = Phoenix_UIDB.profiles[activeProfile].msbt
-                end
-                
-                print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: MSBT settings restored to profile " .. activeProfile)
-                return true
-            else
-                print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: No backup found - creating new settings...")
-                
-                -- Create MSBT settings
-                Phoenix_UIDB.profiles[activeProfile].msbt = {
-                    enabled = false,
-                    __initialized = true,
-                    __createdAt = time()
-                }
-                
-                -- Force save
-                if FlushSettingsDB then FlushSettingsDB() end
-                if FlushSavedVariables then FlushSavedVariables() end
-                
-                -- Update our local reference
-                if self.db and self.db.profile then
-                    self.db.profile.msbt = Phoenix_UIDB.profiles[activeProfile].msbt
-                end
-                
-                print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: New MSBT settings created in profile " .. activeProfile)
-                return true
-            end
-        else
-            -- Verify settings are complete
-            local msbt = Phoenix_UIDB.profiles[activeProfile].msbt
-            if msbt.__initialized then
-                print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: MSBT settings look valid. Current state: " .. (msbt.enabled and "Enabled" or "Disabled"))
-                return true
-            else
-                print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: MSBT settings incomplete - setting initialization flag.")
-                msbt.__initialized = true
-                
-                -- Force save
-                if FlushSettingsDB then FlushSettingsDB() end
-                if FlushSavedVariables then FlushSavedVariables() end
-                
-                return true
-            end
-        end
+        return false
     end
     
-    return false
+    -- Check if active profile data exists
+    if not Phoenix_UIDB.profiles[activeProfile] then
+        return false
+    end
+    
+    -- Check if MSBT settings exist in active profile
+    if not Phoenix_UIDB.profiles[activeProfile].msbt then
+        return false
+    end
+    
+    return true
 end 

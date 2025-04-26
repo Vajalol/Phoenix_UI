@@ -510,9 +510,4 @@ function Module:OnEnable()
     
     -- Initialize date separators
     AddDateSeparators()
-    
-    -- Initialize and announce
-    if Phoenix_UI.debug then
-        print("|cffFF7D0APhoenix UI:|r Enhanced chat history search enabled.")
-    end
 end 
