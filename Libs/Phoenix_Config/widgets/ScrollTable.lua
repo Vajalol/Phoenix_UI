@@ -271,10 +271,19 @@ local methods = {
 		end
 		self.isSorting = true
 		
+		-- Ensure filtered is initialized
+		if not self.filtered then
+			self.filtered = {}
+		end
+		
 		-- If no sortBy column was provided, just sort by whatever the selected column was
-		-- If no selected column, don't sort
+		-- If no selected column, don't sort but still create filtered
 		sortBy = sortBy or self.sortBy;
 		if not sortBy then
+			-- Even if not sorting, ensure filtered is populated
+			for i = 1, #self.data do
+				self.filtered[i] = i
+			end
 			self.isSorting = false
 			return;
 		end
@@ -338,6 +347,11 @@ local methods = {
 
 	DoFilter          = function(self)
 		local result = {};
+
+		-- If data is empty, return an empty result
+		if not self.data or #self.data == 0 then
+			return result;
+		end
 
 		for row = 1, #self.data do
 			local realRow = self.sortTable[row];
@@ -820,6 +834,8 @@ function Phoenix_UIConfig:ScrollTable(parent, columns, numRows, rowHeight)
 	scrollTable.rowHeight = rowHeight or 15;
 	scrollTable.columns = columns;
 	scrollTable.data = {};
+	-- Initialize filtered to prevent nil access errors
+	scrollTable.filtered = {};
 	scrollTable.cellEvents = cellEvents;
 	scrollTable.headerEvents = headerEvents;
 	scrollTable.highlightedRows = {};
