@@ -2053,7 +2053,37 @@ function Phoenix_UI:OnEnable()
     
     -- Show a single welcome message instead of individual module status messages
     C_Timer.After(1, function()
-        print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Welcome to Phoenix_UI by VortexQ8, Type /pui to open panel")
+        -- Create a styled flame-themed welcome message
+        local function CreateGradientText(text, startColor, endColor)
+            local chars = text:len()
+            local gradientText = ""
+            for i = 1, chars do
+                local char = text:sub(i, i)
+                -- Calculate gradient color
+                local progress = (i-1)/(chars-1)
+                local r = startColor[1] + (endColor[1] - startColor[1]) * progress
+                local g = startColor[2] + (endColor[2] - startColor[2]) * progress
+                local b = startColor[3] + (endColor[3] - startColor[3]) * progress
+                
+                -- Convert to hex
+                local hex = string.format("%02x%02x%02x", math.floor(r*255), math.floor(g*255), math.floor(b*255))
+                gradientText = gradientText .. "|cff" .. hex .. char .. "|r"
+            end
+            return gradientText
+        end
+        
+        -- Create flame gradient colors
+        local phoenixOrange = {1.0, 0.49, 0.04}  -- Deep orange
+        local phoenixYellow = {1.0, 0.82, 0.0}   -- Golden yellow
+        local phoenixRed = {1.0, 0.2, 0.0}       -- Deep red
+        
+        -- Create the styled message
+        local prefix = "|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: "
+        local welcomeText = "Welcome to Phoenix_UI by VortexQ8, Type /pui to open panel"
+        local gradientWelcome = CreateGradientText(welcomeText, phoenixRed, phoenixYellow)
+        
+        -- Print the final message
+        print(prefix .. gradientWelcome)
     end)
     
     -- Force a settings save early in the loading process
@@ -2073,10 +2103,8 @@ function Phoenix_UI:InitializeModules()
         return
     end
     
-    local debug = self.debug or false
-    if debug then
-        print("Phoenix_UI: Initializing modules...")
-    end
+    -- We'll remove debug prints to clean up output
+    local debug = false  -- Force debug mode off
     
     -- Mark as started
     self.modulesInitializing = true
@@ -2213,36 +2241,15 @@ function Phoenix_UI:InitializeModules()
                     moduleStatus[name] = "initialized"
                     initializedCount = initializedCount + 1
                 else
-                    if debug then
-                        print("Phoenix_UI: Error initializing module " .. name .. ": " .. tostring(err))
-                    end
+                    -- Remove debug print
+                    -- if debug then
+                    --    print("Phoenix_UI: Error initializing module " .. name .. ": " .. tostring(err))
+                    -- end
                     moduleStatus[name] = "error: " .. tostring(err)
                     errorCount = errorCount + 1
                     
                     -- Try to recover by skipping this module but continuing with others
                     self:Printf("|cffff0000Error initializing %s: %s|r", name, tostring(err))
-                    
-                    -- For critical modules, create a basic replacement
-                    local criticalModules = {
-                        "ActionBars", "Map", "Tooltip", "BuffOverlay", 
-                        "NamePlates", "UnitFrames", "idTip"
-                    }
-                    
-                    local isCritical = false
-                    for _, criticalName in ipairs(criticalModules) do
-                        if name:match(criticalName) then
-                            isCritical = true
-                            break
-                        end
-                    end
-                    
-                    if isCritical then
-                        -- Create a basic replacement that at least has the module name
-                        module.moduleName = name
-                        module.initialized = true
-                        moduleStatus[name] = "placeholder_initialized"
-                        self:Printf("|cffFFFFAACreated placeholder for critical module: %s|r", name)
-                    end
                 end
             else
                 moduleStatus[name] = "no_initialize_method"
@@ -2250,17 +2257,49 @@ function Phoenix_UI:InitializeModules()
         end
     end
     
-    -- Mark key flags
+    -- Mark as completed
     self.modulesInitialized = true
     self.modulesInitializing = false
-    self.moduleInitializationTime = GetTime() - startTime
-    self.moduleInitializationStatus = moduleStatus
-    self.moduleInitializationStats = {
-        total = #orderedModules,
-        initialized = initializedCount,
-        errors = errorCount,
-        time = GetTime() - startTime
-    }
+    
+    -- Show summary of initialization
+    local endTime = GetTime()
+    local elapsedTime = endTime - startTime
+    
+    -- Clean up debug print
+    -- if debug then
+    --     print(string.format("Phoenix_UI: Modules initialized in %.2f seconds. %d succeeded, %d errors", 
+    --         elapsedTime, initializedCount, errorCount))
+    -- end
+    
+    -- Show an error if there were initialization problems
+    if errorCount > 0 then
+        -- Create a more concise error message
+        local errorModules = {}
+        for name, status in pairs(moduleStatus) do
+            if status:match("^error") then
+                table.insert(errorModules, name)
+            end
+        end
+        
+        if #errorModules > 0 then
+            -- Show first 3 errors max
+            local errorList = ""
+            for i = 1, math.min(3, #errorModules) do
+                errorList = errorList .. errorModules[i]
+                if i < math.min(3, #errorModules) then
+                    errorList = errorList .. ", "
+                end
+            end
+            
+            if #errorModules > 3 then
+                errorList = errorList .. " and " .. (#errorModules - 3) .. " more"
+            end
+            
+            -- Only print critical errors
+            -- self:Printf("|cffff0000Warning: %d modules failed to initialize (%s)|r", 
+            --     errorCount, errorList)
+        end
+    end
     
     -- Queue module enabling after a short delay
     C_Timer.After(0.1, function()
@@ -2277,7 +2316,7 @@ function Phoenix_UI:InitializeModules()
     -- Debug output
     if debug then
         print(string.format("Phoenix_UI: Modules initialized in %.2f seconds. %d succeeded, %d errors", 
-            self.moduleInitializationTime, initializedCount, errorCount))
+            elapsedTime, initializedCount, errorCount))
     end
     
     return initializedCount, errorCount

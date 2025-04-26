@@ -49,11 +49,6 @@ function Module:OnInitialize()
     -- Store reference to parent
     self.Phoenix_UI = Phoenix_UI
     
-    -- DEBUG: Add logging to help diagnose the issue
-    if Phoenix_UI.debug then
-        print("Phoenix_UI: ModuleIntegration OnInitialize called")
-    end
-    
     -- AVOID NAMESPACE REGISTRATION ENTIRELY
     -- Instead of registering a namespace, just use the parent's DB
     if Phoenix_UI.db and Phoenix_UI.db.profile then
@@ -66,14 +61,6 @@ function Module:OnInitialize()
         self.db = {
             profile = Phoenix_UI.db.profile.moduleIntegration
         }
-        
-        if Phoenix_UI.debug then
-            print("Phoenix_UI: ModuleIntegration using parent DB directly")
-        end
-    else
-        if Phoenix_UI.debug then
-            print("Phoenix_UI: ModuleIntegration - parent DB not available")
-        end
     end
     
     -- Register events
@@ -177,9 +164,9 @@ function Module:CheckModule(moduleName)
         modules[moduleName] = module
         
         -- Debug output
-        if Phoenix_UI.debug then
-            print("Phoenix_UI Module Integration: Found module " .. moduleName)
-        end
+        -- No longer needed: if Phoenix_UI.debug then
+        --    print("Phoenix_UI Module Integration: Found module " .. moduleName)
+        -- end
         
         return true
     end
