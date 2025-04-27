@@ -520,6 +520,11 @@ function Phoenix_UIConfig:FauxScrollFrame(parent, width, height, displayCount, l
 	panel.lineHeight = lineHeight;
 	panel.displayCount = displayCount;
 
+	-- Set ScrollBar property for Blizzard API compatibility
+	if panel.scrollFrame then
+		panel.scrollFrame.ScrollBar = panel.scrollBar;
+	end
+
 	for k, v in pairs(self.FauxScrollFrameMethods) do
 		panel[k] = v;
 	end
