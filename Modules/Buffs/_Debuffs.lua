@@ -82,8 +82,8 @@ function Debuffs:OnEnable()
         border.shadow:SetPoint("TOPLEFT", border, "TOPLEFT", -4, 4)
         border.shadow:SetPoint("BOTTOMRIGHT", border, "BOTTOMRIGHT", 4, -4)
         border.shadow:SetBackdrop(Backdrop)
-        local r, g, b, a = Phoenix_UI:Color(0.25, true) -- Force a return value
-        border.shadow:SetBackdropBorderColor(r, g, b, a)
+        -- Create direct borderColor
+        border.shadow:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
 
         button.Phoenix_UIBorder = border
     end
@@ -122,8 +122,8 @@ function Debuffs:OnEnable()
                 if color ~= nil then
                     frame.Phoenix_UIBorder.texture:SetVertexColor(color.r, color.g, color.b, 1)
                 else
-                    local r, g, b, a = Phoenix_UI:Color(0.15, true) -- Force a return value
-                    frame.Phoenix_UIBorder.texture:SetVertexColor(r, g, b, a)
+                    -- Set a fixed color without relying on Phoenix_UI:Color
+                    frame.Phoenix_UIBorder.texture:SetVertexColor(0.5, 0.5, 0.5, 1)
                 end
             end
         end

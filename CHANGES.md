@@ -1,5 +1,20 @@
 # Phoenix_UI Changelog
 
+## Version 11.0.56 Updates
+
+### Fixed Main Menu Button Layout
+- **Corrected Micro Menu Button Positioning**
+  - Fixed issue where the Main Menu button (ESC button) was appearing detached from other micro menu buttons
+  - Removed special handling code in Core/Init.lua that was explicitly positioning the Main Menu button separately
+  - Ensured all micro menu buttons are consistently sized and positioned in a continuous row
+  - Improved the visual consistency of the interface by allowing the MoveAny module to handle all buttons equally
+
+- **Improved Code Architecture**
+  - Removed redundant button handling code that caused conflicts between modules
+  - Eliminated potential infinite recursion issues with action button updates
+  - Enhanced compatibility with different WoW client versions
+  - Maintained all button functionality while improving visual layout
+
 ## Version 11.0.55 Updates
 
 ### SpellNotifications Module Fixes
