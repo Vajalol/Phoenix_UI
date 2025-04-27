@@ -15,6 +15,9 @@ function Module:OnEnable()
 		-- Create a frame to handle changes after combat
 		local CombatQueue = CreateFrame("Frame")
 		CombatQueue.frames = {}
+		
+		-- Track frames that we've already applied protection to
+		local protectedFrames = {}
 
 		-- Add function to queue a frame for updates after combat
 		local function QueueFrameForUpdate(frame)
@@ -149,29 +152,44 @@ function Module:OnEnable()
 					pcall(function()
 						-- Only modify if we're still out of combat (triple check)
 						if not InCombatLockdown() then
-							-- Set frame dimensions
-							self:SetSize(width, height)
+							-- CHANGE: Use SetAttribute instead of direct SetSize to avoid taint issues
+							-- self:SetSize(width, height)
+							self:SetAttribute("customWidth", width)
+							self:SetAttribute("customHeight", height)
 							
-							-- Update internal elements as well
-							if self.healthBar then
+							-- Safely update frame layout if permitted method exists
+							if type(CompactUnitFrameProfiles) == "table" and 
+							   type(CompactUnitFrameProfiles.ApplyToFrame) == "function" then
+								CompactUnitFrameProfiles.ApplyToFrame(self)
+							end
+							
+							-- Use CVar approach as a backup to influence frame size
+							if not InCombatLockdown() then
+								-- We can safely set these CVars
+								SetCVar("compactPartyFrameHeight", height)
+								SetCVar("compactPartyFrameWidth", width)
+							end
+							
+							-- Update internal elements as well - only if they're not protected
+							if self.healthBar and not self.healthBar:IsForbidden() then
 								self.healthBar:ClearAllPoints()
 								self.healthBar:SetPoint("TOPLEFT", self, "TOPLEFT", 0, 0)
 								self.healthBar:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", 0, 0)
 							end
 							
-							if self.powerBar then
+							if self.powerBar and not self.powerBar:IsForbidden() then
 								self.powerBar:ClearAllPoints()
 								self.powerBar:SetPoint("BOTTOMLEFT", self, "BOTTOMLEFT", 0, 0)
 								self.powerBar:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", 0, 0)
 								self.powerBar:SetHeight(4)
 							end
 							
-							if self.statusText then
+							if self.statusText and not self.statusText:IsForbidden() then
 								self.statusText:ClearAllPoints()
 								self.statusText:SetPoint("CENTER", self, "CENTER")
 							end
 							
-							if self.centerStatusIcon then
+							if self.centerStatusIcon and not self.centerStatusIcon:IsForbidden() then
 								self.centerStatusIcon:ClearAllPoints()
 								self.centerStatusIcon:SetPoint("CENTER", self, "CENTER")
 							end
@@ -191,16 +209,117 @@ function Module:OnEnable()
 						-- One final check
 						if not InCombatLockdown() then
 							local width = self:GetAttribute("phoenix_width") or db.width
-							self:SetWidth(width)
+							-- CHANGE: Use SetAttribute instead of directly modifying
+							-- self:SetWidth(width)
+							self:SetAttribute("customWidth", width)
+							
+							-- Safely update frame layout if permitted method exists
+							if type(CompactUnitFrameProfiles) == "table" and 
+							   type(CompactUnitFrameProfiles.ApplyToFrame) == "function" then
+								CompactUnitFrameProfiles.ApplyToFrame(self)
+							end
 						end
 					end)
 				end
 			end
 		end
+		
+		-- IMPORTANT: Protect against direct SetSize calls by adding a metatable interceptor
+		-- This is the most robust defense mechanism against taint
+		local function ProtectCompactPartyFrame(frame)
+			if not frame or frame:IsForbidden() or protectedFrames[frame] then
+				return
+			end
+			
+			local name = frame:GetName()
+			if not name or not name:match("^CompactPartyFrameMember") then
+				return
+			end
+			
+			-- Mark this frame as protected
+			protectedFrames[frame] = true
+			
+			-- Store the original SetSize method
+			local originalSetSize = frame.SetSize
+			
+			-- Replace SetSize with our safe version
+			frame.SetSize = function(self, width, height)
+				-- Only call the original if not in combat
+				if not InCombatLockdown() then
+					return originalSetSize(self, width, height)
+				else
+					-- Store the desired size as attributes
+					self:SetAttribute("customWidth", width)
+					self:SetAttribute("customHeight", height)
+					QueueFrameForUpdate(self)
+					return -- Silently fail, no error
+				end
+			end
+			
+			-- Also protect SetWidth and SetHeight
+			local originalSetWidth = frame.SetWidth
+			frame.SetWidth = function(self, width)
+				if not InCombatLockdown() then
+					return originalSetWidth(self, width)
+				else
+					self:SetAttribute("customWidth", width)
+					QueueFrameForUpdate(self)
+					return
+				end
+			end
+			
+			local originalSetHeight = frame.SetHeight
+			frame.SetHeight = function(self, height)
+				if not InCombatLockdown() then
+					return originalSetHeight(self, height)
+				else
+					self:SetAttribute("customHeight", height)
+					QueueFrameForUpdate(self)
+					return
+				end
+			end
+		end
 
-		hooksecurefunc("CompactUnitFrame_UpdateAll", function(self)
-			updateTextures(self)
-		end)
+		-- Update the hook to be more defensive by adding pre-hooks
+		-- This is a defensive approach that catches SetSize calls BEFORE they happen
+		if _G.CompactUnitFrame_SetUpFrame then
+			hooksecurefunc("CompactUnitFrame_SetUpFrame", function(frame)
+				-- If this is a party frame, protect it from getting SetSize during combat
+				if frame and not frame:IsForbidden() and frame:GetName() and 
+				   frame:GetName():match("^CompactPartyFrameMember") then
+					ProtectCompactPartyFrame(frame)
+					
+					-- Queue any size updates for when we're out of combat
+					if InCombatLockdown() then
+						QueueFrameForUpdate(frame)
+					end
+				end
+			end)
+		end
+		
+		-- Also hook the update function to add protection and queue updates
+		if _G.CompactUnitFrame_UpdateAll then
+			hooksecurefunc("CompactUnitFrame_UpdateAll", function(self)
+				-- Only proceed if it's safe
+				if InCombatLockdown() or (self and self:IsForbidden()) then return end
+				
+				-- Protect the frame if it's a party frame
+				if self and not self:IsForbidden() and self:GetName() and 
+				   self:GetName():match("^CompactPartyFrameMember") then
+					ProtectCompactPartyFrame(self)
+				end
+				
+				-- Only run texture updates (which are safe) and queue size updates for later
+				if self and not self:IsForbidden() and self:GetName() then
+					updateTextures(self)
+					
+					-- Instead of calling updateSize directly, queue it for after combat
+					if self:GetName():match("^CompactPartyFrameMember") or self:GetName():match("^CompactPartyFramePet") then
+						QueueFrameForUpdate(self)
+					end
+				end
+			end)
+		end
 
 		-- Register events for combat tracking
 		CombatQueue:RegisterEvent("PLAYER_REGEN_ENABLED")
@@ -229,8 +348,15 @@ function Module:OnEnable()
 			
 			if not self:GetName() then return end
 
+			-- Always safe to update textures
 			updateTextures(self)
-			updateSize(self)
+			
+			-- Only attempt size updates when out of combat
+			if not InCombatLockdown() then
+				updateSize(self)
+			else
+				QueueFrameForUpdate(self)
+			end
 		end
 
 		local function unblockFrameUpdates()
@@ -255,5 +381,94 @@ function Module:OnEnable()
 				wipe(CombatQueue.frames)
 			end
 		end
+
+		-- Add additional init for compatibility with Blizzard frames
+		local initFrame = CreateFrame("Frame")
+		initFrame:RegisterEvent("ADDON_LOADED")
+		initFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
+		initFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+		initFrame:RegisterEvent("GROUP_JOINED")
+		initFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+		
+		local initPending = true -- Used to track if we need to do initialization
+		
+		initFrame:SetScript("OnEvent", function(self, event, addonName)
+			-- For any event, if in combat, simply mark that initialization is pending
+			if InCombatLockdown() then
+				initPending = true
+				return
+			end
+			
+			-- If this is PLAYER_REGEN_ENABLED and we have init pending, trigger all checks
+			if event == "PLAYER_REGEN_ENABLED" and initPending then
+				initPending = false
+				-- Artificial GROUP_ROSTER_UPDATE to initialize frames
+				self:GetScript("OnEvent")(self, "GROUP_ROSTER_UPDATE")
+				return
+			end
+			
+			-- Setup party frames when needed
+			if event == "ADDON_LOADED" and (addonName == "Blizzard_CompactRaidFrames" or addonName == "Blizzard_CUFProfiles") then
+				-- Apply settings to compact raid frame container if it exists
+				if CompactRaidFrameContainer and not InCombatLockdown() then
+					-- Set attributes rather than directly modifying
+					CompactRaidFrameContainer:SetAttribute("phoenix_styled", true)
+				end
+			elseif event == "GROUP_ROSTER_UPDATE" or event == "PLAYER_ENTERING_WORLD" or event == "GROUP_JOINED" then
+				-- Handle existing frames when group composition changes
+				-- Check if party frames exist
+				if CompactPartyFrame and not InCombatLockdown() then
+					CompactPartyFrame:SetAttribute("phoenix_styled", true)
+					
+					-- Safety timer to ensure frames are fully created
+					C_Timer.After(0.5, function()
+						if InCombatLockdown() then
+							initPending = true
+							return
+						end
+						
+						-- Set CVars that influence frame sizing
+						SetCVar("compactPartyFrameHeight", db.height)
+						SetCVar("compactPartyFrameWidth", db.width)
+						
+						-- Attempt to set initial attributes on party member frames if they exist
+						for i = 1, 5 do
+							local memberFrame = _G["CompactPartyFrameMember" .. i]
+							if memberFrame and not memberFrame:IsForbidden() and not InCombatLockdown() then
+								-- Protect this frame from direct SetSize calls
+								ProtectCompactPartyFrame(memberFrame)
+								
+								-- Add to queue for safer processing
+								QueueFrameForUpdate(memberFrame)
+								
+								-- Just update textures which is safe
+								updateTextures(memberFrame)
+								
+								-- Set attributes but don't modify appearance directly
+								memberFrame:SetAttribute("phoenix_width", db.width)
+								memberFrame:SetAttribute("phoenix_height", db.height)
+								memberFrame:SetAttribute("phoenix_styled", true)
+							end
+							
+							-- Also process pet frames
+							local petFrame = _G["CompactPartyFramePet" .. i]
+							if petFrame and not petFrame:IsForbidden() and not InCombatLockdown() then
+								QueueFrameForUpdate(petFrame)
+								updateTextures(petFrame)
+								petFrame:SetAttribute("phoenix_width", db.width)
+								petFrame:SetAttribute("phoenix_styled", true)
+							end
+						end
+						
+						-- Trigger frame updates when out of combat
+						C_Timer.After(0.5, function()
+							if not InCombatLockdown() then
+								unblockFrameUpdates()
+							end
+						end)
+					end)
+				end
+			end
+		end)
 	end
 end

@@ -139,6 +139,39 @@ function DetailsSkin:ApplySkin()
         return false
     end
     
+    -- Apply a preemptive fix for the SetWindowColor error
+    -- This targets the specific error in window_playerbreakdown.lua
+    if _G._detalhes_database and _G._detalhes_database.breakdowns then
+        -- Add a dummy SetColor function to prevent errors
+        local function addSafeSetColor(obj)
+            if obj and not obj.SetColor then
+                obj.SetColor = function() end
+            end
+        end
+        
+        -- Try to add SetColor to any objects that might need it
+        if Details.playerDetailWindow then
+            addSafeSetColor(Details.playerDetailWindow)
+        end
+        
+        -- Details has various naming conventions for the breakdown window
+        local breakdownObjects = {
+            Details.breakdown_window,
+            Details.atributo_damage,
+            Details.tabela_vigente,
+            Details.janela_info
+        }
+        
+        for _, obj in pairs(breakdownObjects) do
+            if obj then
+                addSafeSetColor(obj)
+                if obj.container then addSafeSetColor(obj.container) end
+                if obj.frame then addSafeSetColor(obj.frame) end
+                if obj.baseframe then addSafeSetColor(obj.baseframe) end
+            end
+        end
+    end
+    
     for i, instance in ipairs(instances) do
         if instance then
             Phoenix_UI:Print("Styling Details window " .. i)
@@ -148,13 +181,39 @@ function DetailsSkin:ApplySkin()
             safeCall(instance, "DesaturateMenu", false)
             
             -- Try different methods for setting backdrop color - Details has changed these over time
+            -- First try using SetBackdropColor which is more common
             if not safeCall(instance, "SetBackdropColor", 0.1, 0.1, 0.1, 0.9) then
-                -- Alternative method that might exist
-                safeCall(instance, "SetWindowColor", 0.1, 0.1, 0.1, 0.9)
+                -- Don't use SetWindowColor directly as it's causing errors
+                -- Instead, try to set colors using more direct methods
+                if instance.baseframe and instance.baseframe.SetBackdropColor then
+                    instance.baseframe:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
+                end
+                
+                -- Try setting individual elements if available
+                local frame = instance.baseframe or instance.frame
+                if frame then
+                    -- Try to style the frame directly
+                    if frame.SetBackdropColor then
+                        frame:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
+                    end
+                    
+                    -- Style sub-elements if they exist
+                    for _, child in pairs({frame:GetChildren()}) do
+                        if child.SetBackdropColor then
+                            child:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
+                        end
+                    end
+                end
             end
             
-            -- Try to show the status bar
-            safeCall(instance, "ShowStatusBar", true)
+            -- Try to show the status bar - don't use boolean parameter if it's causing errors
+            if type(instance.ShowStatusBar) == "function" then
+                -- Try with no parameters first
+                if not safeCall(instance, "ShowStatusBar") then
+                    -- If that fails, try with number parameter (some versions expect this)
+                    safeCall(instance, "ShowStatusBar", 1)
+                end
+            end
             
             -- Try to hide side bars
             safeCall(instance, "ShowSideBars", false)
