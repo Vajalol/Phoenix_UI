@@ -16,6 +16,7 @@ function Range:OnEnable()
 
         local UPDATE_DELAY = .2
         local buttonColors, buttonsToUpdate = {}, {}
+        local problemButtons = {}
         local updater = CreateFrame("Frame")
 
         local colors = {
@@ -52,7 +53,7 @@ function Range:OnEnable()
         function Module:UpdateButtonStatus()
             local action = self.action
 
-            if action and self:IsVisible() and HasAction(action) then
+            if action and self:IsVisible() and HasAction(action) and not problemButtons[self] then
                 buttonsToUpdate[self] = true
             else
                 buttonsToUpdate[self] = nil
@@ -103,17 +104,22 @@ function Range:OnEnable()
         end
 
         local function button_UpdateUsable(button)
-            -- Prevent recursion - if we're already processing this button, return immediately
-            if button.isProcessingUpdateUsable then return end
+            if problemButtons[button] then return end
             
-            -- Set flag to prevent re-entry
-            button.isProcessingUpdateUsable = true
+            button.phoenixUpdateUsableCount = (button.phoenixUpdateUsableCount or 0) + 1
             
-            -- Call the update function
+            if button.phoenixUpdateUsableCount > 5 then
+                problemButtons[button] = true
+                button.phoenixUpdateUsableCount = 0
+                if button.icon then
+                    button.icon:SetVertexColor(1, 1, 1)
+                end
+                return
+            end
+            
             Module.UpdateButtonUsable(button, true)
             
-            -- Clear flag when done
-            button.isProcessingUpdateUsable = false
+            button.phoenixUpdateUsableCount = button.phoenixUpdateUsableCount - 1
         end
 
         function Module:RegisterButtonRange(button)
