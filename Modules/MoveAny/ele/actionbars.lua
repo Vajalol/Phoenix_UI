@@ -73,28 +73,15 @@ function MoveAny:UpdateActionBar(frame)
 			local phoenixDBProfile = Phoenix_UI and Phoenix_UI.db and Phoenix_UI.db.profile
 			local phoenixActionBar = phoenixDBProfile and phoenixDBProfile.actionbar or {}
 			
-			-- Get bar-specific padding if available
-			local barNumber = tonumber(string.match(name, "(%d+)$")) or 0
-			local barPadding = nil
-			
-			if phoenixActionBar.barPadding then
-				if barNumber > 0 and barNumber <= 5 then
-					-- Use specific bar padding if available
-					barPadding = phoenixActionBar.barPadding["bar" .. barNumber]
-				elseif string.find(name:lower(), "petbar") then
-					barPadding = phoenixActionBar.barPadding.petbar
-				end
-			end
-			
-			-- Use global padding as fallback
-			local globalPadding = phoenixActionBar.padding and phoenixActionBar.padding.global or 2
-			local offset = barPadding or globalPadding or opts["OFFSET"] or 0
+			-- Use default spacing options
+			local offset = opts["OFFSET"] or 0
 			
 			-- Get button spacing from Phoenix_UI if available
-			local buttonSpacing = phoenixActionBar.padding and phoenixActionBar.padding.buttonSpacing or dSpacing
-			if buttonSpacing then
-				opts["SPACING"] = buttonSpacing
+			local buttonSpacing = dSpacing
+			if phoenixActionBar.padding and phoenixActionBar.padding.buttonSpacing then
+				buttonSpacing = phoenixActionBar.padding.buttonSpacing
 			end
+			opts["SPACING"] = buttonSpacing
 			
 			local flipped = opts["FLIPPED"]
 			if opts["ROWS"] == nil and abpoints[name] and abpoints[name]["ROWS"] then

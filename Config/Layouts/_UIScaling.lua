@@ -42,7 +42,9 @@ local module = {
                 Phoenix_UI_Scale.Scale(currentScale)
             else
                 -- Fallback if Phoenix_UI_Scale.Scale isn't available
-                SetCVar("uiScale", tostring(currentScale))
+                if C_CVar and C_CVar.SetCVar then
+                    C_CVar.SetCVar("uiScale", tostring(currentScale))
+                end
                 UIParent:SetScale(currentScale)
             end
             
@@ -262,7 +264,9 @@ function Layout:OnEnable()
             Phoenix_UI_Scale.Scale(currentScale)
         else
             -- Fallback if Phoenix_UI_Scale.Scale isn't available
-            SetCVar("uiScale", tostring(currentScale))
+            if C_CVar and C_CVar.SetCVar then
+                C_CVar.SetCVar("uiScale", tostring(currentScale))
+            end
             UIParent:SetScale(currentScale)
         end
         
@@ -390,7 +394,9 @@ function Layout:ApplyScale(value, skipSave)
     DebugPrint("Config - Applying UI Scale: " .. value)
     
     -- Set the CVar and apply to UIParent directly for immediate effect
-    SetCVar("uiScale", tostring(value))
+    if C_CVar and C_CVar.SetCVar then
+        C_CVar.SetCVar("uiScale", tostring(value))
+    end
     UIParent:SetScale(value)
     
     -- Save to AceDB

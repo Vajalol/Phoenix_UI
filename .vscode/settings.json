@@ -833,6 +833,5 @@
         "ZoneTextString",
         "PVPInfoTextString",
         "StanceBar"
-    ],
-    "Lua.type.weakUnionCheck": true
+    ]
 }

@@ -281,6 +281,11 @@ function MoveAny:IsEnabled(element, value, settings)
 
 		return false
 	end
+	
+	-- Check if this is the BUFFS element and Phoenix_UI is handling buffs
+	if element == "BUFFS" and Phoenix_UI and Phoenix_UI.modules and Phoenix_UI.modules["Buffs.Buffs"] and Phoenix_UI.modules["Buffs.Buffs"].enabled then
+		return false
+	end
 
 	MoveAny:CheckDB("IsEnabled")
 	local enabled, forced = MoveAny:IsInEditModeEnabled(element)

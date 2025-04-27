@@ -199,28 +199,14 @@ function Layout:OnEnable()
                     type = 'dropdown',
                     label = 'Button Border',
                     tooltip = 'Style of button borders',
-                    column = 4,
+                    column = 3,
                     order = 1,
+                    initialValue = 'classic',
                     onChange = actionBarSettingChanged,
                     options = {
-                        { value = 'default', text = 'Default' },
-                        { value = 'thin', text = 'Thin' },
-                        { value = 'thick', text = 'Thick' },
-                        { value = 'none', text = 'None' }
-                    }
-                },
-                glowEffect = {
-                    key = 'style.glowEffect',
-                    type = 'dropdown',
-                    label = 'Glow Effect',
-                    tooltip = 'Glow effect on usable abilities',
-                    column = 4,
-                    order = 2,
-                    onChange = actionBarSettingChanged,
-                    options = {
-                        { value = 'default', text = 'Default' },
-                        { value = 'pixel', text = 'Pixel Glow' },
-                        { value = 'auto', text = 'Auto Cast Glow' },
+                        { value = 'classic', text = 'Classic' },
+                        { value = 'clean', text = 'Clean' },
+                        { value = 'modern', text = 'Modern' },
                         { value = 'none', text = 'None' }
                     }
                 },
@@ -230,73 +216,14 @@ function Layout:OnEnable()
                     label = 'Border Color',
                     tooltip = 'Color of button borders',
                     column = 4,
-                    order = 3,
+                    order = 1,
+                    initialValue = 'default',
                     onChange = actionBarSettingChanged,
                     options = {
                         { value = 'default', text = 'Default' },
                         { value = 'class', text = 'Class Color' },
                         { value = 'custom', text = 'Custom' }
                     }
-                }
-            },
-            {
-                header = {
-                    type = 'header',
-                    label = 'Bar Padding & Spacing'
-                },
-            },
-            {
-                globalPadding = {
-                    key = 'padding.global',
-                    type = 'slider',
-                    label = 'Global Padding',
-                    tooltip = 'Default padding for all action bars',
-                    min = 0,
-                    max = 20,
-                    step = 1,
-                    initialValue = 2,
-                    column = 4,
-                    order = 1,
-                    onChange = actionBarSettingChanged
-                },
-                buttonSpacing = {
-                    key = 'padding.buttonSpacing',
-                    type = 'slider',
-                    label = 'Button Spacing',
-                    tooltip = 'Space between action buttons',
-                    min = 0,
-                    max = 10,
-                    step = 1,
-                    initialValue = 2,
-                    column = 4,
-                    order = 2,
-                    onChange = actionBarSettingChanged
-                }
-            },
-            {
-                bagbar = {
-                    key = 'menu.bagbar',
-                    type = 'dropdown',
-                    label = 'Bag Buttons',
-                    column = 4,
-                    order = 2,
-                    options = {
-                        { value = 'show', text = 'Show' },
-                        { value = 'mouse_over', text = 'Show on Mouseover' },
-                        { value = 'hide', text = 'Hide' }
-                    }
-                },
-                micromenu = {
-                    key = 'menu.micromenu',
-                    type = 'dropdown',
-                    label = 'MicroMenu',
-                    column = 4,
-                    order = 3,
-                    options = {
-                        { value = 'show', text = 'Show' },
-                        { value = 'mouse_over', text = 'Show on Mouseover' },
-                        { value = 'hide', text = 'Hide' }
-                    },
                 }
             },
             {
@@ -390,79 +317,29 @@ function Layout:OnEnable()
                 },
             },
             {
-                header = {
-                    type = 'header',
-                    label = 'Individual Bar Padding'
+                bagbar = {
+                    key = 'menu.bagbar',
+                    type = 'dropdown',
+                    label = 'Bag Buttons',
+                    column = 4,
+                    order = 2,
+                    options = {
+                        { value = 'show', text = 'Show' },
+                        { value = 'mouse_over', text = 'Show on Mouseover' },
+                        { value = 'hide', text = 'Hide' }
+                    }
                 },
-            },
-            {
-                bar1Padding = {
-                    key = 'barPadding.bar1',
-                    type = 'slider',
-                    label = 'Bar 1 Padding',
-                    min = 0,
-                    max = 20,
-                    step = 1,
-                    initialValue = 2,
-                    column = 3,
-                    order = 1
-                },
-                bar2Padding = {
-                    key = 'barPadding.bar2',
-                    type = 'slider',
-                    label = 'Bar 2 Padding',
-                    min = 0,
-                    max = 20,
-                    step = 1,
-                    initialValue = 2,
-                    column = 3,
-                    order = 2
-                },
-                bar3Padding = {
-                    key = 'barPadding.bar3',
-                    type = 'slider',
-                    label = 'Bar 3 Padding',
-                    min = 0,
-                    max = 20,
-                    step = 1,
-                    initialValue = 2,
-                    column = 3,
-                    order = 3
-                }
-            },
-            {
-                bar4Padding = {
-                    key = 'barPadding.bar4',
-                    type = 'slider',
-                    label = 'Bar 4 Padding',
-                    min = 0,
-                    max = 20,
-                    step = 1,
-                    initialValue = 2,
-                    column = 3,
-                    order = 1
-                },
-                bar5Padding = {
-                    key = 'barPadding.bar5',
-                    type = 'slider',
-                    label = 'Bar 5 Padding',
-                    min = 0,
-                    max = 20,
-                    step = 1,
-                    initialValue = 2,
-                    column = 3,
-                    order = 2
-                },
-                petbarPadding = {
-                    key = 'barPadding.petbar',
-                    type = 'slider',
-                    label = 'Pet Bar Padding',
-                    min = 0,
-                    max = 20,
-                    step = 1,
-                    initialValue = 2,
-                    column = 3,
-                    order = 3
+                micromenu = {
+                    key = 'menu.micromenu',
+                    type = 'dropdown',
+                    label = 'MicroMenu',
+                    column = 4,
+                    order = 3,
+                    options = {
+                        { value = 'show', text = 'Show' },
+                        { value = 'mouse_over', text = 'Show on Mouseover' },
+                        { value = 'hide', text = 'Hide' }
+                    },
                 }
             },
             -- Add an empty row with padding to ensure enough scroll space

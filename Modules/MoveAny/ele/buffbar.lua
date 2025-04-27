@@ -33,6 +33,12 @@ end
 
 local once = true
 function MoveAny:InitBuffBar()
+	-- Check if Phoenix_UI is managing the buffs
+	if Phoenix_UI and Phoenix_UI.modules and Phoenix_UI.modules["Buffs.Buffs"] and Phoenix_UI.modules["Buffs.Buffs"].enabled then
+		-- Phoenix_UI is handling buffs, so don't allow MoveAny to affect them
+		return
+	end
+	
 	local dbtab = {}
 	if MoveAny:IsEnabled("BUFFS", false) then
 		local MABuffBar = CreateFrame("Frame", "MABuffBar", MoveAny:GetMainPanel())
