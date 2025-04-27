@@ -372,6 +372,12 @@ function MoveAny:ApplyButtonStyle(button, styleOptions)
 	-- Set up glow effect - we'll use the existing Blizzard API and textures
 	if button.UpdateUsable then
 		hooksecurefunc(button, "UpdateUsable", function(self)
+			-- Prevent recursion - if we're already processing this button, return immediately
+			if self.isProcessingUpdateUsable then return end
+			
+			-- Set flag to prevent re-entry
+			self.isProcessingUpdateUsable = true
+		
 			local isUsable, notEnoughMana = IsUsableAction(self.action)
 			
 			if glowStyle == "none" then
@@ -395,6 +401,9 @@ function MoveAny:ApplyButtonStyle(button, styleOptions)
 				end
 			end
 			-- For "default" and "auto", we let the default WoW behavior handle it
+			
+			-- Clear flag when done
+			self.isProcessingUpdateUsable = false
 		end)
 	end
 end
