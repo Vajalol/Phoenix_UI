@@ -1440,6 +1440,9 @@ end
 
 -- Fix for Main Menu
 function Phoenix_UI:FixMainMenu()
+    -- This function was causing the MainMenuMicroButton to appear separate from other micro buttons
+    -- We're disabling this functionality to let MoveAny handle this button with all other micro buttons
+    --[[ 
     -- Check if MainMenuMicroButton exists and initialize it if necessary
     if MainMenuMicroButton then
         -- Make the button visible and interactive
@@ -1460,12 +1463,8 @@ function Phoenix_UI:FixMainMenu()
                 ShowUIPanel(GameMenuFrame)
             end
         end)
-        
-        -- Ensure all menu items are properly initialized
-        if GameMenuFrame then
-            GameMenuFrame:SetParent(UIParent)
-        end
     end
+    ]]
 end
 
 -- Run the fix when the addon is loaded
