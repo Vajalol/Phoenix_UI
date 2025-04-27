@@ -72,7 +72,7 @@ function Buffs:OnEnable()
         border.shadow:SetPoint("TOPLEFT", border, "TOPLEFT", -4, 4)
         border.shadow:SetPoint("BOTTOMRIGHT", border, "BOTTOMRIGHT", 4, -4)
         border.shadow:SetBackdrop(Backdrop)
-        border.shadow:SetBackdropBorderColor(unpack(Phoenix_UI:Color(0.25, true)))
+        border.shadow:SetBackdropBorderColor(0.9, 0.4, 0.13, 0.25)
 
         button.Phoenix_UIBorder = border
     end

@@ -355,16 +355,19 @@ function MoveAny:ApplyButtonStyle(button, styleOptions)
 	local highlightTexture = button:GetHighlightTexture()
 	local cooldown = button.cooldown
 	
-	-- Apply border style
+	-- Apply normal texture styling
 	if normalTexture then
-		if borderStyle == "none" then
+		-- Handle custom border types
+		if borderStyle == "outline" then
+			normalTexture:SetAlpha(1)
+			-- Don't apply scaling to ExtraActionButton1
+			if button:GetName() ~= "ExtraActionButton1" then
+				normalTexture:SetScale(1.1)
+			else
+				normalTexture:SetScale(1)
+			end
+		elseif borderStyle == "none" then
 			normalTexture:SetAlpha(0)
-		elseif borderStyle == "thin" then
-			normalTexture:SetAlpha(1)
-			normalTexture:SetScale(0.8)
-		elseif borderStyle == "thick" then
-			normalTexture:SetAlpha(1)
-			normalTexture:SetScale(1.1)
 		else -- default
 			normalTexture:SetAlpha(1)
 			normalTexture:SetScale(1)

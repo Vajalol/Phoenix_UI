@@ -1,0 +1,20 @@
+local Module = Phoenix_UI:NewModule("Chat.Social");
+
+-- Disable all social integration features
+function Module:OnEnable()
+    local db = Phoenix_UI.db.profile.chat
+    
+    -- Initialize social settings if they don't exist
+    if not db.social then
+        db.social = {}
+    end
+    
+    -- Explicitly disable all social features
+    db.social.enabled = false
+    db.social.enhancedStatuses = false
+    db.social.guildRanks = false
+    db.social.friendNotes = false
+    db.social.inlineTooltips = false
+    
+    -- Nothing else to do - all functionality is disabled
+end

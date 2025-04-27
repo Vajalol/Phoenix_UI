@@ -5,7 +5,6 @@
   <Script file = "_Copy.lua" />
   <Script file = "_Url.lua" />
   <Script file = "_Quickjoin.lua" />
-  <Script file = "_RoleIcons.lua" />
   <Script file = "_Emoji.lua" />
   <Script file = "_History.lua" />
   <Script file = "_Organize.lua" />

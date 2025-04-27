@@ -207,32 +207,6 @@ function Layout:OnEnable()
                 }
             },
             {
-                quickjoin = {
-                    key = 'quickjoin',
-                    type = 'checkbox',
-                    label = 'Friendlist Button',
-                    tooltip = 'Show/Hide friendlist button',
-                    onChange = chatSettingChanged
-                }
-            },
-            {
-                header = {
-                    type = 'header',
-                    label = 'Friendlist'
-                }
-            },
-            {
-                friendlist = {
-                    key = 'friendlist',
-                    type = 'checkbox',
-                    label = 'Class-Friendlist',
-                    tooltip = 'Show character names in class color in friendlist',
-                    column = 4,
-                    order = 1,
-                    onChange = chatSettingChanged
-                }
-            },
-            {
                 emojiHeader = {
                     type = 'header',
                     label = 'Emoji Settings'
@@ -402,63 +376,6 @@ function Layout:OnEnable()
                     onChange = chatSettingChanged
                 }
             },
-            -- Social integration settings
-            {
-                socialHeader = {
-                    type = 'header',
-                    label = 'Social Integration'
-                }
-            },
-            {
-                socialEnabled = {
-                    key = 'social.enabled',
-                    type = 'checkbox',
-                    label = 'Enable Social Features',
-                    tooltip = 'Enable enhanced social integration',
-                    column = 4,
-                    order = 1,
-                    onChange = chatSettingChanged
-                },
-                enhancedStatuses = {
-                    key = 'social.enhancedStatuses',
-                    type = 'checkbox',
-                    label = 'Enhanced Status',
-                    tooltip = 'Show enhanced online status for friends and guild members',
-                    column = 4,
-                    order = 2,
-                    onChange = chatSettingChanged
-                },
-                guildRanks = {
-                    key = 'social.guildRanks',
-                    type = 'checkbox',
-                    label = 'Show Guild Ranks',
-                    tooltip = 'Display guild ranks next to guild member names',
-                    column = 4,
-                    order = 3,
-                    onChange = chatSettingChanged
-                }
-            },
-            {
-                friendNotes = {
-                    key = 'social.friendNotes',
-                    type = 'checkbox',
-                    label = 'Friend Notes',
-                    tooltip = 'Show friend notes in chat messages',
-                    column = 4,
-                    order = 1,
-                    onChange = chatSettingChanged
-                },
-                inlineTooltips = {
-                    key = 'social.inlineTooltips',
-                    type = 'checkbox',
-                    label = 'Inline Tooltips',
-                    tooltip = 'Show detailed tooltips when clicking player names',
-                    column = 4,
-                    order = 2,
-                    onChange = chatSettingChanged
-                }
-            },
-            
             -- Performance optimization settings
             {
                 performanceHeader = {

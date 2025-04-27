@@ -296,7 +296,6 @@ local defaults = {
             quickjoin = true,
             friendlist = true,
             looticons = true,
-            roleicons = true,
             history = {
                 enabled = true,
                 lines = 500
@@ -2404,88 +2403,112 @@ function Phoenix_UI:SaveAllSettings()
     -- ENHANCED: Ensure profile mapping is correct
     _G["Phoenix_UIDB"].profileKeys[playerKey] = currentProfile
     
-    -- Force immediate save with multiple methods
-    local saveSuccess = false
+    -- Comprehensive module list to ensure all settings saved
+    local allModules = {
+        -- Core UI modules
+        "general", "unitframes", "nameplates", "actionbars", "castbars", 
+        "buffs", "tooltip", "map", "chat", "misc", "uiscaling", "fonts",
+        -- Additional modules
+        "msbt", "idtip", "buffoverlay", "cooldowntracker", "weakauras", 
+        "mythicplus", "raidframes", "profiles",
+        -- Legacy names for compatibility
+        "actionbar", "castbar", "buff"
+    }
     
-    -- Try different save methods in order
-    if self.ForceSaveDB then
-        saveSuccess = pcall(function() self:ForceSaveDB() end)
-    elseif self.SaveDB then
-        saveSuccess = pcall(function() self:SaveDB(true) end)
-    end
+    -- Extreme mode: save ALL data in the profile, including unknown modules
+    print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Saving all profile data...")
     
-    -- Also save tab settings specifically
-    if self.SaveAllTabSettings then
-        pcall(function() self:SaveAllTabSettings() end)
-    end
+    -- First, directly copy entire profile to ensure everything is captured
+    pcall(function()
+        _G["Phoenix_UIDB"].profiles[currentProfile] = CopyTable(self.db.profile)
+        _G["Phoenix_UIDB"].profiles[currentProfile].__emergency_saved = GetTime()
+    end)
     
-    -- If we have the sync module settings function, call it
-    if self.SyncModuleSettings then
-        pcall(function() self:SyncModuleSettings(true) end)
-    end
-    
-    -- ENHANCED: Save a comprehensive list of modules directly to global vars
-    if self.db and self.db.profile then
-        local criticalModules = {
-            "general", "nameplates", "actionbars", "castbars", "buffs", "msbt", "idtip",
-            "tooltip", "map", "chat", "misc", "uiscaling", "fonts", "unitframes",
-            "cooldowntracker", "weakauras", "mythicplus", "raidframes"
-        }
-        
-        for _, moduleName in ipairs(criticalModules) do
-            if self.db.profile[moduleName] then
-                -- Copy to global DB for both current profile and Default
-                _G["Phoenix_UIDB"].profiles[currentProfile][moduleName] = CopyTable(self.db.profile[moduleName])
+    -- Then, explicitly save each known module for extra redundancy
+    for _, moduleName in ipairs(allModules) do
+        if self.db.profile[moduleName] and type(self.db.profile[moduleName]) == "table" then
+            -- Critical redundancy: save to both global vars and current profile
+            pcall(function()
+                -- Get a clean copy of current settings
+                local currentSettings = CopyTable(self.db.profile[moduleName])
                 
-                -- Also save to Default profile as fallback (skip profile-specific settings)
+                -- Add diagnostic info
+                currentSettings.__saved = GetTime()
+                currentSettings.__emergency = true
+                currentSettings.__method = "SaveAllSettings"
+                
+                -- Save to global variable
+                _G["Phoenix_UIDB"].profiles[currentProfile][moduleName] = currentSettings
+                
+                -- Also save to Default profile as fallback
                 if moduleName ~= "profiles" then
-                    _G["Phoenix_UIDB"].profiles.Default[moduleName] = CopyTable(self.db.profile[moduleName])
+                    _G["Phoenix_UIDB"].profiles.Default[moduleName] = CopyTable(currentSettings)
                 end
                 
-                -- Add timestamp
-                _G["Phoenix_UIDB"].profiles[currentProfile][moduleName].__saved = GetTime()
-                _G["Phoenix_UIDB"].profiles[currentProfile][moduleName].__saved_method = "SaveAllSettings"
-            end
-        end
-    end
-    
-    -- Add timestamp to track when saved
-    _G["Phoenix_UIDB"].__lastSaved = GetTime()
-    _G["Phoenix_UIDB"].__currentProfile = currentProfile
-    _G["Phoenix_UIDB"].__saveMethod = "SaveAllSettings"
-    
-    -- ENHANCED: Multiple flush attempts to maximize chances of disk write
-    for i = 1, 3 do
-        pcall(function()
-            if FlushSettingsDB then
-                FlushSettingsDB()
-            elseif FlushSavedVariables then
-                FlushSavedVariables()
-            end
-        end)
-        
-        -- Delay additional attempts slightly
-        if i < 3 then
-            C_Timer.After(0.2 * i, function()
-                pcall(function()
-                    if FlushSettingsDB then
-                        FlushSettingsDB()
-                    elseif FlushSavedVariables then
-                        FlushSavedVariables()
-                    end
-                end)
+                -- EXTREME REDUNDANCY: Save an additional copy directly in global var
+                _G["Phoenix_UI_" .. moduleName .. "_Backup"] = CopyTable(currentSettings)
             end)
         end
     end
     
-    if debug then
-        print("Phoenix_UI: SaveAllSettings complete")
+    -- Also save module DB settings if they exist
+    if self.moduleDB then
+        for moduleName, data in pairs(self.moduleDB) do
+            if data.profile and type(data.profile) == "table" then
+                pcall(function()
+                    local lowerName = moduleName:lower()
+                    -- Save to global DB
+                    _G["Phoenix_UIDB"].profiles[currentProfile][lowerName] = CopyTable(data.profile)
+                    _G["Phoenix_UIDB"].profiles[currentProfile][lowerName].__saved = GetTime()
+                    _G["Phoenix_UIDB"].profiles[currentProfile][lowerName].__emergency = true
+                    
+                    -- EXTREME REDUNDANCY: Save directly to global var
+                    _G["Phoenix_UI_" .. lowerName .. "_ModuleBackup"] = CopyTable(data.profile)
+                end)
+            end
+        end
     end
     
-    return saveSuccess
+    -- LEVEL 3: Maximum force - Make repeated flush attempts
+    print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Forcing data flush to disk...")
+    
+    -- Try different save methods in order
+    if self.ForceSaveDB then
+        pcall(function() self:ForceSaveDB() end)
+    elseif self.SaveDB then
+        pcall(function() self:SaveDB(true) end)
+    end
+    
+    -- Use built-in WoW functions too
+    for i = 1, 5 do
+        pcall(function() 
+            if FlushSettingsDB then FlushSettingsDB() end 
+            if FlushSavedVariables then FlushSavedVariables() end
+        end)
+    end
+    
+    -- Add redundant save attempts after a longer delay
+    C_Timer.After(2, function()
+        print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Performing additional save verification...")
+        
+        -- Make a final flush attempt
+        pcall(function() 
+            if FlushSettingsDB then FlushSettingsDB() end 
+            if FlushSavedVariables then FlushSavedVariables() end
+        end)
+        
+        -- Record that we did an emergency save
+        _G["Phoenix_UIDB"].__emergency_saved = true
+        _G["Phoenix_UIDB"].__emergency_time = GetTime()
+        
+        print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Emergency save complete. If problems persist, please type '/puirepair'")
+    end)
+    
+    -- Return success
+    return true
 end
 
--- Add a reusable module setting changed handler function that can be used by all modules
+-- Add the CreateModuleSettingChangedHandler function
 function Phoenix_UI:CreateModuleSettingChangedHandler(moduleName)
     return function(element, value)
         -- Get the database
@@ -2561,7 +2584,7 @@ function Phoenix_UI:CreateModuleSettingChangedHandler(moduleName)
     end
 end
 
--- Add a reusable module refresh function
+-- Add the CreateModuleRefreshFunction function
 function Phoenix_UI:CreateModuleRefreshFunction(moduleName)
     return function(self)
         if not self.layout or not self.layout.rows then return end
@@ -2612,177 +2635,187 @@ function Phoenix_UI:ForceSettingsSave()
     local playerKey = playerName .. " - " .. GetRealmName()
     local currentTime = GetTime()
     
-    -- Debug output
     print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Emergency settings save initiated...")
     
-    -- LEVEL 1: Direct variable backup first - most critical
-    if self.db and self.db.profile then
-        -- Get current profile
-        local currentProfile = self.db.keys and self.db.keys.profile or "Default"
-        
-        -- Ensure global DB exists - create if missing
-        if not _G["Phoenix_UIDB"] then 
-            _G["Phoenix_UIDB"] = {} 
-            print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Created missing global DB")
-        end
-        
-        -- IMPORTANT: Force rebuild profile structures from scratch
-        -- This ensures clean data without corrupted references
-        _G["Phoenix_UIDB"].profiles = _G["Phoenix_UIDB"].profiles or {}
-        _G["Phoenix_UIDB"].profileKeys = _G["Phoenix_UIDB"].profileKeys or {}
-        
-        -- CRITICAL: Create emergency backup under special key
-        _G["Phoenix_UIDB"].__emergency_backup = _G["Phoenix_UIDB"].__emergency_backup or {}
-        _G["Phoenix_UIDB"].__emergency_backup[playerKey] = {
-            timestamp = currentTime,
-            profile = currentProfile,
-            data = CopyTable(self.db.profile)
-        }
-        
-        -- Ensure both current and Default profiles exist
-        if not _G["Phoenix_UIDB"].profiles[currentProfile] then
-            _G["Phoenix_UIDB"].profiles[currentProfile] = {}
-            print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Created missing profile: " .. currentProfile)
-        end
-        
-        if not _G["Phoenix_UIDB"].profiles["Default"] then
-            _G["Phoenix_UIDB"].profiles["Default"] = {}
-        end
-        
-        -- CRITICAL: Make sure this character is linked to correct profile
-        _G["Phoenix_UIDB"].profileKeys[playerKey] = currentProfile
-        
-        -- Comprehensive module list to ensure all settings saved
-        local allModules = {
-            -- Core UI modules
-            "general", "unitframes", "nameplates", "actionbars", "castbars", 
-            "buffs", "tooltip", "map", "chat", "misc", "uiscaling", "fonts",
-            -- Additional modules
-            "msbt", "idtip", "buffoverlay", "cooldowntracker", "weakauras", 
-            "mythicplus", "raidframes", "profiles",
-            -- Legacy names for compatibility
-            "actionbar", "castbar", "buff"
-        }
-        
-        -- Extreme mode: save ALL data in the profile, including unknown modules
-        print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Saving all profile data...")
-        
-        -- First, directly copy entire profile to ensure everything is captured
-        pcall(function()
-            _G["Phoenix_UIDB"].profiles[currentProfile] = CopyTable(self.db.profile)
-            _G["Phoenix_UIDB"].profiles[currentProfile].__emergency_saved = currentTime
-        end)
-        
-        -- Then, explicitly save each known module for extra redundancy
-        for _, moduleName in ipairs(allModules) do
-            if self.db.profile[moduleName] and type(self.db.profile[moduleName]) == "table" then
-                -- Critical redundancy: save to both global vars and current profile
-                pcall(function()
-                    -- Get a clean copy of current settings
-                    local currentSettings = CopyTable(self.db.profile[moduleName])
-                    
-                    -- Add diagnostic info
-                    currentSettings.__saved = currentTime
-                    currentSettings.__emergency = true
-                    currentSettings.__method = "ForceSettingsSave"
-                    
-                    -- Save to global variable
-                    _G["Phoenix_UIDB"].profiles[currentProfile][moduleName] = currentSettings
-                    
-                    -- Also save to Default profile as absolute fallback
-                    if moduleName ~= "profiles" then -- Skip profile-specific settings
-                        _G["Phoenix_UIDB"].profiles["Default"][moduleName] = CopyTable(currentSettings)
-                    end
-                    
-                    -- EXTREME REDUNDANCY: Save an additional copy directly in global var
-                    _G["Phoenix_UI_" .. moduleName .. "_Backup"] = CopyTable(currentSettings)
-                end)
-            end
-        end
-        
-        -- Also save module DB settings if they exist
-        if self.moduleDB then
-            for moduleName, data in pairs(self.moduleDB) do
-                if data.profile and type(data.profile) == "table" then
-                    pcall(function()
-                        local lowerName = moduleName:lower()
-                        -- Save to global DB
-                        _G["Phoenix_UIDB"].profiles[currentProfile][lowerName] = CopyTable(data.profile)
-                        _G["Phoenix_UIDB"].profiles[currentProfile][lowerName].__saved = currentTime
-                        _G["Phoenix_UIDB"].profiles[currentProfile][lowerName].__emergency = true
-                        
-                        -- EXTREME REDUNDANCY: Save directly to global var
-                        _G["Phoenix_UI_" .. lowerName .. "_ModuleBackup"] = CopyTable(data.profile)
-                    end)
-                end
-            end
-        end
-        
-        -- LEVEL 3: Maximum force - Make repeated flush attempts
-        print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Forcing data flush to disk...")
-        
-        -- Multiple flush attempts with different methods
-        for i = 1, 5 do
-            -- Make multiple flush attempts
-            pcall(function() 
-                if FlushSettingsDB then FlushSettingsDB() end 
-                if FlushSavedVariables then FlushSavedVariables() end
-            end)
-            
-            -- Stagger additional flush attempts
-            if i < 5 then
-                C_Timer.After(0.3 * i, function() 
-                    pcall(function() 
-                        if FlushSettingsDB then FlushSettingsDB() end 
-                        if FlushSavedVariables then FlushSavedVariables() end
-                    end)
-                end)
-            end
-        end
-        
-        -- Add redundant save attempts after a longer delay
-        C_Timer.After(2, function()
-            print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Performing additional save verification...")
-            
-            -- Make a final flush attempt
-            pcall(function() 
-                if FlushSettingsDB then FlushSettingsDB() end 
-                if FlushSavedVariables then FlushSavedVariables() end
-            end)
-            
-            -- Record that we did an emergency save
-            _G["Phoenix_UIDB"].__emergency_saved = true
-            _G["Phoenix_UIDB"].__emergency_time = currentTime
-            
-            print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Emergency save complete. If problems persist, please type '/puirepair'")
-        end)
-        
-        -- Return success
-        return true
-    else
-        -- Something is very wrong - DB doesn't exist
-        print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: ERROR: Database not available! Creating emergency backup...")
-        
-        -- Create emergency backup from scratch
-        if not _G["Phoenix_UIDB"] then _G["Phoenix_UIDB"] = {} end
-        if not _G["Phoenix_UIDB"].__emergency_backup then _G["Phoenix_UIDB"].__emergency_backup = {} end
-        
-        -- Record error information for diagnostics
-        _G["Phoenix_UIDB"].__emergency_backup[playerKey] = {
-            timestamp = currentTime,
-            error = "Database not available",
-            action = "attempted emergency save"
-        }
-        
-        -- Try flush anyway
-        pcall(function() 
-            if FlushSettingsDB then FlushSettingsDB() end
-            if FlushSavedVariables then FlushSavedVariables() end
-        end)
-        
-        print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Emergency backup created. Please use '/puirepair' to fix")
-        return false
+    -- Ensure global database exists
+    if not _G["Phoenix_UIDB"] then
+        print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Creating missing global database...")
+        _G["Phoenix_UIDB"] = {}
     end
+    
+    -- Initialize backup storage
+    _G["Phoenix_UIDB"].__emergency_backup = _G["Phoenix_UIDB"].__emergency_backup or {}
+    
+    -- Check if we have database available
+    local dbAvailable = self.db and self.db.profile
+    if not dbAvailable then
+        print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: ERROR: Database not available!")
+    else
+        -- Create backup from current settings
+        local backupData = CopyTable(self.db.profile)
+        
+        -- Store backup in global table
+        _G["Phoenix_UIDB"].__emergency_backup[playerKey] = {
+            timestamp = currentTime,
+            data = backupData
+        }
+        
+        print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Emergency backup created successfully")
+        
+        -- Backup individual modules to separate global variables
+        local allModules = {
+            "general", "unitframes", "nameplates", "actionbars", "castbars", 
+            "buffs", "tooltip", "map", "chat", "misc", "uiscaling", "fonts", 
+            "msbt", "idtip", "buffoverlay", "cooldowntracker"
+        }
+        
+        for _, moduleName in ipairs(allModules) do
+            if self.db.profile[moduleName] then
+                _G["Phoenix_UI_" .. moduleName .. "_Backup"] = CopyTable(self.db.profile[moduleName])
+            end
+        end
+        
+        -- Force settings to be saved
+        print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Forcing settings to save...")
+        
+        -- Try multiple save methods
+        if self.SaveDB then
+            pcall(function() self:SaveDB(true) end)
+        end
+        
+        if self.ForceSaveDB then
+            pcall(function() self:ForceSaveDB() end)
+        end
+        
+        -- Use built-in WoW functions too
+        for i = 1, 3 do
+            pcall(function()
+                if FlushSettingsDB then FlushSettingsDB() end
+                if FlushSavedVariables then FlushSavedVariables() end
+            end)
+        end
+        
+        -- Write emergency info to WTF folder file if possible
+        pcall(function()
+            local f = io.open("WTF/Account/" .. GetAccountExpansionLevel() .. 
+                "/SavedVariables/Phoenix_UI_Emergency.lua", "w")
+            if f then
+                f:write("Phoenix_UI_Emergency = Phoenix_UI_Emergency or {}\n")
+                f:write("Phoenix_UI_Emergency[\"" .. playerKey .. "\"] = {\n")
+                f:write("  timestamp = " .. currentTime .. ",\n")
+                f:write("  success = true,\n")
+                f:write("  modules = {")
+                
+                for _, moduleName in ipairs(allModules) do
+                    if self.db.profile[moduleName] then
+                        f:write("\"" .. moduleName .. "\", ")
+                    end
+                end
+                
+                f:write("},\n")
+                f:write("}\n")
+                f:close()
+            end
+        end)
+    end
+    
+    print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Emergency backup complete.")
+    return dbAvailable
+end
+
+-- Emergency function for creating backups and forcing saves
+function Phoenix_UI:EmergencyBackup()
+    local playerName = UnitName("player")
+    local realmName = GetRealmName()
+    local playerKey = playerName .. " - " .. GetRealmName()
+    local currentTime = GetTime()
+    
+    print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Creating emergency backup...")
+    
+    -- Ensure global database exists
+    if not _G["Phoenix_UIDB"] then
+        print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Creating missing global database...")
+        _G["Phoenix_UIDB"] = {}
+    end
+    
+    -- Initialize backup storage
+    _G["Phoenix_UIDB"].__emergency_backup = _G["Phoenix_UIDB"].__emergency_backup or {}
+    
+    -- Check if we have database available
+    local dbAvailable = self.db and self.db.profile
+    if not dbAvailable then
+        print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: ERROR: Database not available!")
+    else
+        -- Create backup from current settings
+        local backupData = CopyTable(self.db.profile)
+        
+        -- Store backup in global table
+        _G["Phoenix_UIDB"].__emergency_backup[playerKey] = {
+            timestamp = currentTime,
+            data = backupData
+        }
+        
+        print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Emergency backup created successfully")
+        
+        -- Backup individual modules to separate global variables
+        local allModules = {
+            "general", "unitframes", "nameplates", "actionbars", "castbars", 
+            "buffs", "tooltip", "map", "chat", "misc", "uiscaling", "fonts", 
+            "msbt", "idtip", "buffoverlay", "cooldowntracker"
+        }
+        
+        for _, moduleName in ipairs(allModules) do
+            if self.db.profile[moduleName] then
+                _G["Phoenix_UI_" .. moduleName .. "_Backup"] = CopyTable(self.db.profile[moduleName])
+            end
+        end
+        
+        -- Force settings to be saved
+        print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Forcing settings to save...")
+        
+        -- Try multiple save methods
+        if self.SaveDB then
+            pcall(function() self:SaveDB(true) end)
+        end
+        
+        if self.ForceSaveDB then
+            pcall(function() self:ForceSaveDB() end)
+        end
+        
+        -- Use built-in WoW functions too
+        for i = 1, 3 do
+            pcall(function()
+                if FlushSettingsDB then FlushSettingsDB() end
+                if FlushSavedVariables then FlushSavedVariables() end
+            end)
+        end
+        
+        -- Write emergency info to WTF folder file if possible
+        pcall(function()
+            local f = io.open("WTF/Account/" .. GetAccountExpansionLevel() .. 
+                "/SavedVariables/Phoenix_UI_Emergency.lua", "w")
+            if f then
+                f:write("Phoenix_UI_Emergency = Phoenix_UI_Emergency or {}\n")
+                f:write("Phoenix_UI_Emergency[\"" .. playerKey .. "\"] = {\n")
+                f:write("  timestamp = " .. currentTime .. ",\n")
+                f:write("  success = true,\n")
+                f:write("  modules = {")
+                
+                for _, moduleName in ipairs(allModules) do
+                    if self.db.profile[moduleName] then
+                        f:write("\"" .. moduleName .. "\", ")
+                    end
+                end
+                
+                f:write("},\n")
+                f:write("}\n")
+                f:close()
+            end
+        end)
+    end
+    
+    print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Emergency backup complete.")
+    return dbAvailable
 end
 
 -- Critical repair function for fixing settings issues
@@ -2792,7 +2825,6 @@ function Phoenix_UI:RepairSettings()
     local playerKey = playerName .. " - " .. GetRealmName()
     local currentTime = GetTime()
     
-    -- Debug output
     print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: Comprehensive settings repair initiated...")
     
     -- First check if we have a good database
