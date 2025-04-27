@@ -103,7 +103,17 @@ function Range:OnEnable()
         end
 
         local function button_UpdateUsable(button)
+            -- Prevent recursion - if we're already processing this button, return immediately
+            if button.isProcessingUpdateUsable then return end
+            
+            -- Set flag to prevent re-entry
+            button.isProcessingUpdateUsable = true
+            
+            -- Call the update function
             Module.UpdateButtonUsable(button, true)
+            
+            -- Clear flag when done
+            button.isProcessingUpdateUsable = false
         end
 
         function Module:RegisterButtonRange(button)
@@ -127,6 +137,3 @@ function Range:OnEnable()
     end
 
 end
-
-
-
