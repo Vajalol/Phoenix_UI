@@ -592,6 +592,11 @@ function Config:SetupConfig()
         }
     }
     
+    -- Ensure Phoenix_UI.configOptions exists before using it
+    if not Phoenix_UI.configOptions then
+        Phoenix_UI.configOptions = {}
+    end
+    
     -- Register with Phoenix_UI's config system
     if Phoenix_UI.ConfigRegistry then
         Phoenix_UI.ConfigRegistry:RegisterModuleOptions("MythicPlus", options)
@@ -1093,23 +1098,32 @@ function Config:CreateConfigLayout()
     }
     
     -- Register the layout with Phoenix_UI
-    Phoenix_UI.configOptions["MythicPlus"] = layout
+    if not Phoenix_UI.configOptions then
+        Phoenix_UI.configOptions = {}
+    end
+    Phoenix_UI.configOptions["MythicPlus"] = options
     
     -- If the ConfigSystem is available, register with it too
     if Phoenix_UI.ConfigSystem and Phoenix_UI.ConfigSystem.RegisterLayout then
-        Phoenix_UI.ConfigSystem:RegisterLayout("MythicPlus", layout)
+        Phoenix_UI.ConfigSystem:RegisterLayout("MythicPlus", options)
     end
 end
 
--- Initialize the config module
 function Config:OnInitialize()
-    -- Set up configuration when Phoenix_UI is ready
-    if Phoenix_UI.configReady then
-        self:SetupConfig()
-    else
-        -- Wait for Phoenix_UI config to be ready
-        Phoenix_UI:RegisterMessage("PHOENIX_UI_CONFIG_READY", function()
-            self:SetupConfig()
-        end)
+    self:SetupConfig()
+    
+    -- Ensure the layout is loaded and registered
+    if Phoenix_UI and Phoenix_UI.layouts and Phoenix_UI.layouts.MythicPlus then
+        -- Make sure the module can access the layout
+        local MythicPlus = Phoenix_UI:GetModule("MythicPlus", true)
+        if MythicPlus then
+            MythicPlus.layout = Phoenix_UI.layouts.MythicPlus
+        end
     end
-end 
+end
+
+-- Register the module with Phoenix_UI if not already registered
+if not Phoenix_UI:GetModule("MythicPlus", true) then
+    local MythicPlus = Phoenix_UI:NewModule("MythicPlus", "AceEvent-3.0", "AceHook-3.0", "AceConsole-3.0")
+    MythicPlus.Config = Config
+end

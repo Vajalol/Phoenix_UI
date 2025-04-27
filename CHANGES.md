@@ -1,5 +1,21 @@
 # Phoenix_UI Changelog
 
+## Version 11.0.57 Updates
+
+### Fixed Mythic+ Module Configuration
+- **Resolved Configuration Display Issue**
+  - Fixed incorrect variable reference causing configuration not to display
+  - Ensured proper configuration options are shown for the Mythic+ module
+
+- **Added Details Skin Configuration Options**
+  - Implemented comprehensive configuration panel for the Details Skin module
+  - Added toggle options for individual skin features
+  - Ensured all skin settings are properly saved and applied
+
+- **Various Small Bugfixes and Improvements**
+  - Resolved minor issues and inconsistencies throughout the addon
+  - Improved overall stability and performance
+
 ## Version 11.0.56 Updates
 
 ### Fixed Main Menu Button Layout
