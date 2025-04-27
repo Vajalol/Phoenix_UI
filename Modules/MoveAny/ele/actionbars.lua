@@ -93,98 +93,22 @@ function MoveAny:UpdateActionBar(frame)
 			local parent = MicroMenu or MAMenuBar
 			if frame == MAMenuBar then
 				if MoveAny:GetWoWBuild() == "RETAIL" then
-					if rows == 3 or rows == 4 or rows == 6 or rows == 7 or rows == 8 or rows == 9 or rows == 12 then
-						if HelpMicroButton then
-							HelpMicroButton:SetParent(parent)
-						end
-
-						if MainMenuMicroButton then
-							MainMenuMicroButton:SetParent(parent)
-						end
-					elseif rows == 11 or rows == 1 then
-						if HelpMicroButton then
-							HelpMicroButton:SetParent(MAHIDDEN)
-						end
-
-						if MainMenuMicroButton then
-							MainMenuMicroButton:SetParent(parent)
-						end
-					elseif rows == 10 or rows == 5 or rows == 2 then
-						if HelpMicroButton then
-							HelpMicroButton:SetParent(MAHIDDEN)
-						end
-
-						if MainMenuMicroButton then
-							MainMenuMicroButton:SetParent(MAHIDDEN)
-						end
-					else
-						if HelpMicroButton then
-							HelpMicroButton:SetParent(MAHIDDEN)
-						end
-
-						if MainMenuMicroButton then
-							MainMenuMicroButton:SetParent(parent)
-						end
+					-- Simplify micro menu button handling to ensure all buttons are treated consistently
+					-- All buttons should have the same parent to ensure consistent appearance
+					if HelpMicroButton then
+						HelpMicroButton:SetParent(parent)
 					end
 				elseif MoveAny:GetWoWBuild() == "CATA" then
-					if rows == 1 or rows == 2 or rows == 3 or rows == 4 or rows == 6 or rows == 7 or rows == 8 or rows == 9 or rows == 12 then
-						if HelpMicroButton then
-							HelpMicroButton:SetParent(parent)
-						end
-
-						if MainMenuMicroButton then
-							MainMenuMicroButton:SetParent(parent)
-						end
-					elseif rows == 11 then
-						if HelpMicroButton then
-							HelpMicroButton:SetParent(MAHIDDEN)
-						end
-
-						if MainMenuMicroButton then
-							MainMenuMicroButton:SetParent(parent)
-						end
-					elseif rows == 10 or rows == 5 then
-						if HelpMicroButton then
-							HelpMicroButton:SetParent(MAHIDDEN)
-						end
-
-						if MainMenuMicroButton then
-							MainMenuMicroButton:SetParent(MAHIDDEN)
-						end
-					else
-						if HelpMicroButton then
-							HelpMicroButton:SetParent(MAHIDDEN)
-						end
-
-						if MainMenuMicroButton then
-							MainMenuMicroButton:SetParent(parent)
-						end
+					-- Simplify micro menu button handling to ensure all buttons are treated consistently
+					-- All buttons should have the same parent to ensure consistent appearance
+					if HelpMicroButton then
+						HelpMicroButton:SetParent(parent)
 					end
 				elseif MoveAny:GetWoWBuild() == "WRATH" then
-					if rows == 11 or rows == 9 or rows == 8 or rows == 7 or rows == 6 or rows == 4 or rows == 1 then
-						if HelpMicroButton then
-							HelpMicroButton:SetParent(parent)
-						end
-
-						if MainMenuMicroButton then
-							MainMenuMicroButton:SetParent(parent)
-						end
-					elseif rows == 10 or rows == 5 or rows == 2 then
-						if HelpMicroButton then
-							HelpMicroButton:SetParent(MAHIDDEN)
-						end
-
-						if MainMenuMicroButton then
-							MainMenuMicroButton:SetParent(parent)
-						end
-					else
-						if HelpMicroButton then
-							HelpMicroButton:SetParent(MAHIDDEN)
-						end
-
-						if MainMenuMicroButton then
-							MainMenuMicroButton:SetParent(MAHIDDEN)
-						end
+					-- Simplify micro menu button handling to ensure all buttons are treated consistently
+					-- All buttons should have the same parent to ensure consistent appearance
+					if HelpMicroButton then
+						HelpMicroButton:SetParent(parent)
 					end
 				end
 			end
@@ -204,10 +128,8 @@ function MoveAny:UpdateActionBar(frame)
 			local count = opts["COUNT"] or maxbtns
 			count = tonumber(count)
 			local maxB = maxbtns
-			if frame ~= MAMenuBar and frame ~= StanceBar then
-				if count > 0 then
-					maxB = count
-				end
+			if frame ~= MAMenuBar and frame ~= StanceBar and count > 0 then
+				maxB = count
 			else
 				maxB = maxbtns
 			end

@@ -78,11 +78,35 @@ function MoveAny:InitMicroMenu()
 			end
 		)
 
-		-- Make sure the MainMenuMicroButton exists
+		-- Define the order of buttons to ensure MainMenuMicroButton is properly positioned
+		local buttonOrder = {}
+		for i, mbname in ipairs(MBTNS) do
+			if mbname ~= "MainMenuMicroButton" then
+				table.insert(buttonOrder, mbname)
+			end
+		end
+		-- Add MainMenuMicroButton after HelpMicroButton to enforce correct ordering
+		local helpIndex = -1
+		for i, name in ipairs(buttonOrder) do
+			if name == "HelpMicroButton" then
+				helpIndex = i
+				break
+			end
+		end
+		if helpIndex > 0 then
+			table.insert(buttonOrder, helpIndex + 1, "MainMenuMicroButton")
+		else
+			table.insert(buttonOrder, "MainMenuMicroButton")
+		end
+		
+		-- Replace MBTNS with our correctly ordered array
+		MBTNS = buttonOrder
+
+		-- Make sure the buttons exist
 		for i, mbname in pairs(MBTNS) do
 			if not _G[mbname] then
 				local btn = _G["MainMenuMicroButton"]
-				if btn and mbname ~= "MainMenuMicroButton" then
+				if btn then
 					-- Create the missing button if the main menu button exists
 					_G[mbname] = CreateFrame("Button", mbname, MAMenuBar, "MainMenuMicroButton")
 				end
@@ -90,7 +114,11 @@ function MoveAny:InitMicroMenu()
 		end
 
 		if MBTNS then
-			for i, mbname in pairs(MBTNS) do
+			-- Position buttons in the correct order with proper spacing
+			local prevButton = nil
+			local buttonSpacing = 0 -- Default spacing
+			
+			for i, mbname in ipairs(MBTNS) do
 				local mb = _G[mbname]
 				if mb then
 					function mb:GetMAEle()
@@ -108,27 +136,24 @@ function MoveAny:InitMicroMenu()
 						mb:SetSize(sw2, sh2)
 					end
 
-					hooksecurefunc(
-						mb,
-						"SetPoint",
-						function(sel)
-							if MAMenuBar.ma_set_po then return end
-							MAMenuBar.ma_set_po = true
-							if MoveAny.UpdateActionBar then
-								MoveAny:UpdateActionBar(MAMenuBar)
-							end
-
-							MAMenuBar.ma_set_po = false
-						end
-					)
-
+					-- Clear all previous positioning
 					mb:ClearAllPoints()
-					mb:SetPoint("TOPLEFT", MAMenuBar, "TOPLEFT", 0, 0)
+					
+					-- Position button in sequence to create a continuous row
+					if prevButton then
+						mb:SetPoint("LEFT", prevButton, "RIGHT", buttonSpacing, 0)
+					else
+						mb:SetPoint("TOPLEFT", MAMenuBar, "TOPLEFT", 0, 0)
+					end
+					
 					if MoveAny:GetWoWBuild() == "RETAIL" then
 						mb:SetPoint("BOTTOM", MAMenuBar, "BOTTOM", 0, MoveAny:GetMicroButtonYOffset())
 					else
 						mb:SetPoint("BOTTOM", MAMenuBar, "BOTTOM", 0, MoveAny:GetMicroButtonYOffset())
 					end
+					
+					-- Remember this button for positioning the next one
+					prevButton = mb
 
 					hooksecurefunc(
 						MAMenuBar,
@@ -248,6 +273,3 @@ function MoveAny:InitMicroMenu()
 		end
 	end
 end
-
-
-
