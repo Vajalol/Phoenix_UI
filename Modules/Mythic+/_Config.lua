@@ -1,9 +1,12 @@
 -- Phoenix_UI: Mythic+ Module - Configuration
 local addonName, Phoenix = ...
 
--- Get the module
-local Module = Phoenix_UI:GetModule("MythicPlus")
-if not Module then return end
+-- Get the module from Phoenix first, then try Phoenix_UI if not found
+local Module = Phoenix:GetModule("MythicPlus") or Phoenix_UI:GetModule("MythicPlus", true)
+if not Module then 
+    print("Phoenix UI WARNING: Mythic+ module not found, configuration will not work correctly.")
+    return 
+end
 
 -- Get localization
 local L = Module.L or Phoenix.L or {}
@@ -1115,15 +1118,31 @@ function Config:OnInitialize()
     -- Ensure the layout is loaded and registered
     if Phoenix_UI and Phoenix_UI.layouts and Phoenix_UI.layouts.MythicPlus then
         -- Make sure the module can access the layout
-        local MythicPlus = Phoenix_UI:GetModule("MythicPlus", true)
+        local MythicPlus = Phoenix:GetModule("MythicPlus") or Phoenix_UI:GetModule("MythicPlus", true)
         if MythicPlus then
             MythicPlus.layout = Phoenix_UI.layouts.MythicPlus
         end
     end
 end
 
--- Register the module with Phoenix_UI if not already registered
-if not Phoenix_UI:GetModule("MythicPlus", true) then
-    local MythicPlus = Phoenix_UI:NewModule("MythicPlus", "AceEvent-3.0", "AceHook-3.0", "AceConsole-3.0")
-    MythicPlus.Config = Config
+-- Ensure update settings method exists
+if Module and not Module.UpdateSettings then
+    Module.UpdateSettings = function(self)
+        -- Notify all submodules to update their settings
+        self:SendMessage("PHOENIX_MYTHICPLUS_SETTINGS_CHANGED")
+        -- If we have Timer module, update its settings
+        if self:GetModule("Timer") then
+            self:GetModule("Timer"):UpdateSettings()
+        end
+        -- If we have Objectives module, update its settings
+        if self:GetModule("Objectives") then
+            self:GetModule("Objectives"):UpdateSettings()
+        end
+    end
 end
+
+-- NO LONGER NEEDED: The modules should be properly registered earlier
+-- if not Phoenix_UI:GetModule("MythicPlus", true) then
+--     local MythicPlus = Phoenix_UI:NewModule("MythicPlus", "AceEvent-3.0", "AceHook-3.0", "AceConsole-3.0")
+--     MythicPlus.Config = Config
+-- end

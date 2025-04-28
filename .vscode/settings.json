@@ -833,5 +833,8 @@
         "ZoneTextString",
         "PVPInfoTextString",
         "StanceBar"
+    ],
+    "Lua.diagnostics.disable": [
+        "assign-type-mismatch"
     ]
 }

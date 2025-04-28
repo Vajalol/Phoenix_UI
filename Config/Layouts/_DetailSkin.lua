@@ -10,6 +10,27 @@ function Layout:OnEnable()
     end
     
     Phoenix_UI.layouts.DetailSkin = self:GetLayout()
+    
+    -- Also register under DetailsSkin to ensure both naming schemes work
+    Phoenix_UI.layouts.DetailsSkin = self:GetLayout()
+    
+    -- Ensure the module itself is properly registered
+    local DetailsSkin = Phoenix_UI:GetModule("DetailsSkin", true)
+    
+    -- Connect the layout to the module
+    if DetailsSkin then
+        DetailsSkin.layout = self:GetLayout()
+    else
+        -- Try to find module through another method if available
+        local moduleRegistry = Phoenix_UI.moduleRegistry or Phoenix_UI.modules
+        if moduleRegistry and moduleRegistry.DetailsSkin then
+            moduleRegistry.DetailsSkin.layout = self:GetLayout()
+        elseif moduleRegistry and moduleRegistry.DetailSkin then
+            moduleRegistry.DetailSkin.layout = self:GetLayout()
+        else
+            Phoenix_UI:Debug("DetailsSkin module not found when registering layout")
+        end
+    end
 end
 
 -- Define the layout structure

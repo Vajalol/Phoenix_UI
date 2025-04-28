@@ -4,6 +4,8 @@ local L = Phoenix_UI.L or {['MythicPlus'] = 'Mythic+'}
 
 -- Get the Mythic+ module - use Phoenix_UI, not Phoenix
 local MythicPlus = Phoenix_UI:GetModule("MythicPlus", true)
+-- We do not have access to Phoenix global here, so don't try to use it
+-- Instead, just handle the nil case gracefully
 
 -- Register the layout with Phoenix_UI configuration
 function Layout:OnEnable()
@@ -12,6 +14,19 @@ function Layout:OnEnable()
     end
     
     Phoenix_UI.layouts.MythicPlus = self:GetLayout()
+    
+    -- Connect the layout directly to the module if found
+    if MythicPlus then
+        MythicPlus.layout = self:GetLayout()
+    else
+        -- Try to find module through another method if available
+        local moduleRegistry = Phoenix_UI.moduleRegistry or Phoenix_UI.modules
+        if moduleRegistry and moduleRegistry.MythicPlus then
+            moduleRegistry.MythicPlus.layout = self:GetLayout()
+        else
+            Phoenix_UI:Debug("MythicPlus module not found when registering layout")
+        end
+    end
 end
 
 -- Define the layout structure

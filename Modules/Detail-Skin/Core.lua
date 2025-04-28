@@ -2,7 +2,7 @@
 -- Adds a phoenix/fire themed skin to Details! damage meter
 
 local addonName, Phoenix = ...
-local DetailsSkin = Phoenix_UI:NewModule("DetailSkin", "AceEvent-3.0", "AceHook-3.0", "AceConsole-3.0")
+local DetailsSkin = Phoenix_UI:NewModule("DetailsSkin", "AceEvent-3.0", "AceHook-3.0", "AceConsole-3.0")
 local L = Phoenix_UI.L
 
 -- Add the skin profile
@@ -86,20 +86,15 @@ function DetailsSkin:OnDetailsLoaded()
         if Phoenix_UI.db and Phoenix_UI.db.profile and 
            Phoenix_UI.db.profile.detailskin and 
            Phoenix_UI.db.profile.detailskin.enabled then
+            -- Apply the skin
             self:ApplySkin()
-            self:Debug("Auto-applying Phoenix skin to Details!")
-        end
-        
-        -- Notify the config panel if it's open
-        if Phoenix_UIConfig and Phoenix_UIConfig.RefreshPanel then
-            Phoenix_UIConfig:RefreshPanel("DetailSkin")
         end
     end)
 end
 
 -- Check if Details! is loaded, but never prevent UI display
 function DetailsSkin:ShouldEnableOptions()
-    return self:IsDetailsLoaded()
+    return true -- Always show options, even if Details! is not loaded
 end
 
 -- Apply the Phoenix UI skin to Details! 
@@ -354,6 +349,7 @@ end
 function DetailsSkin:PLAYER_ENTERING_WORLD()
     -- When player enters world, check if Details! is loaded
     if not self:IsDetailsLoaded() then
+        self:Debug("Details! not loaded at PLAYER_ENTERING_WORLD")
         return
     end
     
@@ -362,34 +358,50 @@ function DetailsSkin:PLAYER_ENTERING_WORLD()
 end
 
 function DetailsSkin:OnEnable()
-    -- Skip if Details! is not loaded - but still register the config
+    -- Register with Config system
+    self:RegisterConfiguration()
+    
+    -- Skip skin application if Details! is not loaded
     if not self:IsDetailsLoaded() then
-        Phoenix_UI:Print(L["DETAILS_SKIN_ERROR"])
+        self:Debug("Details! not loaded at OnEnable - will apply skin later when available")
     else
         -- Setup our hooks/callbacks if Details! is loaded
         self:ApplySkin()
     end
     
+    -- Register for events to detect when Details! loads if it hasn't already
+    self:RegisterEvent("ADDON_LOADED", function(_, addonName)
+        if addonName:lower() == "details" or addonName:lower() == "details!" then
+            self:Debug("Details! loaded via ADDON_LOADED")
+            self:OnDetailsLoaded()
+        end
+    end)
+    
+    -- Setup event handlers - using proper Ace3 event registration
+    self:RegisterEvent("PLAYER_ENTERING_WORLD")
+end
+
+-- Register configuration with Phoenix UI
+function DetailsSkin:RegisterConfiguration()
     -- Ensure Phoenix_UI.configOptions exists before using it
     if not Phoenix_UI.configOptions then
         Phoenix_UI.configOptions = {}
     end
     
     -- Register the layout with Phoenix_UI config system
-    Phoenix_UI.configOptions["DetailSkin"] = self:GetLayout()
+    Phoenix_UI.configOptions["DetailsSkin"] = self:GetLayout()
     
     -- If the ConfigSystem is available, register with it too
     if Phoenix_UI.ConfigSystem and Phoenix_UI.ConfigSystem.RegisterLayout then
-        Phoenix_UI.ConfigSystem:RegisterLayout("DetailSkin", self:GetLayout())
+        Phoenix_UI.ConfigSystem:RegisterLayout("DetailsSkin", self:GetLayout())
     end
     
     -- Connect our module to the layout defined in Config/Layouts/_DetailSkin.lua
     if Phoenix_UI and Phoenix_UI.layouts and Phoenix_UI.layouts.DetailSkin then
         self.layout = Phoenix_UI.layouts.DetailSkin
     end
-    
-    -- Setup event handlers - using proper Ace3 event registration
-    if self.RegisterEvent then
-        self:RegisterEvent("PLAYER_ENTERING_WORLD", "PLAYER_ENTERING_WORLD")
-    end
 end
+
+-- Add module to Phoenix.Modules for global access
+Phoenix.Modules = Phoenix.Modules or {}
+Phoenix.Modules.DetailsSkin = DetailsSkin

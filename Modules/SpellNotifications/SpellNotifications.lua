@@ -83,7 +83,7 @@ end
 -- Handle dispel events
 function SpellNotifications:HandleDispel(sourceGUID, sourceName, destGUID, destName, spellID, spellName, spellSchool, extraSpellID, extraSpellName, extraSchool, auraType)
     -- Skip if we should ignore this event
-    if self:ShouldIgnoreEvent(sourceGUID, destGUID) then return end
+    if self:ShouldIgnoreDispelEvent(sourceGUID, destGUID) then return end
     
     local color = self.colors.DISPELLED
     local msg = format("|c%s%s|r %s from %s", color, extraSpellName, auraType, destName)
