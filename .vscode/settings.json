@@ -832,7 +832,11 @@
         "ZoneTextFrame",
         "ZoneTextString",
         "PVPInfoTextString",
-        "StanceBar"
+        "StanceBar",
+        "ToggleFrame",
+        "Boss5TargetFrame",
+        "BASE_MOVEMENT_SPEED",
+        "CHAT_FRAMES"
     ],
     "Lua.diagnostics.disable": [
         "assign-type-mismatch"
