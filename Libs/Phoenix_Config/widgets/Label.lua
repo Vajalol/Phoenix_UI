@@ -21,7 +21,8 @@ local FontStringMethods = {
 function Phoenix_UIConfig:FontString(parent, text, inherit)
 	local fs = parent:CreateFontString(nil, self.config.font.strata, inherit or 'GameFontNormal');
 
-	fs:SetText(text);
+	-- Always provide a valid string to SetText
+	fs:SetText(text or "");
 	fs:SetJustifyH('LEFT');
 	fs:SetJustifyV('MIDDLE');
 	--fs:SetFont(self.config.font.family, 15);

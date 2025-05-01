@@ -415,6 +415,9 @@ function Phoenix_UIConfig:BuildElement(frame, row, info, dataKey, db)
 	local hasLabel = false;
 	if info.type == 'checkbox' then
 		element = self:Checkbox(frame, info.label, nil, nil, info.tooltip);
+	elseif info.type == 'toggle' then
+		-- Map 'toggle' type to 'checkbox' as they serve the same purpose
+		element = self:Checkbox(frame, info.label, nil, nil, info.tooltip);
 	elseif info.type == 'editBox' then
 		element = self:EditBox(frame, nil, 20);
 		
@@ -528,10 +531,106 @@ function Phoenix_UIConfig:BuildElement(frame, row, info, dataKey, db)
 			
 			return result
 		end
+	elseif info.type == 'text' then
+		-- Map 'text' type to 'textfield' as they serve the same purpose
+		element = self:EditBox(frame, nil, 20);
+		
+		-- Handle label/text that might be a function
+		local textValue = nil
+		if info.text then
+			if type(info.text) == "function" then
+				-- Safely call the function to get the text value
+				local success, result = pcall(info.text)
+				if success and result then
+					textValue = result
+				else
+					textValue = ""
+				end
+			else
+				textValue = info.text
+			end
+		elseif info.label then
+			if type(info.label) == "function" then
+				-- Safely call the function to get the text value
+				local success, result = pcall(info.label)
+				if success and result then
+					textValue = result
+				else
+					textValue = ""
+				end
+			else
+				textValue = info.label
+			end
+		end
+		
+		-- Set text if we have a value
+		if textValue then
+			element:SetText(textValue);
+		end
+		
+		-- Apply the same validation improvement as for editBox
+		local originalValidate = element.Validate
+		element.Validate = function(self, ...)
+			local result = originalValidate(self, ...)
+			
+			-- Save the value to database when validated
+			if result and self.dbReference and self.dataKey then
+				local value = self:GetValue()
+				setDatabaseValue(self.dbReference, self.dataKey, value)
+				
+				-- Trigger appropriate save mechanisms
+				if Phoenix_UI and Phoenix_UI.SaveDB then
+					-- Check if this is a setting that needs immediate save
+					local needsImmediateSave = self.dataKey and (
+						self.dataKey:match("^general%.") or 
+						self.dataKey:match("^theme") or 
+						self.dataKey:match("^font") or
+						self.dataKey:match("^display%.") or
+						self.dataKey:match("^cosmetic%.") or
+						self.dataKey:match("^automation%.") or
+						self.dataKey:match("^nameplates%.") or
+						self.dataKey:match("^actionbars%.") or 
+						self.dataKey:match("^tooltip%.") or 
+						self.dataKey:match("^mythicplus%.") or 
+						self.dataKey:match("^map%.") or 
+						self.dataKey:match("^chat%.") or 
+						self.dataKey:match("^castbars%.") or 
+						self.dataKey:match("^cooldowntracker%.") or 
+						self.dataKey:match("^weakauras%.") or 
+						self.dataKey:match("^msbt%.") or 
+						self.dataKey:match("^buffs%.") or
+						self.dataKey:match("^buffoverlay%.") or
+						self.dataKey:match("^idtip%.") or
+						self.dataKey:match("^misc%.")
+					)
+					
+					if needsImmediateSave then
+						Phoenix_UI:SaveDB()
+					else
+						-- Use a timer to batch multiple edits
+						if not self.saveTimer then
+							self.saveTimer = C_Timer.After(0.5, function()
+								self.saveTimer = nil
+								Phoenix_UI:SaveDB()
+							end)
+						end
+					end
+				end
+			end
+			
+			return result
+		end
 	elseif info.type == 'multiLineBox' then
 		element = self:MultiLineBox(frame, 300, info.height or 20, info.text or '');
 	elseif info.type == 'dropdown' then
 		local options = info.options
+		if type(options) == "function" then
+			options = options()
+		end
+		element = self:Dropdown(frame, 300, 20, options or {}, nil, info.multi or nil, info.assoc or false);
+	elseif info.type == 'select' then
+		-- Map 'select' type to 'dropdown' as they serve the same purpose
+		local options = info.options or info.values
 		if type(options) == "function" then
 			options = options()
 		end
@@ -577,9 +676,31 @@ function Phoenix_UIConfig:BuildElement(frame, row, info, dataKey, db)
 			element:SetScript('OnClick', info.onClick);
 		end
 	elseif info.type == 'header' then
-		element = self:Header(frame, info.label);
+		-- Handle function-based label for header
+		local headerText = info.label
+		if type(info.label) == "function" then
+			-- Safely call the function to get the label text
+			local success, result = pcall(info.label)
+			if success and result then
+				headerText = result
+			else
+				headerText = ""
+			end
+		end
+		element = self:Header(frame, headerText);
 	elseif info.type == 'label' then
-		element = self:CreateLabel(frame, info.label, frame:GetWidth());
+		-- Handle function-based label for label
+		local labelText = info.label
+		if type(info.label) == "function" then
+			-- Safely call the function to get the label text
+			local success, result = pcall(info.label)
+			if success and result then
+				labelText = result
+			else
+				labelText = ""
+			end
+		end
+		element = self:CreateLabel(frame, labelText, frame:GetWidth());
 		element:SetSize(info.width or 10, info.height or 10);
 	elseif info.type == 'texture' then
 		element = self:Texture(frame, info.width or 24, info.height or 24, info.texture);
@@ -638,7 +759,32 @@ function Phoenix_UIConfig:BuildElement(frame, row, info, dataKey, db)
 		end
 	elseif info.type == 'description' then
 		-- Add support for description type (similar to label but with different styling)
-		element = self:CreateLabel(frame, info.text or info.label or "", frame:GetWidth());
+		-- Handle function-based text/label for description
+		local descText = ""
+		
+		if info.text then
+			if type(info.text) == "function" then
+				-- Safely call the function to get the text
+				local success, result = pcall(info.text)
+				if success and result then
+					descText = result
+				end
+			else
+				descText = info.text
+			end
+		elseif info.label then
+			if type(info.label) == "function" then
+				-- Safely call the function to get the label
+				local success, result = pcall(info.label)
+				if success and result then
+					descText = result
+				end
+			else
+				descText = info.label
+			end
+		end
+		
+		element = self:CreateLabel(frame, descText or "", frame:GetWidth());
 		element:SetSize(info.width or frame:GetWidth(), info.height or 20);
 		element:SetJustifyH("LEFT");
 		
@@ -673,8 +819,19 @@ function Phoenix_UIConfig:BuildElement(frame, row, info, dataKey, db)
 		
 		-- Create label if text is provided
 		if info.text then
+			local dividerText = info.text
+			if type(info.text) == "function" then
+				-- Safely call the function to get the text
+				local success, result = pcall(info.text)
+				if success and result then
+					dividerText = result
+				else
+					dividerText = ""
+				end
+			end
+			
 			local label = element:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-			label:SetText(info.text)
+			label:SetText(dividerText or "")
 			label:SetPoint("CENTER", element, "CENTER")
 			
 			-- Add padding around the text
@@ -715,8 +872,22 @@ function Phoenix_UIConfig:BuildElement(frame, row, info, dataKey, db)
 		info.type ~= 'color';
 
 	if info.label and canHaveLabel then
-		self:AddLabel(frame, element, info.label);
-		hasLabel = true;
+		-- Handle function-based labels
+		local labelText = info.label
+		if type(info.label) == "function" then
+			-- Safely call the function to get the label text
+			local success, result = pcall(info.label)
+			if success and result then
+				labelText = result
+			else
+				labelText = ""
+			end
+		end
+		
+		if labelText then -- Only add label if we have valid text
+			self:AddLabel(frame, element, labelText);
+			hasLabel = true;
+		end
 	end
 
 	if info.initialValue then
