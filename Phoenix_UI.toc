@@ -1,6 +1,6 @@
 ## Interface: 100205, 30401, 11501
 ## Author: Vajalol
-## Version: 11.0.57
+## Version: 11.0.58
 ## Title: |cff00D1FFPhoenix|r|cffFF0000_|r|cffFFD100UI|r
 ## SavedVariables: Phoenix_UIDB
 ## SavedVariablesPerCharacter: Phoenix_UIPerCharDB

@@ -1,5 +1,11 @@
 # Phoenix_UI Changelog
 
+## Version 11.0.58 Updates
+
+### Version Number Update
+- **Updated Version Number**
+  - Incremented version number from 11.0.57 to 11.0.58
+
 ## Version 11.0.57 Updates
 
 ### Fixed Mythic+ Module Configuration
@@ -42,7 +48,7 @@
   - Added additional error prevention mechanisms to avoid similar issues
 
 - **Enhanced Unit Death Detection**
-  - Rewrote the pet death detection logic to work with combat log events
+  - Rewritten the pet death detection logic to work with combat log events
   - Implemented direct GUID comparison between combat log and player's pet
   - Improved reliability of death detection across all game activities
   - Fixed issues with the CheckPetDeath function receiving incorrect parameters
