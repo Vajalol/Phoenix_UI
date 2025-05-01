@@ -35,6 +35,14 @@ function MSBTManager:OnEnable()
     -- Initial settings check
     self:UpdateSettings()
     
+    -- Connect to the Phoenix_UI layout system
+    if Phoenix_UI and Phoenix_UI.layouts and Phoenix_UI.layouts.Msbt then
+        self.layout = Phoenix_UI.layouts.Msbt
+        if self.OnLayoutRegistered then
+            self:OnLayoutRegistered(self.layout)
+        end
+    end
+    
     -- Create initial backup
     C_Timer.After(5, function()
         self:BackupSettings()

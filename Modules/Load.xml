@@ -14,6 +14,7 @@
   <Include file='MSBT\Load.xml'/>
   <Include file='CooldownTracker\Load.xml'/>
   <Include file="Detail-Skin\Load.xml"/>
+  <Include file="Mythic+\Load.xml"/>
   <Include file="SpellNotifications\Load.xml"/>
   ##buffoverlay
   <!-- buffoverlay module includes each file directly instead of using Load.xml -->

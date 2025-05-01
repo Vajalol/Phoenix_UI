@@ -3,7 +3,7 @@
 
 local addonName, Phoenix = ...
 local MythicPlus = Phoenix.Modules.MythicPlus
-local Timer = MythicPlus:NewModule("Timer", "AceHook-3.0")
+local Timer = MythicPlus:NewModule("Timer", "AceEvent-3.0", "AceTimer-3.0")
 local L = MythicPlus.L
 
 -- Frame references

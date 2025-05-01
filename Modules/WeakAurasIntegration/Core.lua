@@ -60,6 +60,14 @@ function Module:OnEnable()
         return
     end
     
+    -- Connect to the Phoenix_UI layout system
+    if Phoenix_UI and Phoenix_UI.layouts and Phoenix_UI.layouts.WeakAurasIntegration then
+        self.layout = Phoenix_UI.layouts.WeakAurasIntegration
+        if self.OnLayoutRegistered then
+            self:OnLayoutRegistered(self.layout)
+        end
+    end
+    
     -- Hook into WeakAuras
     self:HookWeakAuras()
     

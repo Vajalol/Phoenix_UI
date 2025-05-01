@@ -451,8 +451,19 @@ function module:OnEnable()
         }
     }
     
-    -- IMPORTANT: Assign the layout to the module itself
-    self.layout = layout
+    -- Register the layout
+    Phoenix_UI.layouts.PremadeGroupsFilter = layout
+    
+    -- Get the PremadeGroupsFilter module
+    local PGFModule = GetPGF()
+    
+    -- Connect the layout to the module
+    if PGFModule then
+        PGFModule.layout = layout
+        if PGFModule.OnLayoutRegistered then
+            PGFModule:OnLayoutRegistered(layout)
+        end
+    end
     
     -- Direct assignment to config options for immediate availability
     if Phoenix_UI and Phoenix_UI.configOptions then

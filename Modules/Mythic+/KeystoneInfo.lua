@@ -1,9 +1,9 @@
--- Phoenix_UI: KeystoneInfo Submodule
--- Enhances keystone links in chat and provides better information display
+-- Phoenix_UI: KeystoneInfo Submodule for Mythic+
+-- Enhanced display of keystone information
 
 local addonName, Phoenix = ...
 local MythicPlus = Phoenix.Modules.MythicPlus
-local KeystoneInfo = MythicPlus:NewModule("KeystoneInfo", "AceEvent-3.0", "AceTimer-3.0")
+local KeystoneInfo = MythicPlus:NewModule("KeystoneInfo", "AceEvent-3.0", "AceHook-3.0", "AceTimer-3.0")
 local L = MythicPlus.L
 
 -- Constants
@@ -97,10 +97,25 @@ function KeystoneInfo:OnInitialize()
     self:RegisterEvent("CHALLENGE_MODE_COMPLETED")
     self:RegisterEvent("PLAYER_ENTERING_WORLD")
     
+    -- Store the original GetActivities function before hooking
+    self.originalGetActivities = C_WeeklyRewards.GetActivities
+    
+    -- Flag to prevent recursive calls
+    self.isProcessingActivities = false
+    
     -- Hook C_WeeklyRewards.GetActivities to track weekly best
     if not self.GetWeeklyChestRewardLevelHooked then
         hooksecurefunc(C_WeeklyRewards, "GetActivities", function()
-            local activities = C_WeeklyRewards.GetActivities()
+            -- Prevent recursion
+            if self.isProcessingActivities then return end
+            
+            -- Set the flag to prevent recursion
+            self.isProcessingActivities = true
+            
+            -- Call the original function safely
+            local activities = self.originalGetActivities()
+            
+            -- Process activities
             if activities then
                 for _, activityInfo in ipairs(activities) do
                     -- The Mythic+ activity type is 1
@@ -110,6 +125,9 @@ function KeystoneInfo:OnInitialize()
                     end
                 end
             end
+            
+            -- Reset the flag
+            self.isProcessingActivities = false
         end)
         self.GetWeeklyChestRewardLevelHooked = true
     end
@@ -200,7 +218,19 @@ end
 
 -- Handle messages
 function KeystoneInfo:PHOENIX_MYTHICPLUS_ENABLED()
-    self:ScheduleRepeatingTimer("UpdateDungeonInfo", updateFrequency)
+    -- Use ScheduleRepeatingTimer if available, otherwise fallback to C_Timer
+    if self.ScheduleRepeatingTimer then
+        self:ScheduleRepeatingTimer("UpdateDungeonInfo", updateFrequency)
+    else
+        -- Fallback for when AceTimer is not available
+        local function TimerLoop()
+            self:UpdateDungeonInfo()
+            C_Timer.After(updateFrequency, TimerLoop)
+        end
+        C_Timer.After(updateFrequency, TimerLoop)
+    end
+    
+    -- Initial update
     self:UpdateDungeonInfo()
 end
 
@@ -397,16 +427,20 @@ function KeystoneInfo:UpdateDungeonInfo()
         end
     end
     
-    -- Get current weekly best using the modern API
-    local activities = C_WeeklyRewards.GetActivities()
-    if activities then
-        for _, activityInfo in ipairs(activities) do
-            -- The Mythic+ activity type is 1
-            if activityInfo.type == 1 and activityInfo.level and activityInfo.level > weeklyBest then
-                weeklyBest = activityInfo.level
-                self:SaveData()
+    -- Get current weekly best using the modern API - use safe approach
+    if not self.isProcessingActivities then
+        self.isProcessingActivities = true
+        local activities = self.originalGetActivities and self.originalGetActivities() or C_WeeklyRewards.GetActivities()
+        if activities then
+            for _, activityInfo in ipairs(activities) do
+                -- The Mythic+ activity type is 1
+                if activityInfo.type == 1 and activityInfo.level and activityInfo.level > weeklyBest then
+                    weeklyBest = activityInfo.level
+                    self:SaveData()
+                end
             end
         end
+        self.isProcessingActivities = false
     end
 end
 

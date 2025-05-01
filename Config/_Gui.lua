@@ -1675,7 +1675,9 @@ function Gui:OnEnable()
         WeakAurasIntegration = WeakAurasIntegration.layout,
         CooldownTracker = CooldownTracker.layout,
         MythicPlus = MythicPlus.layout,
-        DetailSkin = DetailSkin.layout
+        DetailSkin = DetailSkin.layout,
+        MoveAny = Phoenix_UI.layouts and Phoenix_UI.layouts.MoveAny or {},
+        Skins = Phoenix_UI.layouts and Phoenix_UI.layouts.Skins or {},
     }
 
     -- Organize modules into categories for better organization
@@ -1697,8 +1699,10 @@ function Gui:OnEnable()
         { title = 'MSBT', name = 'Msbt', layout = options['Msbt'] },
         { title = 'IdTip', name = 'IdTip', layout = options['IdTip'] },
         { title = 'WeakAuras', name = 'WeakAurasIntegration', layout = options['WeakAurasIntegration'] },
-        { title = 'Mythic+', name = 'MythicPlus', layout = options['MythicPlus'] },
-        { title = 'Detail Skin', name = 'DetailSkin', layout = options['DetailSkin'] },
+        { title = 'Mythic+', name = 'MythicPlus', layout = Phoenix_UI.layouts and Phoenix_UI.layouts.MythicPlus or options['MythicPlus'] },
+        { title = 'Detail Skin', name = 'DetailSkin', layout = Phoenix_UI.layouts and Phoenix_UI.layouts.DetailSkin or options['DetailSkin'] },
+        { title = 'MoveAny', name = 'MoveAny', layout = Phoenix_UI.layouts and Phoenix_UI.layouts.MoveAny or options['MoveAny'] },
+        { title = 'Skins', name = 'Skins', layout = Phoenix_UI.layouts and Phoenix_UI.layouts.Skins or options['Skins'] },
         
         -- Appearance
         { title = '|cffFF5500Appearance|r', name = 'header3', isHeader = true },
@@ -2877,6 +2881,66 @@ function PhoenixConfig:CreateOptions()
                                     -- Set
                                     ACD:Open('Phoenix_UI_Config')
                                     ACD:SelectGroup('Phoenix_UI_Config', 'General', 'Msbt')
+                                    
+                                    ACR:NotifyChange('Phoenix_UI_Config')
+                                end,
+                                hidden = true,
+                            },
+                        },
+                    },
+                },
+            },
+            MoveAny = {
+                name = 'MoveAny', type = 'group', order = 10,
+                args = {
+                    layout = {
+                        type = 'group',
+                        inline = true,
+                        name = '',
+                        args = {
+                            load = {
+                                name = 'Config',
+                                type = 'execute',
+                                func = function()
+                                    local layout = self:GetModule('Config.Layout.MoveAny')
+                                    
+                                    -- Get and build layout options
+                                    local opts = {}
+                                    self:BuildOptions(layout, opts)
+                                    
+                                    -- Set
+                                    ACD:Open('Phoenix_UI_Config')
+                                    ACD:SelectGroup('Phoenix_UI_Config', 'General', 'MoveAny')
+                                    
+                                    ACR:NotifyChange('Phoenix_UI_Config')
+                                end,
+                                hidden = true,
+                            },
+                        },
+                    },
+                },
+            },
+            Skins = {
+                name = 'Skins', type = 'group', order = 11,
+                args = {
+                    layout = {
+                        type = 'group',
+                        inline = true,
+                        name = '',
+                        args = {
+                            load = {
+                                name = 'Config',
+                                type = 'execute',
+                                func = function()
+                                    local layout = self:GetModule('Config.Layout.Skins')
+                                    
+                                    -- Get and build layout options
+                                    local opts = {}
+                                    self:BuildOptions(layout, opts)
+                                    
+                                    -- Set
+                                    ACD:Open('Phoenix_UI_Config')
+                                    ACD:SelectGroup('Phoenix_UI_Config', 'General', 'Skins')
                                     
                                     ACR:NotifyChange('Phoenix_UI_Config')
                                 end,

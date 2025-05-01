@@ -785,6 +785,14 @@ function Module:OnEnable()
     
     -- Record status for diagnostics
     self:LogModuleStatus()
+    
+    -- Connect to the Phoenix_UI layout system if available
+    if Phoenix_UI and Phoenix_UI.layouts and Phoenix_UI.layouts.CooldownTracker then
+        self.layout = Phoenix_UI.layouts.CooldownTracker
+        if self.OnLayoutRegistered then
+            self:OnLayoutRegistered(self.layout)
+        end
+    end
 end
 
 -- Helper function to get the module's database

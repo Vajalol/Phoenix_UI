@@ -1,7 +1,7 @@
 -- Phoenix UI: DetailSkin Layout
 local addonName, Phoenix = ...
 local Layout = Phoenix_UI:NewModule("Config.Layout.DetailSkin")
-local L = Phoenix.L or {['DetailSkin'] = 'Detail Skin'}
+local L = Phoenix_UI.L or {['DetailSkin'] = 'Detail Skin'}
 
 -- Register the layout with Phoenix_UI configuration
 function Layout:OnEnable()
@@ -9,27 +9,27 @@ function Layout:OnEnable()
         Phoenix_UI.layouts = {}
     end
     
-    Phoenix_UI.layouts.DetailSkin = self:GetLayout()
+    -- Create the layout
+    local layout = self:GetLayout()
     
-    -- Also register under DetailsSkin to ensure both naming schemes work
-    Phoenix_UI.layouts.DetailsSkin = self:GetLayout()
+    -- Register with consistent naming
+    Phoenix_UI.layouts.DetailSkin = layout
     
-    -- Ensure the module itself is properly registered
-    local DetailsSkin = Phoenix_UI:GetModule("DetailsSkin", true)
+    -- Get the DetailSkin module
+    local DetailsSkin = Phoenix_UI:GetModule("DetailSkin", true)
     
     -- Connect the layout to the module
     if DetailsSkin then
-        DetailsSkin.layout = self:GetLayout()
-    else
-        -- Try to find module through another method if available
-        local moduleRegistry = Phoenix_UI.moduleRegistry or Phoenix_UI.modules
-        if moduleRegistry and moduleRegistry.DetailsSkin then
-            moduleRegistry.DetailsSkin.layout = self:GetLayout()
-        elseif moduleRegistry and moduleRegistry.DetailSkin then
-            moduleRegistry.DetailSkin.layout = self:GetLayout()
-        else
-            Phoenix_UI:Debug("DetailsSkin module not found when registering layout")
+        DetailsSkin.layout = layout
+        if DetailsSkin.OnLayoutRegistered then
+            DetailsSkin:OnLayoutRegistered(layout)
         end
+    end
+    
+    -- Check if Details is installed
+    local detailsFound = _G.Details ~= nil
+    if detailsFound then
+        -- Details is installed, we can set up any specific integration if needed
     end
 end
 
@@ -83,12 +83,24 @@ If this tab appears empty, install Details! from your addon manager, then reload
                         -- Notify Details! to update if it exists
                         if value then
                             if _G.Details then
-                                Phoenix_UI:Print(L['DetailSkin_Enabled'] or 'Phoenix UI skin for Details! has been enabled. Please reload your UI to apply changes.')
+                                if Phoenix_UI.Print then
+                                    Phoenix_UI:Print(L['DetailSkin_Enabled'] or 'Phoenix UI skin for Details! has been enabled. Please reload your UI to apply changes.')
+                                else
+                                    print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: " .. (L['DetailSkin_Enabled'] or 'Phoenix UI skin for Details! has been enabled. Please reload your UI to apply changes.'))
+                                end
                             else
-                                Phoenix_UI:Print(L['DetailSkin_Details_Missing'] or 'Details! addon is not loaded or installed. Install Details! to use this skin.')
+                                if Phoenix_UI.Print then
+                                    Phoenix_UI:Print(L['DetailSkin_Details_Missing'] or 'Details! addon is not loaded or installed. Install Details! to use this skin.')
+                                else
+                                    print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: " .. (L['DetailSkin_Details_Missing'] or 'Details! addon is not loaded or installed. Install Details! to use this skin.'))
+                                end
                             end
                         else
-                            Phoenix_UI:Print(L['DetailSkin_Disabled'] or 'Phoenix UI skin for Details! has been disabled. Please reload your UI to apply changes.')
+                            if Phoenix_UI.Print then
+                                Phoenix_UI:Print(L['DetailSkin_Disabled'] or 'Phoenix UI skin for Details! has been disabled. Please reload your UI to apply changes.')
+                            else
+                                print("|cffFF7D0APhoenix|r|cffFF0000_|r|cffFFD100UI|r: " .. (L['DetailSkin_Disabled'] or 'Phoenix UI skin for Details! has been disabled. Please reload your UI to apply changes.'))
+                            end
                         end
                     end
                 }

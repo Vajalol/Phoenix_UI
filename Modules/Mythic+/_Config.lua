@@ -1,8 +1,8 @@
 -- Phoenix_UI: Mythic+ Module - Configuration
 local addonName, Phoenix = ...
 
--- Get the module from Phoenix first, then try Phoenix_UI if not found
-local Module = Phoenix:GetModule("MythicPlus") or Phoenix_UI:GetModule("MythicPlus", true)
+-- Get the module
+local Module = Phoenix.Modules.MythicPlus
 if not Module then 
     print("Phoenix UI WARNING: Mythic+ module not found, configuration will not work correctly.")
     return 

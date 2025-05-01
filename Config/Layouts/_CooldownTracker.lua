@@ -298,8 +298,12 @@ function module:OnInitialize()
 end
 
 function module:OnEnable()
+    if not Phoenix_UI.layouts then
+        Phoenix_UI.layouts = {}
+    end
+    
     -- Get Config
-    local L = Phoenix.L or {}
+    local L = Phoenix_UI.L or {}
     local DB = GetDB()
     
     -- Ensure timeline settings are valid values (initialize if needed)
@@ -321,8 +325,8 @@ function module:OnEnable()
         }
     end
     
-    -- Layout
-    module.layout = {
+    -- Create the layout
+    local layout = {
         layoutConfig = { padding = { top = 15 } },
         database = DB.cooldownTracker,
         rows = {
@@ -1416,46 +1420,19 @@ function module:OnEnable()
         }
     }
     
-    -- Make sure UI elements appear correctly by publishing the layout to multiple places
-    -- Direct assignment for immediate availability
-    if Phoenix_UI and Phoenix_UI.configOptions then
-        Phoenix_UI.configOptions["CooldownTracker"] = self.layout
-    end
+    -- Register the layout
+    Phoenix_UI.layouts.CooldownTracker = layout
     
-    -- Use centralized config system if available
-    if Phoenix_UI.ConfigSystem and Phoenix_UI.ConfigSystem.RegisterLayout then
-        Phoenix_UI.ConfigSystem:RegisterLayout("CooldownTracker", self.layout)
-    end
+    -- Get the CooldownTracker module
+    local CooldownTrackerModule = GetCooldownTracker()
     
-    -- Force refresh if config UI is already showing
-    if Phoenix_UI.UI and Phoenix_UI.UI.RefreshConfig then
-        C_Timer.After(0.3, function()
-            if Phoenix_UI.UI.RefreshConfig then
-                Phoenix_UI.UI:RefreshConfig()
-            end
-        end)
-    end
-
-    -- Wait a moment to let the UI fully initialize
-    C_Timer.After(0.2, function()
-        -- Find all slider widgets and initialize them safely
-        local container = Phoenix_UI.UI and Phoenix_UI.UI.frames and Phoenix_UI.UI.frames.configFrame
-        if not container then return end
-        
-        -- Go through all potential sliders
-        for _, child in pairs({container:GetChildren()}) do
-            if child and child.GetObjectType and child:GetObjectType() == "Slider" then
-                -- Get the widget info if available
-                local widget = child.widget or child.parent and child.parent.widget
-                if widget and widget.type == "slider" then
-                    InitializeSlider(child, widget, widget.min, widget.max, 
-                        (widget.initialValue or (widget.key and widget.key:match("width") and 300) or 
-                        (widget.key and widget.key:match("height") and 150) or 
-                        (widget.key and widget.key:match("minDisplayTime") and 60) or 0))
-                end
-            end
+    -- Connect the layout to the module
+    if CooldownTrackerModule then
+        CooldownTrackerModule.layout = layout
+        if CooldownTrackerModule.OnLayoutRegistered then
+            CooldownTrackerModule:OnLayoutRegistered(layout)
         end
-    end)
+    end
 end
 
 -- Helper function to add widgets to a frame

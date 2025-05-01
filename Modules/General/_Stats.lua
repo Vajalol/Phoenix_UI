@@ -854,6 +854,14 @@ function Module:OnEnable()
             Module.UpdateFrameSize()
         end
     end)
+    
+    -- Connect to the Phoenix_UI layout system
+    if Phoenix_UI and Phoenix_UI.layouts and Phoenix_UI.layouts.PlayerStats then
+        self.layout = Phoenix_UI.layouts.PlayerStats
+        if self.OnLayoutRegistered then
+            self:OnLayoutRegistered(self.layout)
+        end
+    end
 end
 
 -- Add RefreshPlayerStats function to handle configuration changes
@@ -1084,6 +1092,41 @@ function Module:RefreshPlayerStats()
                         FlushSettingsDB()
                     end
                 end)
+            end
+        end
+    end
+end
+
+-- Connect to the Phoenix_UI layout system
+function Module:OnLayoutRegistered(layout)
+    -- Store the layout reference
+    self.layout = layout
+    
+    -- Check if layout is valid and has the expected method
+    if not layout then return end
+    
+    -- Register settings callback (with safety check)
+    if layout.RegisterCallback then
+        layout:RegisterCallback("OnConfigChanged", function(key, value)
+            -- Update our settings based on layout changes
+            if not Phoenix_UI.db.profile.general.playerStats then
+                Phoenix_UI.db.profile.general.playerStats = {}
+            end
+            
+            -- Set the value in our settings
+            Phoenix_UI.db.profile.general.playerStats[key] = value
+            
+            -- Refresh UI based on new settings
+            self:RefreshPlayerStats()
+        end)
+    end
+    
+    -- Set up initial values in the layout (with safety checks)
+    if layout.GetOption and layout.SetOption then
+        local config = Phoenix_UI.db.profile.general.playerStats or {}
+        for key, value in pairs(config) do
+            if layout:GetOption(key) ~= nil then
+                layout:SetOption(key, value)
             end
         end
     end

@@ -1,5 +1,17 @@
 local Module = Phoenix_UI:NewModule("Tooltip.Core");
 
+-- Settings update handler
+local function UpdateTooltipSettings()
+    local db = Phoenix_UI.db.profile.tooltip
+    
+    -- Only modify anchor if mouseanchor is enabled
+    if db.mouseanchor then
+        hooksecurefunc("GameTooltip_SetDefaultAnchor", function(tooltip, parent)
+            tooltip:SetOwner(parent, "ANCHOR_CURSOR")
+        end)
+    end
+end
+
 function Module:OnEnable()
     local db = Phoenix_UI.db.profile.tooltip
 
@@ -12,15 +24,23 @@ function Module:OnEnable()
     self.pendingInspects = {}
     self.slotItemLevels = {}
     
-    -- tooltip anchor
-    if (db.mouseanchor) then
-        hooksecurefunc("GameTooltip_SetDefaultAnchor", function(tooltip, parent)
-            tooltip:SetOwner(parent, "ANCHOR_CURSOR")
-        end)
-    else
-        hooksecurefunc("GameTooltip_SetDefaultAnchor", function(tooltip, parent)
-            tooltip:SetOwner(parent, "ANCHOR_NONE")
-        end)
+    -- Register for config changes
+    Phoenix_UI:RegisterMessage("PHOENIX_UI_SETTING_CHANGED", function(event, key, value)
+        -- Only update if the change is tooltip-related
+        if key and key:match("^tooltip%.") then
+            UpdateTooltipSettings()
+        end
+    end)
+    
+    -- Initial settings update
+    UpdateTooltipSettings()
+    
+    -- Connect to the Phoenix_UI layout system
+    if Phoenix_UI and Phoenix_UI.layouts and Phoenix_UI.layouts.Tooltip then
+        self.layout = Phoenix_UI.layouts.Tooltip
+        if self.OnLayoutRegistered then
+            self:OnLayoutRegistered(self.layout)
+        end
     end
 
     if (db.style == "Custom") then
@@ -80,10 +100,17 @@ function Module:OnEnable()
             local is_10_0_plus = data and data.guid
             
             if is_10_0_plus then
-                unit = data.guid and C_PlayerInfo and C_PlayerInfo.GetUnitByGUID and C_PlayerInfo.GetUnitByGUID(data.guid)
+                -- Add safe check for C_PlayerInfo and GetUnitByGUID method
+                local unit = nil
+                if data.guid and C_PlayerInfo and type(C_PlayerInfo.GetUnitByGUID) == "function" then
+                    unit = C_PlayerInfo.GetUnitByGUID(data.guid)
+                end
+                
+                -- Fallback to token if available
                 if not unit and data.token then
                     unit = data.token
                 end
+                
                 unitName = data.name
             else
                 -- Fallback to older method
@@ -156,7 +183,36 @@ function Module:OnEnable()
                     GetTarget(unit .. "target") or "Unknown")
             end
         end
-        
+    end
+
+    -- Register tooltip hooks for WoW 10.0+
+    if TooltipDataProcessor then
+        TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Unit, function(tooltip, data)
+            if tooltip ~= GameTooltip or not data then return end
+            
+            -- Add safe check for C_PlayerInfo and GetUnitByGUID method
+            local unit = nil
+            if data.guid and C_PlayerInfo and type(C_PlayerInfo.GetUnitByGUID) == "function" then
+                unit = C_PlayerInfo.GetUnitByGUID(data.guid)
+            end
+            
+            -- Fallback to token if available
+            if not unit and data.token then
+                unit = data.token
+            end
+            
+            if unit then
+                Phoenix_UI:GetModule("Tooltip.Core"):DisplayUnit(tooltip, unit)
+            end
+        end)
+    else
+        -- Legacy hook for pre-10.0
+        GameTooltip:HookScript("OnTooltipSetUnit", function(self)
+            local _, unit = self:GetUnit()
+            if unit then
+                Phoenix_UI:GetModule("Tooltip.Core"):DisplayUnit(self, unit)
+            end
+        end)
     end
 
     -- Make the GetItemLevel function available for DisplayUnit

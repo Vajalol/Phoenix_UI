@@ -92,10 +92,16 @@ end
 
 -- Enhanced tooltip method that supports target of target and role indicators
 function Phoenix_Tooltip:DisplayUnit(tooltip, unit)
-    local db = Phoenix_UI.db.profile.tooltip
+    if not tooltip or not unit then return end
     
-    if not unit or not tooltip then return end
-    if InCombatLockdown() and db.hideincombat then return end
+    local db = Phoenix_UI.db.profile.tooltip
+    if not db then return end
+    
+    -- Check combat state if hide in combat is enabled
+    if InCombatLockdown() and db.hideincombat then 
+        tooltip:Hide()
+        return 
+    end
     
     local unitExists = UnitExists(unit)
     if not unitExists then return end
@@ -118,14 +124,16 @@ function Phoenix_Tooltip:DisplayUnit(tooltip, unit)
         }
     end
     
-    -- Role Icons - Only add if not already present
+    -- Role Icons
     if db.roleIcons and UnitIsPlayer(unit) then
         local roleIcon = GetRoleIcon(unit)
         if roleIcon ~= "" then
             local firstLine = _G[tooltip:GetName().."TextLeft1"]
-            local text = firstLine and firstLine:GetText()
-            if text and not text:find("Interface\\LFGFrame\\UI%-LFG%-ICON%-PORTRAITROLES") then
-                firstLine:SetText(roleIcon .. " " .. text)
+            if firstLine then
+                local text = firstLine:GetText()
+                if text and not text:find("Interface\\LFGFrame\\UI%-LFG%-ICON%-PORTRAITROLES") then
+                    firstLine:SetText(roleIcon .. " " .. text)
+                end
             end
         end
     end
@@ -133,80 +141,37 @@ function Phoenix_Tooltip:DisplayUnit(tooltip, unit)
     -- Target of target information
     if db.targetOfTarget and UnitExists(unit .. "target") then
         local targetName = UnitName(unit.."target")
-        local targetReaction = UnitReaction(unit.."target", "player")
-        local targetClass = UnitIsPlayer(unit.."target") and select(2, UnitClass(unit.."target"))
-        
-        -- Format target name with appropriate colors
-        local targetText
-        if UnitIsUnit(unit.."target", "player") then
-            targetText = "|cffff0000"..GetLocalizedText("YOU", "YOU"):upper().."|r"
-        elseif targetClass then
-            local color = RAID_CLASS_COLORS[targetClass]
-            targetText = string.format("|cff%02x%02x%02x%s|r", 
-                color.r * 255, color.g * 255, color.b * 255, targetName)
-        elseif targetReaction then
-            local color = FACTION_BAR_COLORS[targetReaction]
-            targetText = string.format("|cff%02x%02x%02x%s|r", 
-                color.r * 255, color.g * 255, color.b * 255, targetName)
-        else
-            targetText = targetName
-        end
-        
-        -- Add target information to tooltip (only if not already present)
-        local targetLine = false
-        for i = 2, tooltip:NumLines() do
-            local line = _G[tooltip:GetName().."TextLeft"..i]
-            local text = line and line:GetText() or ""
-            if text:find(GetLocalizedText("Target", "Target")) then
-                targetLine = true
-                break
+        if targetName then
+            local targetReaction = UnitReaction(unit.."target", "player")
+            local targetClass = UnitIsPlayer(unit.."target") and select(2, UnitClass(unit.."target"))
+            
+            -- Format target name with appropriate colors
+            local targetText
+            if UnitIsUnit(unit.."target", "player") then
+                targetText = "|cffff0000"..GetLocalizedText("YOU", "YOU"):upper().."|r"
+            elseif targetClass then
+                local color = RAID_CLASS_COLORS[targetClass]
+                targetText = string.format("|cff%02x%02x%02x%s|r", 
+                    color.r * 255, color.g * 255, color.b * 255, targetName)
+            elseif targetReaction then
+                local color = FACTION_BAR_COLORS[targetReaction]
+                targetText = string.format("|cff%02x%02x%02x%s|r", 
+                    color.r * 255, color.g * 255, color.b * 255, targetName)
+            else
+                targetText = targetName
             end
-        end
-        
-        if not targetLine then
+            
             tooltip:AddDoubleLine(GetLocalizedText("Target", "Target") .. ":", targetText)
         end
     end
     
-    -- Status indicator (AFK/DND) - only if not already added
-    if UnitIsPlayer(unit) then
-        local statusAdded = false
-        for i = 2, tooltip:NumLines() do
-            local line = _G[tooltip:GetName().."TextLeft"..i]
-            local text = line and line:GetText() or ""
-            if text:find("<AFK>") or text:find("<DND>") then
-                statusAdded = true
-                break
-            end
-        end
-        
-        if not statusAdded then
-            if UnitIsAFK(unit) then
-                tooltip:AddLine(GetLocalizedText("<AFK>", "<AFK>"), 0.5, 0.5, 1)
-            elseif UnitIsDND(unit) then
-                tooltip:AddLine(GetLocalizedText("<DND>", "<DND>"), 1, 0, 0)
-            end
-        end
-    end
-    
-    -- Health information - only add if not already present and enabled
+    -- Health information
     if db.showHealth then
         local hp = UnitHealth(unit)
         local maxhp = UnitHealthMax(unit)
-        local percent = maxhp > 0 and floor(hp/maxhp*100) or 0
-        
-        -- Check if health information is already in the tooltip
-        local healthInfoExists = false
-        for i = 2, tooltip:NumLines() do
-            local line = _G[tooltip:GetName().."TextLeft"..i]
-            local text = line and line:GetText() or ""
-            if text:find(GetLocalizedText("Health", "Health")) then
-                healthInfoExists = true
-                break
-            end
-        end
-        
-        if not healthInfoExists then
+        if hp and maxhp and maxhp > 0 then
+            local percent = floor(hp/maxhp*100)
+            
             local formattedHp = FormatHealthNumber(hp)
             local formattedMaxHp = FormatHealthNumber(maxhp)
             
@@ -223,37 +188,67 @@ function Phoenix_Tooltip:DisplayUnit(tooltip, unit)
         end
     end
     
-    -- Add item level if enabled and available
+    -- Item level information
     if db.showItemLevel and UnitIsPlayer(unit) then
         local itemLevel = GetItemLevel(unit)
         if itemLevel then
-            -- Check if item level is already in the tooltip
-            local itemLevelExists = false
-            for i = 2, tooltip:NumLines() do
-                local line = _G[tooltip:GetName().."TextLeft"..i]
-                local text = line and line:GetText() or ""
-                if text:find("iLvl:") then
-                    itemLevelExists = true
-                    break
-                end
+            local r, g, b = 1, 1, 0 -- Default yellow
+            
+            if itemLevel >= 470 then -- Current season high level gear
+                r, g, b = 1, 0.5, 0 -- Orange for high level
+            elseif itemLevel >= 450 then -- Current season normal gear
+                r, g, b = 0, 1, 0   -- Green for good level
+            elseif itemLevel < 420 then -- Below current content
+                r, g, b = 0.5, 0.5, 0.5 -- Gray for low level
             end
             
-            if not itemLevelExists then
-                -- Color code the item level based on value
-                local r, g, b = 1, 1, 0 -- Default yellow
-                
-                if itemLevel >= 470 then -- Current season high level gear
-                    r, g, b = 1, 0.5, 0 -- Orange for high level
-                elseif itemLevel >= 450 then -- Current season normal gear
-                    r, g, b = 0, 1, 0   -- Green for good level
-                elseif itemLevel < 420 then -- Below current content
-                    r, g, b = 0.5, 0.5, 0.5 -- Gray for low level
-                end
-                
-                tooltip:AddLine("iLvl: " .. itemLevel, r, g, b)
-            end
+            tooltip:AddLine("iLvl: " .. itemLevel, r, g, b)
         end
     end
     
-    tooltip:Show()
-end 
+    -- Who's targeting information
+    if db.whoTargeting and UnitExists(unit) then
+        local targeting = {}
+        for i=1, GetNumGroupMembers() do
+            local raidUnit = (IsInRaid() and "raid"..i or "party"..i)
+            if UnitIsUnit(raidUnit.."target", unit) then
+                local name = UnitName(raidUnit)
+                if name then
+                    table.insert(targeting, name)
+                end
+            end
+        end
+        
+        if #targeting > 0 then
+            tooltip:AddLine("Targeted by: " .. table.concat(targeting, ", "), 0.8, 0.8, 0.8)
+        end
+    end
+    
+    -- Spell IDs
+    if db.spellIDs then
+        local spellId = select(2, tooltip:GetSpell())
+        if spellId then
+            tooltip:AddLine("Spell ID: " .. spellId, 0.7, 0.7, 0.7)
+        end
+    end
+    
+    tooltip:Show() -- Refresh the tooltip
+end
+
+-- Register for config changes
+Phoenix_UI:RegisterMessage("PHOENIX_UI_CONFIG_CHANGED", function(_, module)
+    if module == "tooltip" then
+        -- Clear caches to ensure fresh data with new settings
+        wipe(tooltipCache)
+        
+        -- Force tooltip update if hovering over something
+        local tooltip = GameTooltip
+        if tooltip:IsShown() then
+            local owner = tooltip:GetOwner()
+            if owner then
+                tooltip:Hide()
+                tooltip:Show()
+            end
+        end
+    end
+end) 

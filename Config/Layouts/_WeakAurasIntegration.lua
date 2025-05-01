@@ -4,6 +4,10 @@ local addonName, Phoenix = ...
 local module = Phoenix_UI:NewModule('Config.Layout.WeakAurasIntegration')
 
 function module:OnEnable()
+    if not Phoenix_UI.layouts then
+        Phoenix_UI.layouts = {}
+    end
+    
     -- Get database
     local db = Phoenix_UI.db
     
@@ -26,8 +30,8 @@ function module:OnEnable()
         }
     end
     
-    -- Layout
-    self.layout = {
+    -- Create the layout
+    local layout = {
         database = db.profile.weakauras,
         rows = {
             {
@@ -95,20 +99,31 @@ function module:OnEnable()
         }
     }
     
-    -- IMPORTANT: Assign the layout to the module itself
-    self.layout = self.layout
+    -- Register the layout
+    Phoenix_UI.layouts.WeakAurasIntegration = layout
+    
+    -- Get the WeakAurasIntegration module
+    local WeakAurasModule = Phoenix_UI:GetModule("WeakAurasIntegration", true)
+    
+    -- Connect the layout to the module
+    if WeakAurasModule then
+        WeakAurasModule.layout = layout
+        if WeakAurasModule.OnLayoutRegistered then
+            WeakAurasModule:OnLayoutRegistered(layout)
+        end
+    end
     
     -- Direct assignment to config options for immediate availability
     if Phoenix_UI and Phoenix_UI.configOptions then
-        Phoenix_UI.configOptions["WeakAurasIntegration"] = self.layout
+        Phoenix_UI.configOptions["WeakAurasIntegration"] = layout
     end
     
     -- Register the layout with the config system
     if Phoenix_UI.config and Phoenix_UI.config.AddLayout then
-        Phoenix_UI.config:AddLayout(self.layout)
+        Phoenix_UI.config:AddLayout(layout)
     elseif Phoenix_UI.ConfigSystem and Phoenix_UI.ConfigSystem.Layouts then
         -- Direct fallback - store layout in the ConfigSystem
-        Phoenix_UI.ConfigSystem.Layouts["WeakAurasIntegration"] = self.layout
+        Phoenix_UI.ConfigSystem.Layouts["WeakAurasIntegration"] = layout
     end
     
     -- Force config refresh if config is already open

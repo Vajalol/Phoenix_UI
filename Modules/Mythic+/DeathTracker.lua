@@ -3,7 +3,7 @@
 
 local addonName, Phoenix = ...
 local MythicPlus = Phoenix.Modules.MythicPlus
-local DeathTracker = MythicPlus:NewModule("DeathTracker", "AceEvent-3.0")
+local DeathTracker = MythicPlus:NewModule("DeathTracker", "AceEvent-3.0", "AceTimer-3.0")
 local L = MythicPlus.L
 
 -- Constants
@@ -71,15 +71,26 @@ local function CreateDeathFrame()
     bg:SetAllPoints()
     bg:SetColorTexture(0, 0, 0, 0.7)
     
-    -- Create border
-    local border = CreateFrame("Frame", nil, deathFrame)
+    -- Create border using BackdropTemplate for modern WoW versions
+    local border = CreateFrame("Frame", nil, deathFrame, BackdropTemplateMixin and "BackdropTemplate")
     border:SetPoint("TOPLEFT", deathFrame, "TOPLEFT", -1, 1)
     border:SetPoint("BOTTOMRIGHT", deathFrame, "BOTTOMRIGHT", 1, -1)
-    border:SetBackdrop({
+    
+    -- Use SetBackdrop if it exists, otherwise manually set the backdrop elements
+    local backdropInfo = {
         edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
         edgeSize = 16,
         insets = {left = 4, right = 4, top = 4, bottom = 4}
-    })
+    }
+    
+    if border.SetBackdrop then
+        border:SetBackdrop(backdropInfo)
+    else
+        -- For modern clients without SetBackdrop
+        Mixin(border, BackdropTemplateMixin)
+        border:OnBackdropLoaded()
+        border:SetBackdrop(backdropInfo)
+    end
     
     -- Create skull icon
     local icon = deathFrame:CreateTexture(nil, "OVERLAY")

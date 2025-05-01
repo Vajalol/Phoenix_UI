@@ -1,18 +1,22 @@
 local Layout = Phoenix_UI:NewModule('Config.Layout.PlayerStats')
 
 function Layout:OnEnable()
+    if not Phoenix_UI.layouts then
+        Phoenix_UI.layouts = {}
+    end
+    
     -- Database
     local db = Phoenix_UI.db
 
     -- Components
     local Phoenix_UIConfig = LibStub('Phoenix_UIConfig')
 
-    -- Get the Stats module
-    local Stats = Phoenix_UI:GetModule("General.Stats", true)
+    -- Get the PlayerStats module
+    local PlayerStats = Phoenix_UI:GetModule("PlayerStats", true)
 
     -- Helper functions
     local function IsModuleLoaded()
-        return Stats ~= nil
+        return PlayerStats ~= nil
     end
 
     local function SaveSettings()
@@ -35,8 +39,8 @@ function Layout:OnEnable()
         }
     end
     
-    -- Layout
-    Layout.layout = {
+    -- Create the layout
+    local layout = {
         layoutConfig = { padding = { top = 15 } },
         database = db.profile.edit and db.profile.edit.playerStatsFrame or {},
         rows = {
@@ -90,7 +94,7 @@ function Layout:OnEnable()
                         
                         -- Notify the module to refresh if loaded
                         if IsModuleLoaded() and _G.Phoenix_PlayerStatsFrame then
-                            Stats:RefreshPlayerStats()
+                            PlayerStats:RefreshPlayerStats()
                         end
                     end,
                     column = 4,
@@ -111,7 +115,7 @@ function Layout:OnEnable()
                         
                         -- Notify the module to refresh if loaded
                         if IsModuleLoaded() and _G.Phoenix_PlayerStatsFrame then
-                            Stats:RefreshPlayerStats()
+                            PlayerStats:RefreshPlayerStats()
                         end
                     end,
                     column = 4,
@@ -132,7 +136,7 @@ function Layout:OnEnable()
                         
                         -- Notify the module to refresh if loaded
                         if IsModuleLoaded() and _G.Phoenix_PlayerStatsFrame then
-                            Stats:RefreshPlayerStats()
+                            PlayerStats:RefreshPlayerStats()
                         end
                     end,
                     column = 4,
@@ -155,7 +159,7 @@ function Layout:OnEnable()
                         
                         -- Notify the module to refresh if loaded
                         if IsModuleLoaded() and _G.Phoenix_PlayerStatsFrame then
-                            Stats:RefreshPlayerStats()
+                            PlayerStats:RefreshPlayerStats()
                         end
                     end,
                     column = 6,
@@ -402,6 +406,17 @@ function Layout:OnEnable()
             }
         }
     }
+    
+    -- Register the layout
+    Phoenix_UI.layouts.PlayerStats = layout
+    
+    -- Connect the layout to the module
+    if PlayerStats then
+        PlayerStats.layout = layout
+        if PlayerStats.OnLayoutRegistered then
+            PlayerStats:OnLayoutRegistered(layout)
+        end
+    end
 end
 
 function Layout:Refresh()

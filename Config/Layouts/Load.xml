@@ -19,5 +19,7 @@
   <Include file='_UIScaling.lua'/>
   <Include file='_WeakAurasIntegration.lua'/>
   <Include file='_CooldownTracker.lua'/>
+  <Include file='_MoveAny.lua'/>
   <Include file='_MythicPlus.lua'/>
+  <Include file='_Skins.lua'/>
 </Ui>

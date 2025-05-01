@@ -516,7 +516,9 @@ function Phoenix_UI:OnInitialize()
             
             -- Add special handling for problematic modules
             local criticalModules = {
-                "nameplates", "actionbars", "castbars", "buffs", "msbt", "idtip"
+                "general", "actionbars", "unitframes", "nameplates", "chat", 
+                "tooltip", "map", "fonts", "uiscaling", "buffs", "mythicplus",
+                "detailskin", "skins"
             }
             
             for _, module in ipairs(criticalModules) do
@@ -2118,7 +2120,8 @@ function Phoenix_UI:InitializeModules()
         -- Ensure critical settings tables exist
         local criticalModules = {
             "general", "actionbars", "unitframes", "nameplates", "chat", 
-            "tooltip", "map", "fonts", "uiscaling", "buffs"
+            "tooltip", "map", "fonts", "uiscaling", "buffs", "mythicplus",
+            "detailskin", "skins"
         }
         
         for _, moduleName in ipairs(criticalModules) do
@@ -2186,6 +2189,20 @@ function Phoenix_UI:InitializeModules()
         for _, prefix in ipairs(lowPriorityPrefixes) do
             if string.find(a.name, "^" .. prefix) then aPriority = aPriority - 5 end
             if string.find(b.name, "^" .. prefix) then bPriority = bPriority - 5 end
+        end
+        
+        -- Ensure layout modules are initialized after their respective modules
+        if string.find(a.name, "^Config%.Layout%.") then
+            local moduleName = string.match(a.name, "^Config%.Layout%.(.+)$")
+            if moduleName and string.find(b.name, "^Modules%." .. moduleName) then
+                aPriority = aPriority - 15
+            end
+        end
+        if string.find(b.name, "^Config%.Layout%.") then
+            local moduleName = string.match(b.name, "^Config%.Layout%.(.+)$")
+            if moduleName and string.find(a.name, "^Modules%." .. moduleName) then
+                bPriority = bPriority - 15
+            end
         end
         
         -- Default alphabetical sorting if priorities are equal

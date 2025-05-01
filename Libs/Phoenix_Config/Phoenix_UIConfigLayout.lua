@@ -201,9 +201,11 @@ local EasyLayout = {
 		local width = self:GetWidth() - l.padding.left - l.padding.right;
 
 		local y = -l.padding.top;
-		for i = 1, #self.rows do
-			local row = self.rows[i];
-			y = y - row:DrawRow(width, y);
+		if self.rows then
+			for i = 1, #self.rows do
+				local row = self.rows[i];
+				y = y - row:DrawRow(width, y);
+			end
 		end
 	end
 };
@@ -221,6 +223,3 @@ Phoenix_UIConfig:RegisterModule(module, version);
 
 -- Set PTSans Narrow as the default font
 Phoenix_UIConfig:SetDefaultFont("Interface\\AddOns\\Phoenix_UI\\Media\\Fonts\\PTSansNarrow.ttf", 12, "NONE", "OVERLAY");
-
-
-

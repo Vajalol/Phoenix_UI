@@ -6,14 +6,13 @@ local addonName, Phoenix = ...
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("PLAYER_LOGIN")
 frame:SetScript("OnEvent", function(self, event)
-    -- Get both module references
-    local MythicPlus = Phoenix_UI:GetModule("MythicPlus", true)
-    local ConfigMythicPlus = Phoenix_UI:GetModule("Config.Layout.MythicPlus", true)
-    
-    -- Don't proceed if either module is missing
-    if not MythicPlus or not ConfigMythicPlus then
+    -- Get module reference
+    local MythicPlus = Phoenix.Modules.MythicPlus
+
+    -- Don't proceed if module is missing
+    if not MythicPlus then
         if Phoenix_UI.debug then
-            print("Phoenix UI: |cffff9900Mythic+ module or config missing.|r")
+            print("Phoenix UI: |cffff9900Mythic+ module missing.|r")
         end
         return
     end

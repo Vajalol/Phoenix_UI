@@ -2,7 +2,7 @@
 local addonName, Phoenix = ...
 
 -- Get the main module
-local Module = Phoenix_UI:GetModule("MythicPlus")
+local Module = Phoenix.Modules.MythicPlus
 if not Module then return end
 
 -- Set up localization

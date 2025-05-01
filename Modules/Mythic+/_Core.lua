@@ -4,8 +4,13 @@
 local addonName, Phoenix = ...
 local L = Phoenix.L
 
+-- Ensure the Modules table exists in the Phoenix namespace
+Phoenix.Modules = Phoenix.Modules or {}
+
 -- Create the module
-local MythicPlus = Phoenix:NewModule("MythicPlus", "AceEvent-3.0", "AceHook-3.0", "AceConsole-3.0")
+local MythicPlus = Phoenix_UI:NewModule("MythicPlus", "AceEvent-3.0", "AceHook-3.0", "AceConsole-3.0")
+-- Store it in the Phoenix.Modules namespace for access by other files
+Phoenix.Modules.MythicPlus = MythicPlus
 MythicPlus.L = L
 
 -- Default settings
@@ -149,7 +154,7 @@ end
 -- Module initialization
 function MythicPlus:OnInitialize()
     -- Register database
-    self.db = Phoenix.db:RegisterNamespace("MythicPlus", defaults)
+    self.db = Phoenix_UI.db:RegisterNamespace("MythicPlus", defaults)
     
     -- Register chat commands
     self:RegisterChatCommand("keystoneinfo", function() self:ShowKeystoneInfo() end)
@@ -166,6 +171,14 @@ function MythicPlus:OnEnable()
     self:RegisterEvent("CHALLENGE_MODE_RESET", function() OnChallengeEnd(false) end)
     self:RegisterEvent("PLAYER_ENTERING_WORLD", OnPlayerEnteringWorld)
     self:RegisterEvent("BAG_UPDATE", UpdateCurrentKeystone)
+    
+    -- Connect to the Phoenix_UI layout system
+    if Phoenix_UI and Phoenix_UI.layouts and Phoenix_UI.layouts.MythicPlus then
+        self.layout = Phoenix_UI.layouts.MythicPlus
+        if self.OnLayoutRegistered then
+            self:OnLayoutRegistered(self.layout)
+        end
+    end
     
     -- Update current keystone on enable
     UpdateCurrentKeystone()
@@ -364,6 +377,4 @@ function MythicPlus:ShouldEnableOptions()
     -- This will be used to determine if options should be enabled (true) or disabled (false)
     -- But we'll always show the options regardless of this return value
     return inMythicPlus or (currentKeystone and currentKeystone.level > 0)
-end
-
-Phoenix.Modules.MythicPlus = MythicPlus 
+end 
