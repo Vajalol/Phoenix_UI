@@ -89,63 +89,58 @@ local function OnPlayerEnteringWorld()
     end
 end
 
--- Detect the current keystone
-local function UpdateCurrentKeystone()
-    -- Check the backpack for a keystone
+-- Update current keystone information
+function UpdateCurrentKeystone()
+    local keyFound = false
+    
+    -- Scan bags for keystone
     for bag = 0, NUM_BAG_SLOTS do
         for slot = 1, C_Container.GetContainerNumSlots(bag) do
-            local itemID = C_Container.GetContainerItemID(bag, slot)
-            if itemID and itemID == 180653 then  -- Keystone item ID
-                local itemLink = C_Container.GetContainerItemLink(bag, slot)
-                if itemLink then
-                    -- Parse the link to get keystone details
-                    local mapID, level, affix1, affix2, affix3, affix4 = string.match(itemLink, "|Hkeystone:(%d+):(%d+):(%d+):(%d+):(%d+):(%d+)|h")
-                    
-                    if mapID then
-                        mapID = tonumber(mapID)
-                        level = tonumber(level)
-                        
-                        -- Get dungeon name
-                        local name = C_ChallengeMode.GetMapUIInfo(mapID) or ""
-                        
-                        -- Get affix info
-                        local affixes = {}
-                        local affixIDs = {affix1, affix2, affix3, affix4}
-                        
-                        for _, affixID in ipairs(affixIDs) do
-                            if affixID and tonumber(affixID) > 0 then
-                                local affixName, affixDesc, affixFileid = C_ChallengeMode.GetAffixInfo(tonumber(affixID))
-                                if affixName then
-                                    table.insert(affixes, {
-                                        id = tonumber(affixID),
-                                        name = affixName,
-                                        description = affixDesc,
-                                        icon = affixFileid
+            local itemLink = C_Container.GetContainerItemLink(bag, slot)
+            if itemLink and itemLink:match("|Hkeystone:") then
+                -- Extract info from keystone link
+                local itemString = string.match(itemLink, "keystone:([^|]+)")
+                if itemString then
+                    local info = { strsplit(":", itemString) }
+                    if info[1] and info[2] then
+                        local mapID = tonumber(info[1])
+                        local level = tonumber(info[2])
+                        if mapID and level then
+                            currentKeystone.mapID = mapID
+                            currentKeystone.level = level
+                            currentKeystone.name = C_ChallengeMode.GetMapUIInfo(mapID) or ""
+                            
+                            -- Get affixes
+                            currentKeystone.affixes = {}
+                            for i = 3, #info do
+                                if info[i] and tonumber(info[i]) then
+                                    local affixID = tonumber(info[i])
+                                    local name, description = C_ChallengeMode.GetAffixInfo(affixID)
+                                    table.insert(currentKeystone.affixes, {
+                                        id = affixID,
+                                        name = name,
+                                        description = description
                                     })
                                 end
                             end
+                            
+                            keyFound = true
+                            break
                         end
-                        
-                        -- Update current keystone data
-                        currentKeystone.level = level
-                        currentKeystone.mapID = mapID
-                        currentKeystone.name = name
-                        currentKeystone.affixes = affixes
-                        
-                        -- Notify submodules
-                        MythicPlus:SendMessage("PHOENIX_MYTHICPLUS_KEYSTONE_UPDATED", currentKeystone)
-                        return
                     end
                 end
             end
         end
+        if keyFound then break end
     end
     
-    -- No keystone found
-    currentKeystone.level = 0
-    currentKeystone.mapID = 0
-    currentKeystone.name = ""
-    currentKeystone.affixes = {}
+    -- Reset keystone info if not found
+    if not keyFound then
+        currentKeystone.level = 0
+        currentKeystone.mapID = 0
+        currentKeystone.name = ""
+        currentKeystone.affixes = {}
+    end
     
     -- Notify submodules
     MythicPlus:SendMessage("PHOENIX_MYTHICPLUS_KEYSTONE_UPDATED", currentKeystone)
@@ -153,8 +148,55 @@ end
 
 -- Module initialization
 function MythicPlus:OnInitialize()
-    -- Register database
-    self.db = Phoenix_UI.db:RegisterNamespace("MythicPlus", defaults)
+    -- Debug helper function
+    local function DebugMessage(msg)
+        if Phoenix_UI and Phoenix_UI.debug then
+            print("|cff00ffffPhoenix UI MythicPlus:|r " .. msg)
+        end
+    end
+    
+    DebugMessage("Initializing MythicPlus module...")
+    
+    -- Check if we already have a database reference
+    if not self.db then
+        -- Use the Phoenix_UI.SafeRegisterNamespace utility if available
+        if Phoenix_UI.SafeRegisterNamespace then
+            DebugMessage("Using Phoenix_UI.SafeRegisterNamespace")
+            self.db = Phoenix_UI.SafeRegisterNamespace(Phoenix_UI.db, "MythicPlus", defaults)
+        else
+            -- Fall back to our custom approach
+            DebugMessage("SafeRegisterNamespace not available, using fallback approach")
+            -- Try to get the existing namespace first
+            if Phoenix_UI.db and Phoenix_UI.db.namespaces and Phoenix_UI.db.namespaces.MythicPlus then
+                DebugMessage("Found existing MythicPlus namespace")
+                self.db = Phoenix_UI.db.namespaces.MythicPlus
+            else
+                -- Register database only if it doesn't exist
+                DebugMessage("Attempting to register new MythicPlus namespace")
+                local success, errorMsg = pcall(function()
+                    self.db = Phoenix_UI.db:RegisterNamespace("MythicPlus", defaults)
+                end)
+                
+                if not success then
+                    DebugMessage("Registration failed: " .. tostring(errorMsg))
+                end
+                
+                -- If registration failed, create a fallback db structure
+                if not self.db then
+                    DebugMessage("Creating fallback db structure")
+                    self.db = { profile = CopyTable(defaults.profile) }
+                end
+            end
+        end
+    else
+        DebugMessage("DB already exists")
+    end
+    
+    -- Ensure profile exists
+    if not self.db.profile then
+        DebugMessage("db.profile missing, creating from defaults")
+        self.db.profile = CopyTable(defaults.profile)
+    end
     
     -- Register chat commands
     self:RegisterChatCommand("keystoneinfo", function() self:ShowKeystoneInfo() end)
@@ -162,9 +204,16 @@ function MythicPlus:OnInitialize()
     
     -- Set up initial state
     inMythicPlus = C_ChallengeMode.IsChallengeModeActive()
+    
+    DebugMessage("MythicPlus module initialization complete")
 end
 
 function MythicPlus:OnEnable()
+    -- Skip if disabled in settings
+    if self.db.profile and self.db.profile.enabled == false then
+        return
+    end
+    
     -- Register events
     self:RegisterEvent("CHALLENGE_MODE_START", OnChallengeStart)
     self:RegisterEvent("CHALLENGE_MODE_COMPLETED", function() OnChallengeEnd(true) end)

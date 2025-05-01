@@ -8,11 +8,66 @@ if not Module then
     return 
 end
 
+-- Ensure Module.db exists to prevent nil errors
+if not Module.db then
+    print("Phoenix UI WARNING: Mythic+ module database not found, creating fallback.")
+    Module.db = {
+        profile = {
+            enabled = true,
+            showTimer = true,
+            showObjectives = true,
+            deathPenalty = true,
+            enhanceKeystones = true,
+            integrateWithPhoenix = true,
+            progressFormat = "PERCENTAGE_AND_VALUE",
+            timerFormat = "REMAINING",
+            showEnemyTooltip = true,
+            showChestTimers = true,
+            -- Add other default settings as needed
+        }
+    }
+end
+
+-- If Module.db isn't a proper table with a profile, fix it
+if type(Module.db) ~= "table" or type(Module.db.profile) ~= "table" then
+    print("Phoenix UI WARNING: Mythic+ module database structure invalid, repairing.")
+    Module.db = {
+        profile = Module.db.profile or {
+            enabled = true,
+            showTimer = true,
+            showObjectives = true,
+            deathPenalty = true,
+            enhanceKeystones = true,
+            integrateWithPhoenix = true,
+            progressFormat = "PERCENTAGE_AND_VALUE",
+            timerFormat = "REMAINING",
+            showEnemyTooltip = true,
+            showChestTimers = true,
+        }
+    }
+end
+
 -- Get localization
 local L = Module.L or Phoenix.L or {}
 
 -- Configuration module
 local Config = Module:NewModule("Config")
+
+-- Safe getter function to prevent errors
+local function SafeGet(path, default)
+    if not Module.db or not Module.db.profile then return default end
+    
+    local keys = {strsplit(".", path)}
+    local value = Module.db.profile
+    
+    for i=1, #keys do
+        if type(value) ~= "table" then return default end
+        value = value[keys[i]]
+        if value == nil then return default end
+    end
+    
+    return value
+end
 
 -- Set up the configuration options
 function Config:SetupConfig()
@@ -42,10 +97,18 @@ function Config:SetupConfig()
                         desc = L["MYTHIC_PLUS_DESC"] or "Enable all Mythic+ features",
                         order = 3,
                         width = "full",
-                        get = function() return Module.db.enabled end,
+                        get = function() return SafeGet("enabled", true) end,
                         set = function(info, value)
-                            Module.db.enabled = value
-                            Module:UpdateSettings()
+                            if not Module.db or not Module.db.profile then 
+                                print("Phoenix UI ERROR: Cannot save Mythic+ settings, database not initialized.")
+                                return 
+                            end
+                            
+                            Module.db.profile.enabled = value
+                            
+                            if Module.UpdateSettings then
+                                Module:UpdateSettings()
+                            end
                             
                             -- If we're disabling the module, trigger a message
                             if not value then
@@ -56,9 +119,9 @@ function Config:SetupConfig()
                             
                             -- Notify the user
                             if value then
-                                Module:Print(L["MYTHIC_PLUS"] .. " " .. L["ENABLED"])
+                                Module:Print(L["MYTHIC_PLUS"] .. " " .. (L["ENABLED"] or "enabled"))
                             else
-                                Module:Print(L["MYTHIC_PLUS"] .. " " .. L["DISABLED"])
+                                Module:Print(L["MYTHIC_PLUS"] .. " " .. (L["DISABLED"] or "disabled"))
                             end
                         end
                     },
@@ -67,20 +130,20 @@ function Config:SetupConfig()
                         name = "|cffff8800" .. L["MYTHIC_PLUS_ENABLE_DESC"] or "Toggling this option will enable or disable all Mythic+ enhancements." .. "|r",
                         order = 4,
                         fontSize = "medium",
-                        hidden = function() return Module.db.enabled end,
+                        hidden = function() return Module.db.profile.enabled end,
                     },
                     separator1 = {
                         type = "header",
                         name = "",
                         order = 10,
-                        hidden = function() return not Module.db.enabled end,
+                        hidden = function() return not Module.db.profile.enabled end,
                     },
                     featureSection = {
                         type = "description",
                         name = L["MYTHIC_PLUS_FEATURES"] or "Individual Features",
                         order = 11,
                         fontSize = "medium",
-                        hidden = function() return not Module.db.enabled end,
+                        hidden = function() return not Module.db.profile.enabled end,
                     },
                     showTimer = {
                         type = "toggle",
@@ -88,10 +151,10 @@ function Config:SetupConfig()
                         desc = L["TIMER_DESC"] or "Enhanced timer display",
                         order = 12,
                         width = "half",
-                        hidden = function() return not Module.db.enabled end,
-                        get = function() return Module.db.showTimer end,
+                        hidden = function() return not Module.db.profile.enabled end,
+                        get = function() return Module.db.profile.showTimer end,
                         set = function(info, value)
-                            Module.db.showTimer = value
+                            Module.db.profile.showTimer = value
                             Module:UpdateSettings()
                         end
                     },
@@ -101,10 +164,10 @@ function Config:SetupConfig()
                         desc = L["ENEMY_FORCES_DESC"] or "Track progress towards enemy forces requirement",
                         order = 13,
                         width = "half",
-                        hidden = function() return not Module.db.enabled end,
-                        get = function() return Module.db.showObjectives end,
+                        hidden = function() return not Module.db.profile.enabled end,
+                        get = function() return Module.db.profile.showObjectives end,
                         set = function(info, value)
-                            Module.db.showObjectives = value
+                            Module.db.profile.showObjectives = value
                             Module:UpdateSettings()
                         end
                     },
@@ -114,10 +177,10 @@ function Config:SetupConfig()
                         desc = L["DEATH_TRACKER_DESC"] or "Track deaths during Mythic+ runs",
                         order = 14,
                         width = "half",
-                        hidden = function() return not Module.db.enabled end,
-                        get = function() return Module.db.deathPenalty end,
+                        hidden = function() return not Module.db.profile.enabled end,
+                        get = function() return Module.db.profile.deathPenalty end,
                         set = function(info, value)
-                            Module.db.deathPenalty = value
+                            Module.db.profile.deathPenalty = value
                             Module:UpdateSettings()
                         end
                     },
@@ -127,10 +190,10 @@ function Config:SetupConfig()
                         desc = L["KEYSTONE_LINK_DESC"] or "Enhanced keystone links in chat",
                         order = 15,
                         width = "half",
-                        hidden = function() return not Module.db.enabled end,
-                        get = function() return Module.db.enhanceKeystones end,
+                        hidden = function() return not Module.db.profile.enabled end,
+                        get = function() return Module.db.profile.enhanceKeystones end,
                         set = function(info, value)
-                            Module.db.enhanceKeystones = value
+                            Module.db.profile.enhanceKeystones = value
                             Module:UpdateSettings()
                         end
                     },
@@ -138,14 +201,14 @@ function Config:SetupConfig()
                         type = "header",
                         name = "",
                         order = 20,
-                        hidden = function() return not Module.db.enabled end,
+                        hidden = function() return not Module.db.profile.enabled end,
                     },
                     integrationSection = {
                         type = "description",
                         name = L["MYTHIC_PLUS_INTEGRATION"] or "Integration Settings",
                         order = 21,
                         fontSize = "medium",
-                        hidden = function() return not Module.db.enabled end,
+                        hidden = function() return not Module.db.profile.enabled end,
                     },
                     integrateWithPhoenix = {
                         type = "toggle",
@@ -153,10 +216,10 @@ function Config:SetupConfig()
                         desc = L["MYTHIC_PLUS_INTEGRATE_PHOENIX_DESC"] or "Add Mythic+ settings to the main Phoenix UI configuration panel",
                         order = 22,
                         width = "full",
-                        hidden = function() return not Module.db.enabled end,
-                        get = function() return Module.db.integrateWithPhoenix end,
+                        hidden = function() return not Module.db.profile.enabled end,
+                        get = function() return Module.db.profile.integrateWithPhoenix end,
                         set = function(info, value)
-                            Module.db.integrateWithPhoenix = value
+                            Module.db.profile.integrateWithPhoenix = value
                             -- Refresh configuration panel integration
                             if Phoenix.RefreshConfig then
                                 Phoenix:RefreshConfig()
@@ -174,7 +237,7 @@ function Config:SetupConfig()
                         name = "|cffAAAAAA" .. L["MYTHIC_PLUS_INTEGRATION_INFO"] or "Changes to this option will take effect after reloading your UI." .. "|r",
                         order = 23,
                         fontSize = "small",
-                        hidden = function() return not Module.db.enabled end,
+                        hidden = function() return not Module.db.profile.enabled end,
                     },
                 }
             },
@@ -182,7 +245,7 @@ function Config:SetupConfig()
                 type = "group",
                 name = L["ENEMY_FORCES"] or "Enemy Forces",
                 order = 2,
-                disabled = function() return not Module.db.enabled or not Module.db.showObjectives end,
+                disabled = function() return not Module.db.profile.enabled or not Module.db.profile.showObjectives end,
                 args = {
                     header = {
                         type = "header",
@@ -206,9 +269,9 @@ function Config:SetupConfig()
                             ["VALUE_ONLY"] = L["ENEMY_FORCES_VALUE"] or "Value only",
                             ["PERCENTAGE_AND_VALUE"] = L["ENEMY_FORCES_BOTH"] or "Percentage and value"
                         },
-                        get = function() return Module.db.progressFormat end,
+                        get = function() return Module.db.profile.progressFormat end,
                         set = function(info, value)
-                            Module.db.progressFormat = value
+                            Module.db.profile.progressFormat = value
                             Module:UpdateSettings()
                         end
                     },
@@ -218,9 +281,9 @@ function Config:SetupConfig()
                         desc = L["ENEMY_FORCES_TOOLTIP_DESC"] or "Display the amount of enemy forces progress each mob gives",
                         order = 4,
                         width = "full",
-                        get = function() return Module.db.showEnemyTooltip end,
+                        get = function() return Module.db.profile.showEnemyTooltip end,
                         set = function(info, value)
-                            Module.db.showEnemyTooltip = value
+                            Module.db.profile.showEnemyTooltip = value
                             Module:UpdateSettings()
                         end
                     }
@@ -230,7 +293,7 @@ function Config:SetupConfig()
                 type = "group",
                 name = L["TIMER"] or "Timer",
                 order = 3,
-                disabled = function() return not Module.db.enabled or not Module.db.showTimer end,
+                disabled = function() return not Module.db.profile.enabled or not Module.db.profile.showTimer end,
                 args = {
                     header = {
                         type = "header",
@@ -249,9 +312,9 @@ function Config:SetupConfig()
                         desc = L["TIMER_DESC"] or "Enhanced timer display",
                         order = 3,
                         width = "full",
-                        get = function() return Module.db.enhancedTimer end,
+                        get = function() return Module.db.profile.enhancedTimer end,
                         set = function(info, value)
-                            Module.db.enhancedTimer = value
+                            Module.db.profile.enhancedTimer = value
                             Module:UpdateSettings()
                         end
                     },
@@ -261,15 +324,15 @@ function Config:SetupConfig()
                         desc = L["TIMER_STYLE_DESC"] or "Visual style of the timer",
                         order = 4,
                         width = "double",
-                        disabled = function() return not Module.db.enhancedTimer end,
+                        disabled = function() return not Module.db.profile.enhancedTimer end,
                         values = {
                             ["PHOENIX"] = L["TIMER_STYLE_PHOENIX"] or "Phoenix UI",
                             ["CLASSIC"] = L["TIMER_STYLE_CLASSIC"] or "Classic",
                             ["MINIMALIST"] = L["TIMER_STYLE_MINIMALIST"] or "Minimalist"
                         },
-                        get = function() return Module.db.timerStyle end,
+                        get = function() return Module.db.profile.timerStyle end,
                         set = function(info, value)
-                            Module.db.timerStyle = value
+                            Module.db.profile.timerStyle = value
                             Module:UpdateSettings()
                         end
                     },
@@ -279,10 +342,10 @@ function Config:SetupConfig()
                         desc = L["TIMER_CHEST_MARKERS_DESC"] or "Show bonus chest time markers",
                         order = 5,
                         width = "full",
-                        disabled = function() return not Module.db.enhancedTimer end,
-                        get = function() return Module.db.showChestTimers end,
+                        disabled = function() return not Module.db.profile.enhancedTimer end,
+                        get = function() return Module.db.profile.showChestTimers end,
                         set = function(info, value)
-                            Module.db.showChestTimers = value
+                            Module.db.profile.showChestTimers = value
                             Module:UpdateSettings()
                         end
                     },
@@ -292,15 +355,15 @@ function Config:SetupConfig()
                         desc = L["TIMER_FORMAT_DESC"] or "Format for displaying timer information",
                         order = 6,
                         width = "double",
-                        disabled = function() return not Module.db.enhancedTimer end,
+                        disabled = function() return not Module.db.profile.enhancedTimer end,
                         values = {
                             ["REMAINING"] = L["TIMER_FORMAT_REMAINING"] or "Time Remaining Only",
                             ["ELAPSED"] = L["TIMER_FORMAT_ELAPSED"] or "Time Elapsed Only",
                             ["DUAL"] = L["TIMER_FORMAT_DUAL"] or "Both Elapsed and Remaining"
                         },
-                        get = function() return Module.db.timerFormat or "REMAINING" end,
+                        get = function() return Module.db.profile.timerFormat or "REMAINING" end,
                         set = function(info, value)
-                            Module.db.timerFormat = value
+                            Module.db.profile.timerFormat = value
                             Module:UpdateSettings()
                         end
                     }
@@ -310,7 +373,7 @@ function Config:SetupConfig()
                 type = "group",
                 name = L["DEATH_TRACKER"] or "Death Tracker",
                 order = 4,
-                disabled = function() return not Module.db.enabled or not Module.db.deathPenalty end,
+                disabled = function() return not Module.db.profile.enabled or not Module.db.profile.deathPenalty end,
                 args = {
                     header = {
                         type = "header",
@@ -329,9 +392,9 @@ function Config:SetupConfig()
                         desc = L["DEATH_COUNTER_DESC"] or "Show death counter in objective tracker",
                         order = 3,
                         width = "full",
-                        get = function() return Module.db.deathTracker end,
+                        get = function() return Module.db.profile.deathTracker end,
                         set = function(info, value)
-                            Module.db.deathTracker = value
+                            Module.db.profile.deathTracker = value
                             Module:UpdateSettings()
                         end
                     },
@@ -341,10 +404,10 @@ function Config:SetupConfig()
                         desc = L["DEATH_DETAILS_DESC"] or "Show detailed death information",
                         order = 4,
                         width = "full",
-                        disabled = function() return not Module.db.deathTracker end,
-                        get = function() return Module.db.showDeathDetails end,
+                        disabled = function() return not Module.db.profile.deathTracker end,
+                        get = function() return Module.db.profile.showDeathDetails end,
                         set = function(info, value)
-                            Module.db.showDeathDetails = value
+                            Module.db.profile.showDeathDetails = value
                             Module:UpdateSettings()
                         end
                     }
@@ -372,9 +435,9 @@ function Config:SetupConfig()
                         desc = L["KEYSTONE_LINK_DESC"] or "Enhanced keystone links in chat",
                         order = 3,
                         width = "full",
-                        get = function() return Module.db.keystoneLink end,
+                        get = function() return Module.db.profile.keystoneLink end,
                         set = function(info, value)
-                            Module.db.keystoneLink = value
+                            Module.db.profile.keystoneLink = value
                             Module:UpdateSettings()
                         end
                     }
@@ -402,9 +465,9 @@ function Config:SetupConfig()
                         desc = L["AUTO_GOSSIP_DESC"] or "Automatically select gossip options in Mythic+ dungeons",
                         order = 3,
                         width = "full",
-                        get = function() return Module.db.autoGossip end,
+                        get = function() return Module.db.profile.autoGossip end,
                         set = function(info, value)
-                            Module.db.autoGossip = value
+                            Module.db.profile.autoGossip = value
                             Module:UpdateSettings()
                         end
                     },
@@ -414,10 +477,10 @@ function Config:SetupConfig()
                         desc = L["SHOW_CLUES_DESC"] or "Output Court of Stars clues to party chat",
                         order = 4,
                         width = "full",
-                        disabled = function() return not Module.db.autoGossip end,
-                        get = function() return Module.db.showClues end,
+                        disabled = function() return not Module.db.profile.autoGossip end,
+                        get = function() return Module.db.profile.showClues end,
                         set = function(info, value)
-                            Module.db.showClues = value
+                            Module.db.profile.showClues = value
                             Module:UpdateSettings()
                         end
                     }
@@ -445,9 +508,9 @@ function Config:SetupConfig()
                         desc = L["TWW_SHOW_SEASON_NOTIFICATION_DESC"] or "Show a notification about Season 2 support when loading",
                         order = 3,
                         width = "full",
-                        get = function() return Module.db.showSeasonNotification end,
+                        get = function() return Module.db.profile.showSeasonNotification end,
                         set = function(info, value)
-                            Module.db.showSeasonNotification = value
+                            Module.db.profile.showSeasonNotification = value
                             Module:UpdateSettings()
                         end
                     },
@@ -492,10 +555,10 @@ function Config:SetupConfig()
                         desc = L["TWW_DARKREACH_DESC"] or "Show enemy forces values in Darkreach Depths",
                         order = 11,
                         width = "full",
-                        get = function() return Module.db.dungeons and Module.db.dungeons[2579] or true end,
+                        get = function() return Module.db.profile.dungeons and Module.db.profile.dungeons[2579] or true end,
                         set = function(info, value)
-                            if not Module.db.dungeons then Module.db.dungeons = {} end
-                            Module.db.dungeons[2579] = value
+                            if not Module.db.profile.dungeons then Module.db.profile.dungeons = {} end
+                            Module.db.profile.dungeons[2579] = value
                             Module:UpdateSettings()
                         end
                     },
@@ -505,10 +568,10 @@ function Config:SetupConfig()
                         desc = L["TWW_DAWNBREAKER_DESC"] or "Show enemy forces values in The Dawnbreaker",
                         order = 12,
                         width = "full",
-                        get = function() return Module.db.dungeons and Module.db.dungeons[2580] or true end,
+                        get = function() return Module.db.profile.dungeons and Module.db.profile.dungeons[2580] or true end,
                         set = function(info, value)
-                            if not Module.db.dungeons then Module.db.dungeons = {} end
-                            Module.db.dungeons[2580] = value
+                            if not Module.db.profile.dungeons then Module.db.profile.dungeons = {} end
+                            Module.db.profile.dungeons[2580] = value
                             Module:UpdateSettings()
                         end
                     },
@@ -518,10 +581,10 @@ function Config:SetupConfig()
                         desc = L["TWW_ATALDAZAR_DESC"] or "Show enemy forces values in Atal'Dazar",
                         order = 13,
                         width = "full",
-                        get = function() return Module.db.dungeons and Module.db.dungeons[968] or true end,
+                        get = function() return Module.db.profile.dungeons and Module.db.profile.dungeons[968] or true end,
                         set = function(info, value)
-                            if not Module.db.dungeons then Module.db.dungeons = {} end
-                            Module.db.dungeons[968] = value
+                            if not Module.db.profile.dungeons then Module.db.profile.dungeons = {} end
+                            Module.db.profile.dungeons[968] = value
                             Module:UpdateSettings()
                         end
                     },
@@ -531,10 +594,10 @@ function Config:SetupConfig()
                         desc = L["TWW_BLACKROOKHOLD_DESC"] or "Show enemy forces values in Black Rook Hold",
                         order = 14,
                         width = "full",
-                        get = function() return Module.db.dungeons and Module.db.dungeons[1501] or true end,
+                        get = function() return Module.db.profile.dungeons and Module.db.profile.dungeons[1501] or true end,
                         set = function(info, value)
-                            if not Module.db.dungeons then Module.db.dungeons = {} end
-                            Module.db.dungeons[1501] = value
+                            if not Module.db.profile.dungeons then Module.db.profile.dungeons = {} end
+                            Module.db.profile.dungeons[1501] = value
                             Module:UpdateSettings()
                         end
                     },
@@ -544,10 +607,10 @@ function Config:SetupConfig()
                         desc = L["TWW_WAYCRESTMANOR_DESC"] or "Show enemy forces values in Waycrest Manor",
                         order = 15,
                         width = "full",
-                        get = function() return Module.db.dungeons and Module.db.dungeons[1862] or true end,
+                        get = function() return Module.db.profile.dungeons and Module.db.profile.dungeons[1862] or true end,
                         set = function(info, value)
-                            if not Module.db.dungeons then Module.db.dungeons = {} end
-                            Module.db.dungeons[1862] = value
+                            if not Module.db.profile.dungeons then Module.db.profile.dungeons = {} end
+                            Module.db.profile.dungeons[1862] = value
                             Module:UpdateSettings()
                         end
                     },
@@ -557,10 +620,10 @@ function Config:SetupConfig()
                         desc = L["TWW_EVERBLOOM_DESC"] or "Show enemy forces values in Everbloom",
                         order = 16,
                         width = "full",
-                        get = function() return Module.db.dungeons and Module.db.dungeons[1279] or true end,
+                        get = function() return Module.db.profile.dungeons and Module.db.profile.dungeons[1279] or true end,
                         set = function(info, value)
-                            if not Module.db.dungeons then Module.db.dungeons = {} end
-                            Module.db.dungeons[1279] = value
+                            if not Module.db.profile.dungeons then Module.db.profile.dungeons = {} end
+                            Module.db.profile.dungeons[1279] = value
                             Module:UpdateSettings()
                         end
                     },
@@ -570,10 +633,10 @@ function Config:SetupConfig()
                         desc = L["TWW_THEATEROFPAIN_DESC"] or "Show enemy forces values in Theater of Pain",
                         order = 19,
                         width = "full",
-                        get = function() return Module.db.dungeons and Module.db.dungeons[1683] or true end,
+                        get = function() return Module.db.profile.dungeons and Module.db.profile.dungeons[1683] or true end,
                         set = function(info, value)
-                            if not Module.db.dungeons then Module.db.dungeons = {} end
-                            Module.db.dungeons[1683] = value
+                            if not Module.db.profile.dungeons then Module.db.profile.dungeons = {} end
+                            Module.db.profile.dungeons[1683] = value
                             Module:UpdateSettings()
                         end
                     },
@@ -583,10 +646,10 @@ function Config:SetupConfig()
                         desc = L["TWW_MECHAGONWORKSHOP_DESC"] or "Show enemy forces values in Operation: Mechagon - Workshop",
                         order = 20,
                         width = "full",
-                        get = function() return Module.db.dungeons and Module.db.dungeons[2097] or true end,
+                        get = function() return Module.db.profile.dungeons and Module.db.profile.dungeons[2097] or true end,
                         set = function(info, value)
-                            if not Module.db.dungeons then Module.db.dungeons = {} end
-                            Module.db.dungeons[2097] = value
+                            if not Module.db.profile.dungeons then Module.db.profile.dungeons = {} end
+                            Module.db.profile.dungeons[2097] = value
                             Module:UpdateSettings()
                         end
                     }
@@ -615,7 +678,10 @@ end
 
 -- Create a config layout for Phoenix_UI's custom panel system
 function Config:CreateConfigLayout()
-    if not Phoenix_UI.configOptions then return end
+    if not Phoenix_UI then return end
+    if not Phoenix_UI.configOptions then
+        Phoenix_UI.configOptions = {}
+    end
     
     local layout = {
         -- Layout configuration
@@ -644,7 +710,7 @@ function Config:CreateConfigLayout()
                     label = ENABLE,
                     tooltip = L["MYTHIC_PLUS_DESC"] or "Enable all Mythic+ features",
                     onChange = function(widget, value)
-                        Module.db.enabled = value
+                        Module.db.profile.enabled = value
                         Module:UpdateSettings()
                     end,
                     column = 12
@@ -683,7 +749,7 @@ function Config:CreateConfigLayout()
                         { value = "PERCENTAGE_AND_VALUE", text = L["ENEMY_FORCES_BOTH"] or "Percentage and value" }
                     },
                     onChange = function(widget, value)
-                        Module.db.progressFormat = value
+                        Module.db.profile.progressFormat = value
                         Module:UpdateSettings()
                     end,
                     column = 6
@@ -694,7 +760,7 @@ function Config:CreateConfigLayout()
                     label = L["ENEMY_FORCES_TOOLTIP"] or "Show progress value on enemy tooltips",
                     tooltip = L["ENEMY_FORCES_TOOLTIP_DESC"] or "Display the amount of enemy forces progress each mob gives",
                     onChange = function(widget, value)
-                        Module.db.showEnemyTooltip = value
+                        Module.db.profile.showEnemyTooltip = value
                         Module:UpdateSettings()
                     end,
                     column = 6
@@ -728,7 +794,7 @@ function Config:CreateConfigLayout()
                     label = L["TIMER"] or "Enhanced Timer",
                     tooltip = L["TIMER_DESC"] or "Enhanced timer display",
                     onChange = function(widget, value)
-                        Module.db.enhancedTimer = value
+                        Module.db.profile.enhancedTimer = value
                         Module:UpdateSettings()
                     end,
                     column = 4
@@ -743,9 +809,9 @@ function Config:CreateConfigLayout()
                         { value = "CLASSIC", text = L["TIMER_STYLE_CLASSIC"] or "Classic" },
                         { value = "MINIMALIST", text = L["TIMER_STYLE_MINIMALIST"] or "Minimalist" }
                     },
-                    disabled = function() return not Module.db.enhancedTimer end,
+                    disabled = function() return not Module.db.profile.enhancedTimer end,
                     onChange = function(widget, value)
-                        Module.db.timerStyle = value
+                        Module.db.profile.timerStyle = value
                         Module:UpdateSettings()
                     end,
                     column = 4
@@ -755,9 +821,9 @@ function Config:CreateConfigLayout()
                     type = 'checkbox',
                     label = L["TIMER_CHEST_MARKERS"] or "Chest Timers",
                     tooltip = L["TIMER_CHEST_MARKERS_DESC"] or "Show bonus chest time markers",
-                    disabled = function() return not Module.db.enhancedTimer end,
+                    disabled = function() return not Module.db.profile.enhancedTimer end,
                     onChange = function(widget, value)
-                        Module.db.showChestTimers = value
+                        Module.db.profile.showChestTimers = value
                         Module:UpdateSettings()
                     end,
                     column = 4
@@ -772,9 +838,9 @@ function Config:CreateConfigLayout()
                         { value = "ELAPSED", text = L["TIMER_FORMAT_ELAPSED"] or "Time Elapsed Only" },
                         { value = "DUAL", text = L["TIMER_FORMAT_DUAL"] or "Both Elapsed and Remaining" }
                     },
-                    disabled = function() return not Module.db.enhancedTimer end,
+                    disabled = function() return not Module.db.profile.enhancedTimer end,
                     onChange = function(widget, value)
-                        Module.db.timerFormat = value
+                        Module.db.profile.timerFormat = value
                         Module:UpdateSettings()
                     end,
                     column = 4
@@ -808,7 +874,7 @@ function Config:CreateConfigLayout()
                     label = L["DEATH_COUNTER"] or "Death Counter",
                     tooltip = L["DEATH_COUNTER_DESC"] or "Show death counter in objective tracker",
                     onChange = function(widget, value)
-                        Module.db.deathTracker = value
+                        Module.db.profile.deathTracker = value
                         Module:UpdateSettings()
                     end,
                     column = 6
@@ -818,9 +884,9 @@ function Config:CreateConfigLayout()
                     type = 'checkbox',
                     label = L["DEATH_DETAILS"] or "Death Details",
                     tooltip = L["DEATH_DETAILS_DESC"] or "Show detailed death information",
-                    disabled = function() return not Module.db.deathTracker end,
+                    disabled = function() return not Module.db.profile.deathTracker end,
                     onChange = function(widget, value)
-                        Module.db.showDeathDetails = value
+                        Module.db.profile.showDeathDetails = value
                         Module:UpdateSettings()
                     end,
                     column = 6
@@ -854,7 +920,7 @@ function Config:CreateConfigLayout()
                     label = L["KEYSTONE_LINK"] or "Keystone Link",
                     tooltip = L["KEYSTONE_LINK_DESC"] or "Enhanced keystone links in chat",
                     onChange = function(widget, value)
-                        Module.db.keystoneLink = value
+                        Module.db.profile.keystoneLink = value
                         Module:UpdateSettings()
                     end,
                     column = 12
@@ -888,7 +954,7 @@ function Config:CreateConfigLayout()
                     label = L["AUTO_GOSSIP"] or "Auto Gossip",
                     tooltip = L["AUTO_GOSSIP_DESC"] or "Automatically select gossip options in Mythic+ dungeons",
                     onChange = function(widget, value)
-                        Module.db.autoGossip = value
+                        Module.db.profile.autoGossip = value
                         Module:UpdateSettings()
                     end,
                     column = 6
@@ -898,9 +964,9 @@ function Config:CreateConfigLayout()
                     type = 'checkbox',
                     label = L["SHOW_CLUES"] or "Show Clues",
                     tooltip = L["SHOW_CLUES_DESC"] or "Output Court of Stars clues to party chat",
-                    disabled = function() return not Module.db.autoGossip end,
+                    disabled = function() return not Module.db.profile.autoGossip end,
                     onChange = function(widget, value)
-                        Module.db.showClues = value
+                        Module.db.profile.showClues = value
                         Module:UpdateSettings()
                     end,
                     column = 6
@@ -934,7 +1000,7 @@ function Config:CreateConfigLayout()
                     label = L["TWW_SHOW_SEASON_NOTIFICATION"] or "Show Season Notification",
                     tooltip = L["TWW_SHOW_SEASON_NOTIFICATION_DESC"] or "Show a notification about Season 2 support when loading",
                     onChange = function(widget, value)
-                        Module.db.showSeasonNotification = value
+                        Module.db.profile.showSeasonNotification = value
                         Module:UpdateSettings()
                     end,
                     column = 6
@@ -1000,8 +1066,8 @@ function Config:CreateConfigLayout()
                     label = L["TWW_DARKREACH"] or "Darkreach Depths",
                     tooltip = L["TWW_DARKREACH_DESC"] or "Show enemy forces values in Darkreach Depths",
                     onChange = function(widget, value)
-                        if not Module.db.dungeons then Module.db.dungeons = {} end
-                        Module.db.dungeons[2579] = value
+                        if not Module.db.profile.dungeons then Module.db.profile.dungeons = {} end
+                        Module.db.profile.dungeons[2579] = value
                         Module:UpdateSettings()
                     end,
                     column = 4
@@ -1012,8 +1078,8 @@ function Config:CreateConfigLayout()
                     label = L["TWW_DAWNBREAKER"] or "The Dawnbreaker",
                     tooltip = L["TWW_DAWNBREAKER_DESC"] or "Show enemy forces values in The Dawnbreaker",
                     onChange = function(widget, value)
-                        if not Module.db.dungeons then Module.db.dungeons = {} end
-                        Module.db.dungeons[2580] = value
+                        if not Module.db.profile.dungeons then Module.db.profile.dungeons = {} end
+                        Module.db.profile.dungeons[2580] = value
                         Module:UpdateSettings()
                     end,
                     column = 4
@@ -1026,8 +1092,8 @@ function Config:CreateConfigLayout()
                     label = L["TWW_ATALDAZAR"] or "Atal'Dazar",
                     tooltip = L["TWW_ATALDAZAR_DESC"] or "Show enemy forces values in Atal'Dazar",
                     onChange = function(widget, value)
-                        if not Module.db.dungeons then Module.db.dungeons = {} end
-                        Module.db.dungeons[968] = value
+                        if not Module.db.profile.dungeons then Module.db.profile.dungeons = {} end
+                        Module.db.profile.dungeons[968] = value
                         Module:UpdateSettings()
                     end,
                     column = 4
@@ -1038,8 +1104,8 @@ function Config:CreateConfigLayout()
                     label = L["TWW_BLACKROOKHOLD"] or "Black Rook Hold",
                     tooltip = L["TWW_BLACKROOKHOLD_DESC"] or "Show enemy forces values in Black Rook Hold",
                     onChange = function(widget, value)
-                        if not Module.db.dungeons then Module.db.dungeons = {} end
-                        Module.db.dungeons[1501] = value
+                        if not Module.db.profile.dungeons then Module.db.profile.dungeons = {} end
+                        Module.db.profile.dungeons[1501] = value
                         Module:UpdateSettings()
                     end,
                     column = 4
@@ -1052,8 +1118,8 @@ function Config:CreateConfigLayout()
                     label = L["TWW_WAYCRESTMANOR"] or "Waycrest Manor",
                     tooltip = L["TWW_WAYCRESTMANOR_DESC"] or "Show enemy forces values in Waycrest Manor",
                     onChange = function(widget, value)
-                        if not Module.db.dungeons then Module.db.dungeons = {} end
-                        Module.db.dungeons[1862] = value
+                        if not Module.db.profile.dungeons then Module.db.profile.dungeons = {} end
+                        Module.db.profile.dungeons[1862] = value
                         Module:UpdateSettings()
                     end,
                     column = 4
@@ -1064,8 +1130,8 @@ function Config:CreateConfigLayout()
                     label = L["TWW_EVERBLOOM"] or "Everbloom",
                     tooltip = L["TWW_EVERBLOOM_DESC"] or "Show enemy forces values in Everbloom",
                     onChange = function(widget, value)
-                        if not Module.db.dungeons then Module.db.dungeons = {} end
-                        Module.db.dungeons[1279] = value
+                        if not Module.db.profile.dungeons then Module.db.profile.dungeons = {} end
+                        Module.db.profile.dungeons[1279] = value
                         Module:UpdateSettings()
                     end,
                     column = 4
@@ -1078,8 +1144,8 @@ function Config:CreateConfigLayout()
                     label = L["TWW_THEATEROFPAIN"] or "Theater of Pain",
                     tooltip = L["TWW_THEATEROFPAIN_DESC"] or "Show enemy forces values in Theater of Pain",
                     onChange = function(widget, value)
-                        if not Module.db.dungeons then Module.db.dungeons = {} end
-                        Module.db.dungeons[1683] = value
+                        if not Module.db.profile.dungeons then Module.db.profile.dungeons = {} end
+                        Module.db.profile.dungeons[1683] = value
                         Module:UpdateSettings()
                     end,
                     column = 4
@@ -1090,8 +1156,8 @@ function Config:CreateConfigLayout()
                     label = L["TWW_MECHAGONWORKSHOP"] or "Operation: Mechagon - Workshop",
                     tooltip = L["TWW_MECHAGONWORKSHOP_DESC"] or "Show enemy forces values in Operation: Mechagon - Workshop",
                     onChange = function(widget, value)
-                        if not Module.db.dungeons then Module.db.dungeons = {} end
-                        Module.db.dungeons[2097] = value
+                        if not Module.db.profile.dungeons then Module.db.profile.dungeons = {} end
+                        Module.db.profile.dungeons[2097] = value
                         Module:UpdateSettings()
                     end,
                     column = 4
@@ -1104,12 +1170,14 @@ function Config:CreateConfigLayout()
     if not Phoenix_UI.configOptions then
         Phoenix_UI.configOptions = {}
     end
-    Phoenix_UI.configOptions["MythicPlus"] = options
+    Phoenix_UI.configOptions["MythicPlus"] = layout
     
     -- If the ConfigSystem is available, register with it too
     if Phoenix_UI.ConfigSystem and Phoenix_UI.ConfigSystem.RegisterLayout then
-        Phoenix_UI.ConfigSystem:RegisterLayout("MythicPlus", options)
+        Phoenix_UI.ConfigSystem:RegisterLayout("MythicPlus", layout)
     end
+    
+    return layout
 end
 
 function Config:OnInitialize()
